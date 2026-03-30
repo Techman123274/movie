@@ -58,7 +58,7 @@ export default async function SportsEventPage({ params }: SportsEventPageProps) 
         <h2 className="mb-4 text-2xl font-medium text-white">Open in StreamCenter</h2>
         <p className="max-w-3xl text-sm leading-7 text-[var(--color-text-muted)]">
           Sports watch pages are intentionally kept separate from movie playback. This page routes you to StreamCenter
-          for the live watch destination while preserving league and event context inside Luma.
+          for the live watch destination while preserving league and event context inside Subflix.
         </p>
         <div className="mt-8 flex flex-wrap gap-3">
           <a

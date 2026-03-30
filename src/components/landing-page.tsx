@@ -11,13 +11,13 @@ export function LandingPage() {
           <div className="grid items-center gap-10 lg:grid-cols-[1.05fr_0.95fr]">
             <div className="animate-[fade-rise_800ms_ease-out]">
               <p className="mb-4 text-xs uppercase tracking-[0.36em] text-[var(--color-brand-strong)]">
-                Stream movies, series, and sports
+                subflix.tech
               </p>
               <h1 className="display-font text-5xl leading-none text-white sm:text-7xl lg:text-8xl">
                 One cinematic front door for tonight&apos;s watchlist.
               </h1>
               <p className="mt-5 max-w-2xl text-base leading-7 text-[var(--color-text-muted)] sm:mt-6 sm:text-lg sm:leading-8">
-                Discover premium movies and series with TMDB-powered browsing, then jump into a dedicated sports experience for live matchdays and league nights.
+                Subflix blends TMDB-powered movie and series discovery with a separate sports lane, so the whole experience feels sharp, focused, and easy to trust.
               </p>
               <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
                 <Link href="/browse" className="rounded-full bg-[var(--color-brand)] px-6 py-3 text-center text-sm font-semibold text-[#07111f]">

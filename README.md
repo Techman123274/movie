@@ -1,6 +1,6 @@
-# Luma
+# Subflix
 
-Luma is a premium streaming-style movie, TV, and sports web app built with Next.js App Router. It uses TMDB as the primary metadata source for film and series, Supabase for profile-scoped data, Clerk for auth, a guarded playback layer for VidLink and MoviesAPI, and a separate sports watch flow linked into StreamCenter.
+Subflix is a premium streaming-style movie, TV, and sports web app built with Next.js App Router. It uses TMDB as the primary metadata source for film and series, Supabase for profile-scoped data, Clerk for auth, a guarded playback layer for VidLink and MoviesAPI, and a separate sports watch flow linked into StreamCenter.
 
 ## Features
 

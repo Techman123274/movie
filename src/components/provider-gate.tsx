@@ -1,3 +1,4 @@
+import { PlaybackActions } from "@/components/playback-actions";
 import type { PlaybackProviderResult } from "@/lib/types";
 
 type ProviderGateProps = {
@@ -45,11 +46,13 @@ export function ProviderGate({ providers }: ProviderGateProps) {
         </div>
       </div>
 
+      <PlaybackActions embedUrl={availableProvider.embedUrl} title={`Watching via ${availableProvider.provider}`} />
+
       <div className="overflow-hidden rounded-[32px] border border-white/10 bg-black shadow-[0_24px_80px_rgba(0,0,0,0.5)]">
         <iframe
           src={availableProvider.embedUrl}
           title="Playback"
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen; remote-playback; display-capture"
           allowFullScreen
           className="aspect-video w-full"
           referrerPolicy="origin"

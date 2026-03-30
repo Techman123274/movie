@@ -16,9 +16,9 @@ export function SiteFooter() {
       <div className="surface rounded-[28px] px-5 py-5 sm:px-6">
         <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <p className="display-font text-2xl text-white">Luma</p>
+            <p className="display-font text-2xl text-white">Subflix</p>
             <p className="mt-1 text-sm text-[var(--color-text-muted)]">
-              A cleaner v1 streaming experience for movies, series, and sports.
+              Subflix.tech brings movies, series, and sports into one cleaner streaming experience.
             </p>
           </div>
           <nav className="flex flex-wrap gap-x-4 gap-y-2">

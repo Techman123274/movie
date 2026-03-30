@@ -15,7 +15,7 @@ export default async function BrowsePage() {
       <PageFrame activeHref="/browse">
         <UnavailablePanel
           title="Catalog data is unavailable."
-          message="Luma now uses live TMDB data only. Add working TMDB credentials and try again."
+          message="Subflix now uses live TMDB data only. Add working TMDB credentials and try again."
         />
       </PageFrame>
     );

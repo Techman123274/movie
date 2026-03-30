@@ -1,9 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Show, SignInButton, SignUpButton, UserButton } from "@clerk/nextjs";
-import { Menu, Search, UserCircle2, X } from "lucide-react";
+import { UserButton, useAuth } from "@clerk/nextjs";
+import { ArrowRight, Menu, Search, Sparkles, UserCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
@@ -21,27 +20,19 @@ type SiteHeaderProps = {
 };
 
 export function SiteHeader({ activeHref }: SiteHeaderProps) {
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-
-  useEffect(() => {
-    document.body.style.overflow = isMenuOpen ? "hidden" : "";
-
-    return () => {
-      document.body.style.overflow = "";
-    };
-  }, [isMenuOpen]);
+  const { isSignedIn } = useAuth();
 
   return (
     <header className="sticky top-0 z-40 border-b border-white/8 bg-[rgba(5,11,19,0.72)] backdrop-blur-xl">
-      <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-4 sm:px-8">
-        <Link href="/browse" className="flex min-w-0 items-center gap-3">
+      <div className="mx-auto grid max-w-7xl grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-4 py-4 sm:px-8 md:flex md:items-center md:justify-between">
+        <Link href="/browse" className="flex min-w-0 items-center gap-3 overflow-hidden md:flex-1">
           <div className="gold-ring flex h-10 w-10 items-center justify-center rounded-full bg-[rgba(214,179,109,0.12)] text-sm font-semibold tracking-[0.32em] text-[var(--color-brand-strong)]">
-            L
+            S
           </div>
           <div className="min-w-0">
-            <p className="display-font truncate text-xl leading-none sm:text-2xl">Luma</p>
+            <p className="display-font truncate text-xl leading-none sm:text-2xl">Subflix</p>
             <p className="truncate text-[10px] uppercase tracking-[0.28em] text-[var(--color-text-muted)] sm:text-[11px] sm:tracking-[0.32em]">
-              Ad-free cinema
+              subflix.tech
             </p>
           </div>
         </Link>
@@ -61,107 +52,125 @@ export function SiteHeader({ activeHref }: SiteHeaderProps) {
           ))}
         </nav>
 
-        <div className="flex items-center gap-2 sm:gap-3">
+        <div className="relative z-20 flex shrink-0 items-center gap-2 pointer-events-auto sm:gap-3">
           <Link
             href="/search"
-            className="surface flex h-10 w-10 items-center justify-center rounded-full text-[var(--color-text-muted)] transition hover:text-white"
+            className="surface flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[var(--color-text-muted)] transition hover:text-white"
           >
             <Search size={18} />
           </Link>
-          <Show when="signed-out">
-            <SignInButton mode="modal">
-              <button
-                type="button"
+          {!isSignedIn ? (
+            <>
+              <Link
+                href="/sign-in"
                 className="hidden surface items-center gap-2 rounded-full px-4 py-2 text-sm text-[var(--color-text-muted)] transition hover:text-white sm:flex"
               >
                 <UserCircle2 size={18} />
                 Sign in
-              </button>
-            </SignInButton>
-            <SignUpButton mode="modal">
-              <button
-                type="button"
+              </Link>
+              <Link
+                href="/sign-up"
                 className="hidden rounded-full bg-[var(--color-brand)] px-4 py-2 text-sm font-semibold text-[#07111f] transition hover:bg-[var(--color-brand-strong)] sm:block"
               >
                 Sign up
-              </button>
-            </SignUpButton>
-          </Show>
-          <Show when="signed-in">
+              </Link>
+            </>
+          ) : null}
+          {isSignedIn ? (
             <div className="hidden surface items-center gap-3 rounded-full px-3 py-2 sm:flex">
               <Link href="/account" className="text-sm text-[var(--color-text-muted)] transition hover:text-white">
                 Account
               </Link>
               <UserButton />
             </div>
-          </Show>
-          <button
-            type="button"
-            onClick={() => setIsMenuOpen((value) => !value)}
-            className="surface flex h-10 w-10 items-center justify-center rounded-full text-[var(--color-text-muted)] transition hover:text-white md:hidden"
-            aria-label="Toggle navigation menu"
-            aria-expanded={isMenuOpen}
-            aria-controls="site-mobile-nav"
-          >
-            {isMenuOpen ? <X size={18} /> : <Menu size={18} />}
-          </button>
+          ) : null}
+          <details className="group relative md:hidden">
+            <summary
+              className="surface relative z-20 flex h-10 w-10 shrink-0 list-none touch-manipulation items-center justify-center rounded-full text-[var(--color-text-muted)] transition hover:text-white [&::-webkit-details-marker]:hidden"
+              aria-label="Toggle navigation menu"
+            >
+              <Menu size={18} />
+            </summary>
+            <div className="absolute right-0 top-full z-50 mt-3 w-[min(23rem,calc(100vw-1.25rem))] overflow-hidden rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(12,21,35,0.98),rgba(5,11,19,0.98))] shadow-2xl">
+              <div className="border-b border-white/8 px-5 py-4">
+                <p className="text-[10px] uppercase tracking-[0.32em] text-[var(--color-brand-strong)]">Mobile Menu</p>
+                <div className="mt-3 rounded-[22px] border border-white/8 bg-white/4 p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="display-font text-2xl text-white">Subflix</p>
+                      <p className="mt-1 text-sm leading-6 text-[var(--color-text-muted)]">
+                        Jump back into movies, series, sports, and your account from one place.
+                      </p>
+                    </div>
+                    <Sparkles size={18} className="mt-1 shrink-0 text-[var(--color-brand-strong)]" />
+                  </div>
+                  {!isSignedIn ? (
+                    <div className="mt-4 grid grid-cols-2 gap-2">
+                      <Link
+                        href="/sign-in"
+                        className="surface flex min-h-11 items-center justify-center rounded-2xl px-4 text-sm font-medium text-white transition hover:bg-white/10"
+                      >
+                        Log in
+                      </Link>
+                      <Link
+                        href="/sign-up"
+                        className="flex min-h-11 items-center justify-center rounded-2xl bg-[var(--color-brand)] px-4 text-sm font-semibold text-[#07111f] transition hover:bg-[var(--color-brand-strong)]"
+                      >
+                        Join now
+                      </Link>
+                    </div>
+                  ) : null}
+                  {isSignedIn ? (
+                    <div className="mt-4 flex items-center justify-between rounded-2xl border border-white/8 bg-white/4 px-4 py-3">
+                      <div>
+                        <p className="text-sm font-medium text-white">Signed in</p>
+                        <p className="text-xs uppercase tracking-[0.24em] text-[var(--color-text-muted)]">Account ready</p>
+                      </div>
+                      <UserButton />
+                    </div>
+                  ) : null}
+                </div>
+              </div>
+              <nav id="site-mobile-nav" className="grid gap-2 px-4 py-4">
+                {navItems.map((item) => (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={cn(
+                      "flex items-center justify-between rounded-2xl border border-white/8 bg-white/4 px-4 py-3 text-sm text-[var(--color-text-muted)] transition hover:bg-white/8 hover:text-white",
+                      activeHref === item.href && "border-[rgba(214,179,109,0.35)] bg-[rgba(214,179,109,0.12)] text-white",
+                    )}
+                  >
+                    <span>{item.label}</span>
+                    <ArrowRight size={16} className="text-[var(--color-brand-strong)]" />
+                  </Link>
+                ))}
+                <Link
+                  href="/search"
+                  className="flex items-center justify-between rounded-2xl border border-white/8 bg-white/4 px-4 py-3 text-sm text-[var(--color-text-muted)] transition hover:bg-white/8 hover:text-white"
+                >
+                  <span>Quick search</span>
+                  <Search size={16} className="text-[var(--color-brand-strong)]" />
+                </Link>
+                {!isSignedIn ? (
+                  <div className="rounded-2xl border border-dashed border-white/10 px-4 py-3 text-sm leading-6 text-[var(--color-text-muted)]">
+                    Use <span className="text-white">Log in</span> above to access profiles, continue watching, and account tools on mobile.
+                  </div>
+                ) : null}
+                {isSignedIn ? (
+                  <Link
+                    href="/account"
+                    className="flex items-center justify-between rounded-2xl border border-white/8 bg-white/4 px-4 py-3 text-sm text-[var(--color-text-muted)] transition hover:bg-white/8 hover:text-white"
+                  >
+                    <span>Account</span>
+                    <ArrowRight size={16} className="text-[var(--color-brand-strong)]" />
+                  </Link>
+                ) : null}
+              </nav>
+            </div>
+          </details>
         </div>
       </div>
-
-      {isMenuOpen ? (
-        <div className="md:hidden">
-          <button
-            type="button"
-            aria-label="Close navigation menu"
-            className="fixed inset-0 top-[72px] z-40 bg-[rgba(2,6,12,0.62)] backdrop-blur-sm"
-            onClick={() => setIsMenuOpen(false)}
-          />
-          <div className="absolute inset-x-0 top-full z-50 border-t border-white/8 bg-[rgba(5,11,19,0.98)] px-4 py-4 shadow-2xl">
-            <nav id="site-mobile-nav" className="grid gap-2">
-            {navItems.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                onClick={() => setIsMenuOpen(false)}
-                className={cn(
-                  "surface rounded-2xl px-4 py-3 text-sm text-[var(--color-text-muted)] transition hover:text-white",
-                  activeHref === item.href && "bg-white/8 text-white",
-                )}
-              >
-                {item.label}
-              </Link>
-            ))}
-            <Show when="signed-out">
-              <SignInButton mode="modal">
-                <button
-                  type="button"
-                  className="surface rounded-2xl px-4 py-3 text-left text-sm text-[var(--color-text-muted)] transition hover:text-white"
-                >
-                  Sign in
-                </button>
-              </SignInButton>
-              <SignUpButton mode="modal">
-                <button
-                  type="button"
-                  className="rounded-2xl bg-[var(--color-brand)] px-4 py-3 text-left text-sm font-semibold text-[#07111f]"
-                >
-                  Sign up
-                </button>
-              </SignUpButton>
-            </Show>
-            <Show when="signed-in">
-              <Link
-                href="/account"
-                onClick={() => setIsMenuOpen(false)}
-                className="surface rounded-2xl px-4 py-3 text-sm text-[var(--color-text-muted)] transition hover:text-white"
-              >
-                Account
-              </Link>
-            </Show>
-            </nav>
-          </div>
-        </div>
-      ) : null}
     </header>
   );
 }

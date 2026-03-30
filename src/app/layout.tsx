@@ -15,8 +15,8 @@ const displayFont = Cormorant_Garamond({
 });
 
 export const metadata: Metadata = {
-  title: "Luma",
-  description: "A premium, ad-free streaming interface powered by TMDB.",
+  title: "Subflix",
+  description: "Subflix.tech is a premium streaming interface for movies, series, and sports powered by TMDB.",
 };
 
 export default function RootLayout({
@@ -31,7 +31,14 @@ export default function RootLayout({
       className={`${bodyFont.variable} ${displayFont.variable} h-full antialiased`}
     >
       <body className="min-h-full bg-[var(--color-canvas)] text-[var(--color-text)]">
-        <ClerkProvider>{children}</ClerkProvider>
+        <ClerkProvider
+          signInUrl="/sign-in"
+          signUpUrl="/sign-up"
+          signInFallbackRedirectUrl="/browse"
+          signUpFallbackRedirectUrl="/browse"
+        >
+          {children}
+        </ClerkProvider>
       </body>
     </html>
   );
