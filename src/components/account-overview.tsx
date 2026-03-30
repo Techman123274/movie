@@ -1,6 +1,15 @@
 import { hasClerkCredentials, hasSupabaseCredentials } from "@/lib/env";
 
-export function AccountOverview() {
+type AccountOverviewProps = {
+  stats: {
+    profiles: number;
+    continueWatching: number;
+    recentlyWatched: number;
+    watchlist: number;
+  };
+};
+
+export function AccountOverview({ stats }: AccountOverviewProps) {
   return (
     <div className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
       <section className="surface-strong rounded-[30px] p-8">
@@ -10,6 +19,24 @@ export function AccountOverview() {
           Clerk handles sign-in, while Supabase stores profiles, watchlist items, progress, history, and the region
           used for provider-specific discovery like Netflix, Hulu, Prime Video, and Max.
         </p>
+        <div className="mt-8 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="rounded-[24px] border border-white/10 bg-black/20 px-4 py-4">
+            <p className="text-xs uppercase tracking-[0.22em] text-[var(--color-text-muted)]">Profiles</p>
+            <p className="mt-2 text-3xl text-white">{stats.profiles}</p>
+          </div>
+          <div className="rounded-[24px] border border-white/10 bg-black/20 px-4 py-4">
+            <p className="text-xs uppercase tracking-[0.22em] text-[var(--color-text-muted)]">Resume queue</p>
+            <p className="mt-2 text-3xl text-white">{stats.continueWatching}</p>
+          </div>
+          <div className="rounded-[24px] border border-white/10 bg-black/20 px-4 py-4">
+            <p className="text-xs uppercase tracking-[0.22em] text-[var(--color-text-muted)]">Recent titles</p>
+            <p className="mt-2 text-3xl text-white">{stats.recentlyWatched}</p>
+          </div>
+          <div className="rounded-[24px] border border-white/10 bg-black/20 px-4 py-4">
+            <p className="text-xs uppercase tracking-[0.22em] text-[var(--color-text-muted)]">Watchlist</p>
+            <p className="mt-2 text-3xl text-white">{stats.watchlist}</p>
+          </div>
+        </div>
       </section>
 
       <section className="surface rounded-[30px] p-8">

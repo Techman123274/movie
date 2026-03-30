@@ -5,10 +5,14 @@ import { RouteLinkRow } from "@/components/route-link-row";
 import { UnavailablePanel } from "@/components/unavailable-panel";
 import { getHomePageData } from "@/lib/tmdb";
 import { getViewerContext } from "@/lib/viewer";
+import { getPersonalizedRails } from "@/lib/watch-state";
 
 export default async function BrowsePage() {
-  await getViewerContext({ redirectToOnboarding: true });
-  const data = await getHomePageData();
+  const viewer = await getViewerContext({ redirectToOnboarding: true });
+  const [data, personalized] = await Promise.all([
+    getHomePageData(),
+    viewer.activeProfile ? getPersonalizedRails(viewer.activeProfile.id) : Promise.resolve(null),
+  ]);
 
   if (!data) {
     return (
@@ -42,6 +46,8 @@ export default async function BrowsePage() {
           />
         </div>
       </section>
+      {personalized?.continueWatchingRail ? <MediaRail rail={personalized.continueWatchingRail} /> : null}
+      {personalized?.recentlyWatchedRail ? <MediaRail rail={personalized.recentlyWatchedRail} /> : null}
       <div className="space-y-12">
         {data.rails.map((rail) => (
           <MediaRail key={rail.id} rail={rail} />

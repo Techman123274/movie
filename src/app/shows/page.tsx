@@ -26,6 +26,7 @@ export default async function ShowsPage() {
         eyebrow="Series"
         title="Season-spanning drama, thrillers, and prestige television."
         description="Scroll through TV discovery shelves with cleaner spacing and a stronger streaming-style browsing rhythm."
+        backdropPath={rails[0]?.items[0]?.backdropPath ?? null}
       />
       {rails.map((rail) => (
         <MediaRail key={rail.id} rail={rail} />

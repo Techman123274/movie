@@ -2,17 +2,19 @@ import Link from "next/link";
 import { Play } from "lucide-react";
 import { WatchlistButton } from "@/components/watchlist-button";
 import { getImageUrl } from "@/lib/tmdb";
-import type { MediaDetail } from "@/lib/types";
-import { formatMediaLabel, formatRating, formatRuntime, formatYear } from "@/lib/utils";
+import type { MediaDetail, ResumeTarget } from "@/lib/types";
+import { formatEpisodeLabel, formatMediaLabel, formatRating, formatRuntime, formatYear } from "@/lib/utils";
 
 type DetailHeroProps = {
   item: MediaDetail;
   profileId: string | null;
   inWatchlist: boolean;
+  resumeTarget: ResumeTarget | null;
 };
 
-export function DetailHero({ item, profileId, inWatchlist }: DetailHeroProps) {
+export function DetailHero({ item, profileId, inWatchlist, resumeTarget }: DetailHeroProps) {
   const background = getImageUrl(item.backdropPath, "w1280");
+  const episodeLabel = formatEpisodeLabel(resumeTarget?.seasonNumber, resumeTarget?.episodeNumber);
 
   return (
     <section
@@ -37,12 +39,17 @@ export function DetailHero({ item, profileId, inWatchlist }: DetailHeroProps) {
           {item.numberOfSeasons ? <span>{item.numberOfSeasons} seasons</span> : null}
         </div>
         <p className="mt-6 max-w-2xl text-base leading-7 text-[var(--color-text-muted)]">{item.overview}</p>
+        {resumeTarget ? (
+          <p className="mt-4 text-sm uppercase tracking-[0.22em] text-[var(--color-brand-strong)]">
+            {episodeLabel ? `Ready to resume ${episodeLabel}` : "Ready to resume this title"}
+          </p>
+        ) : null}
         <div className="mt-8 flex flex-wrap gap-3">
           <Link
-            href={`/${item.mediaType}/${item.id}/watch`}
+            href={resumeTarget?.watchHref ?? `/${item.mediaType}/${item.id}/watch`}
             className="inline-flex items-center gap-2 rounded-full bg-[var(--color-brand)] px-6 py-3 text-sm font-semibold text-[#07111f]"
           >
-            <Play size={16} fill="currentColor" /> Start Watching
+            <Play size={16} fill="currentColor" /> {resumeTarget ? "Resume Watching" : "Start Watching"}
           </Link>
           <WatchlistButton
             profileId={profileId}

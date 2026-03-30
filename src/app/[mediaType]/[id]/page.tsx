@@ -6,7 +6,7 @@ import { MediaRail } from "@/components/media-rail";
 import { PageFrame } from "@/components/page-frame";
 import { ProviderBadges } from "@/components/provider-badges";
 import { UnavailablePanel } from "@/components/unavailable-panel";
-import { isInWatchlist } from "@/lib/persistence";
+import { getResumeTarget, isInWatchlist } from "@/lib/persistence";
 import { getMediaDetail, getSeasonEpisodes } from "@/lib/tmdb";
 import type { MediaType } from "@/lib/types";
 import { getViewerContext } from "@/lib/viewer";
@@ -39,9 +39,12 @@ export default async function DetailPage({ params }: DetailPageProps) {
     );
   }
 
-  const inWatchlist = viewer.activeProfile
-    ? await isInWatchlist(viewer.activeProfile.id, detail.id, detail.mediaType)
-    : false;
+  const [inWatchlist, resumeTarget] = viewer.activeProfile
+    ? await Promise.all([
+        isInWatchlist(viewer.activeProfile.id, detail.id, detail.mediaType),
+        getResumeTarget(viewer.activeProfile.id, detail.id, detail.mediaType),
+      ])
+    : [false, null];
   const season =
     mediaType === "tv" && detail.seasons?.[0]
       ? await getSeasonEpisodes(detail.id, detail.seasons[0].seasonNumber)
@@ -49,7 +52,12 @@ export default async function DetailPage({ params }: DetailPageProps) {
 
   return (
     <PageFrame activeHref={mediaType === "movie" ? "/movies" : "/shows"}>
-      <DetailHero item={detail} profileId={viewer.activeProfile?.id ?? null} inWatchlist={inWatchlist} />
+      <DetailHero
+        item={detail}
+        profileId={viewer.activeProfile?.id ?? null}
+        inWatchlist={inWatchlist}
+        resumeTarget={resumeTarget}
+      />
       <ProviderBadges providers={detail.providers} />
       {season ? <EpisodeBrowser tvId={detail.id} selectedSeason={season} /> : null}
       <CastStrip cast={detail.cast} />

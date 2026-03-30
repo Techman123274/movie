@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { PageFrame } from "@/components/page-frame";
 import { ProviderGate } from "@/components/provider-gate";
 import { UnavailablePanel } from "@/components/unavailable-panel";
+import { WatchStatePanel } from "@/components/watch-state-panel";
 import { resolvePlaybackOptions } from "@/lib/playback";
 import { getMediaDetail, getSeasonEpisodes } from "@/lib/tmdb";
 import type { MediaType } from "@/lib/types";
@@ -58,10 +59,18 @@ export default async function WatchPage({ params, searchParams }: WatchPageProps
         <h1 className="display-font text-5xl text-white">{detail.title}</h1>
         <p className="mt-4 max-w-3xl text-base leading-7 text-[var(--color-text-muted)]">
           {mediaType === "tv"
-            ? `Season ${seasonNumber}, episode ${episodeNumber}. Continue watching is profile-aware and ready for persisted progress once Supabase is configured.`
-            : "This distraction-free watch shell is designed to keep the surrounding experience premium and uncluttered."}
+            ? `Season ${seasonNumber}, episode ${episodeNumber}. This player now records resume state for the active profile so browse, account, and detail pages can bring you back here quickly.`
+            : "This distraction-free watch shell now updates profile resume state automatically so you can jump back in from the rest of the app."}
         </p>
       </section>
+
+      <WatchStatePanel
+        profileId={viewer.activeProfile?.id ?? null}
+        mediaId={detail.id}
+        mediaType={mediaType as MediaType}
+        seasonNumber={mediaType === "tv" ? seasonNumber : undefined}
+        episodeNumber={mediaType === "tv" ? episodeNumber : undefined}
+      />
 
       <ProviderGate providers={providers} />
 

@@ -5,9 +5,10 @@ import { PageFrame } from "@/components/page-frame";
 import { RouteLinkRow } from "@/components/route-link-row";
 import { RegionForm } from "@/components/region-form";
 import { UnavailablePanel } from "@/components/unavailable-panel";
-import { getContinueWatching, getWatchlist } from "@/lib/persistence";
+import { getWatchlist } from "@/lib/persistence";
 import { getMediaSummariesByIds } from "@/lib/tmdb";
 import { getViewerContext } from "@/lib/viewer";
+import { getPersonalizedRails } from "@/lib/watch-state";
 
 export default async function AccountPage() {
   const viewer = await getViewerContext({ redirectToOnboarding: true });
@@ -34,23 +35,13 @@ export default async function AccountPage() {
     );
   }
 
-  const [continueWatching, watchlist] = await Promise.all([
-    getContinueWatching(viewer.activeProfile.id),
+  const [personalized, watchlist] = await Promise.all([
+    getPersonalizedRails(viewer.activeProfile.id),
     getWatchlist(viewer.activeProfile.id),
   ]);
-  const [continueWatchingItems, watchlistItems] = await Promise.all([
-    getMediaSummariesByIds(
-      continueWatching.map((record) => ({ mediaType: record.mediaType, mediaId: record.mediaId })),
-    ),
-    getMediaSummariesByIds(watchlist.map((record) => ({ mediaType: record.mediaType, mediaId: record.mediaId }))),
-  ]);
-
-  const continueWatchingRail = {
-    id: "continue-watching",
-    title: "Continue Watching",
-    eyebrow: "Profile aware",
-    items: continueWatchingItems,
-  };
+  const watchlistItems = await getMediaSummariesByIds(
+    watchlist.map((record) => ({ mediaType: record.mediaType, mediaId: record.mediaId })),
+  );
 
   const watchlistRail = {
     id: "watchlist",
@@ -61,7 +52,14 @@ export default async function AccountPage() {
 
   return (
     <PageFrame>
-      <AccountOverview />
+      <AccountOverview
+        stats={{
+          profiles: viewer.profiles.length,
+          continueWatching: personalized.continueWatchingCount,
+          recentlyWatched: personalized.recentlyWatchedCount,
+          watchlist: watchlistItems.length,
+        }}
+      />
       <RouteLinkRow
         items={[
           { href: "/profiles", label: "Switch Profiles" },
@@ -70,14 +68,14 @@ export default async function AccountPage() {
         ]}
       />
       <RegionForm profile={viewer.activeProfile} returnTo="/account" />
-      {continueWatchingItems.length ? (
-        <MediaRail rail={continueWatchingRail} />
-      ) : (
+      {personalized.continueWatchingRail ? <MediaRail rail={personalized.continueWatchingRail} /> : null}
+      {personalized.recentlyWatchedRail ? <MediaRail rail={personalized.recentlyWatchedRail} /> : null}
+      {!personalized.continueWatchingRail && !personalized.recentlyWatchedRail ? (
         <EmptyState
-          title="Nothing in continue watching"
-          message="Once this profile has watch progress records in Supabase, titles will appear here with live TMDB metadata."
+          title="No watch activity yet"
+          message="Start any movie or episode and this account view will begin surfacing resume picks and recent activity for the active profile."
         />
-      )}
+      ) : null}
       {watchlistItems.length ? (
         <MediaRail rail={watchlistRail} />
       ) : (

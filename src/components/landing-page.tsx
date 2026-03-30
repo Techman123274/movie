@@ -1,14 +1,20 @@
 import Link from "next/link";
 import { Film, PlayCircle, Tv, Trophy } from "lucide-react";
+import { CinematicGallery } from "@/components/cinematic-gallery";
 import { MarketingHeader } from "@/components/marketing-header";
+import type { MediaSummary } from "@/lib/types";
 
-export function LandingPage() {
+type LandingPageProps = {
+  featuredItems: MediaSummary[];
+};
+
+export function LandingPage({ featuredItems }: LandingPageProps) {
   return (
     <div className="page-shell">
       <MarketingHeader />
       <main className="relative overflow-hidden">
         <section className="mx-auto max-w-7xl px-4 py-12 sm:px-8 sm:py-20">
-          <div className="grid items-center gap-10 lg:grid-cols-[1.05fr_0.95fr]">
+          <div className="grid items-center gap-10 lg:grid-cols-[0.92fr_1.08fr]">
             <div className="animate-[fade-rise_800ms_ease-out]">
               <p className="mb-4 text-xs uppercase tracking-[0.36em] text-[var(--color-brand-strong)]">
                 subflix.tech
@@ -28,25 +34,33 @@ export function LandingPage() {
                 </Link>
               </div>
             </div>
+            <CinematicGallery
+              items={featuredItems}
+              eyebrow="Featured artwork"
+              title="The catalog should feel premium before a single click."
+              description="Subflix now opens with a richer visual lead: live backdrops, stronger poster treatment, and imagery that makes the whole product feel closer to a real streaming launch."
+            />
+          </div>
+        </section>
 
-            <div className="grid gap-4 sm:grid-cols-2">
-              {[
-                { icon: Film, title: "Movies", copy: "Hero sliders, rich detail pages, and premium discovery rails." },
-                { icon: Tv, title: "Series", copy: "Follow season arcs, episode lists, and provider availability." },
-                { icon: Trophy, title: "Sports", copy: "Dedicated league hubs, live event cards, and StreamCenter watch access." },
-                { icon: PlayCircle, title: "Ad-Gated Playback", copy: "External players stay behind explicit validation controls." },
-              ].map((item, index) => (
-                <article
-                  key={item.title}
-                  className="surface animate-[fade-rise_700ms_ease-out] rounded-[28px] p-6"
-                  style={{ animationDelay: `${index * 120}ms` }}
-                >
-                  <item.icon className="mb-4 text-[var(--color-brand-strong)]" size={28} />
-                  <h2 className="display-font text-3xl text-white">{item.title}</h2>
-                  <p className="mt-3 text-sm leading-6 text-[var(--color-text-muted)]">{item.copy}</p>
-                </article>
-              ))}
-            </div>
+        <section className="mx-auto max-w-7xl px-4 py-2 sm:px-8 sm:py-4">
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            {[
+              { icon: Film, title: "Movies", copy: "Hero sliders, rich detail pages, and premium discovery rails." },
+              { icon: Tv, title: "Series", copy: "Follow season arcs, episode lists, and provider availability." },
+              { icon: Trophy, title: "Sports", copy: "Dedicated league hubs, live event cards, and StreamCenter watch access." },
+              { icon: PlayCircle, title: "Ad-Gated Playback", copy: "External players stay behind explicit validation controls." },
+            ].map((item, index) => (
+              <article
+                key={item.title}
+                className="surface animate-[fade-rise_700ms_ease-out] rounded-[28px] p-6"
+                style={{ animationDelay: `${index * 120}ms` }}
+              >
+                <item.icon className="mb-4 text-[var(--color-brand-strong)]" size={28} />
+                <h2 className="display-font text-3xl text-white">{item.title}</h2>
+                <p className="mt-3 text-sm leading-6 text-[var(--color-text-muted)]">{item.copy}</p>
+              </article>
+            ))}
           </div>
         </section>
 

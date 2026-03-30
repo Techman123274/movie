@@ -10,6 +10,9 @@ export type MediaSummary = {
   genreNames: string[];
   releaseDate?: string;
   voteAverage?: number;
+  hrefOverride?: string;
+  actionLabel?: string;
+  contextLabel?: string;
 };
 
 export type ProviderInfo = {
@@ -106,11 +109,36 @@ export type WatchProgressRecord = {
   updatedAt: string;
 };
 
+export type ResumeTarget = WatchProgressRecord & {
+  watchHref: string;
+};
+
+export type WatchHistoryRecord = {
+  profileId: string;
+  mediaId: number;
+  mediaType: MediaType;
+  seasonNumber?: number;
+  episodeNumber?: number;
+  watchedAt: string;
+  watchHref: string;
+};
+
 export type WatchlistRecord = {
   profileId: string;
   mediaId: number;
   mediaType: MediaType;
   addedAt: string;
+};
+
+export type WatchStateEvent = "start" | "complete" | "clear";
+
+export type WatchStatePayload = {
+  profileId: string;
+  mediaId: number;
+  mediaType: MediaType;
+  seasonNumber?: number;
+  episodeNumber?: number;
+  event: WatchStateEvent;
 };
 
 export type PlaybackRequest = {

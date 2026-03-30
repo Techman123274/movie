@@ -10,10 +10,11 @@ type MediaCardProps = {
 
 export function MediaCard({ item }: MediaCardProps) {
   const image = getImageUrl(item.posterPath, "w342");
+  const href = item.hrefOverride ?? `/${item.mediaType}/${item.id}`;
 
   return (
     <Link
-      href={`/${item.mediaType}/${item.id}`}
+      href={href}
       className="group relative block w-[170px] min-w-[170px] snap-start overflow-hidden rounded-[24px] border border-white/10 bg-[rgba(255,255,255,0.03)] transition duration-300 hover:-translate-y-1 hover:border-[rgba(214,179,109,0.4)] hover:shadow-[0_24px_80px_rgba(0,0,0,0.5)] sm:w-[185px] sm:min-w-[185px] lg:w-[205px] lg:min-w-[205px]"
     >
       <div
@@ -29,12 +30,18 @@ export function MediaCard({ item }: MediaCardProps) {
           <span>{formatMediaLabel(item.mediaType)}</span>
           <span className="h-1 w-1 rounded-full bg-white/40" />
           <span>{formatYear(item.releaseDate)}</span>
+          {item.contextLabel ? (
+            <>
+              <span className="h-1 w-1 rounded-full bg-white/40" />
+              <span>{item.contextLabel}</span>
+            </>
+          ) : null}
         </div>
         <h3 className="display-font line-clamp-2 text-xl leading-5 text-white sm:text-2xl sm:leading-6">{item.title}</h3>
         <div className="mt-3 flex items-center justify-between text-xs text-[var(--color-text-muted)] sm:text-sm">
           <span>{formatRating(item.voteAverage)}</span>
           <span className="inline-flex items-center gap-1 text-[var(--color-brand-strong)]">
-            Open <ArrowRight size={14} />
+            {item.actionLabel ?? "Open"} <ArrowRight size={14} />
           </span>
         </div>
       </div>

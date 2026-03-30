@@ -38,3 +38,37 @@ export function formatRuntime(runtime?: number) {
 export function formatMediaLabel(mediaType: "movie" | "tv") {
   return mediaType === "movie" ? "Movie" : "Series";
 }
+
+export function buildWatchHref(
+  mediaType: "movie" | "tv",
+  mediaId: number,
+  seasonNumber?: number,
+  episodeNumber?: number,
+) {
+  const basePath = `/${mediaType}/${mediaId}/watch`;
+
+  if (mediaType !== "tv") {
+    return basePath;
+  }
+
+  const searchParams = new URLSearchParams();
+
+  if (seasonNumber) {
+    searchParams.set("season", String(seasonNumber));
+  }
+
+  if (episodeNumber) {
+    searchParams.set("episode", String(episodeNumber));
+  }
+
+  const query = searchParams.toString();
+  return query ? `${basePath}?${query}` : basePath;
+}
+
+export function formatEpisodeLabel(seasonNumber?: number, episodeNumber?: number) {
+  if (!seasonNumber || !episodeNumber) {
+    return null;
+  }
+
+  return `S${seasonNumber} E${episodeNumber}`;
+}

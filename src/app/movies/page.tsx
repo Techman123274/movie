@@ -26,6 +26,7 @@ export default async function MoviesPage() {
         eyebrow="Movies"
         title="Big-screen stories, surfaced like a premium service."
         description="Move through live TMDB movie rails with the same shelf system used across the rest of the app."
+        backdropPath={rails[0]?.items[0]?.backdropPath ?? null}
       />
       {rails.map((rail) => (
         <MediaRail key={rail.id} rail={rail} />

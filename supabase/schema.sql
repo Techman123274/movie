@@ -43,3 +43,18 @@ create table if not exists public.watch_history (
   episode_number integer,
   watched_at timestamptz not null default now()
 );
+
+create unique index if not exists watchlists_profile_media_unique
+on public.watchlists (profile_id, media_type, media_id);
+
+create unique index if not exists watch_progress_profile_media_unique
+on public.watch_progress (profile_id, media_type, media_id);
+
+create index if not exists watch_progress_profile_updated_idx
+on public.watch_progress (profile_id, updated_at desc);
+
+create index if not exists watch_history_profile_watched_idx
+on public.watch_history (profile_id, watched_at desc);
+
+create index if not exists watch_history_profile_media_episode_idx
+on public.watch_history (profile_id, media_type, media_id, season_number, episode_number, watched_at desc);
