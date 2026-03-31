@@ -1,26 +1,50 @@
 import Link from "next/link";
+import { SeasonPicker } from "@/components/season-picker";
 import { getImageUrl } from "@/lib/tmdb";
-import type { SeasonSummary } from "@/lib/types";
-import { formatRuntime } from "@/lib/utils";
+import type { ResumeTarget, SeasonSummary } from "@/lib/types";
+import { buildWatchHref, formatRuntime } from "@/lib/utils";
 
 type EpisodeBrowserProps = {
   tvId: number;
+  seasons: SeasonSummary[];
   selectedSeason: SeasonSummary;
+  resumeTarget: ResumeTarget | null;
 };
 
-export function EpisodeBrowser({ tvId, selectedSeason }: EpisodeBrowserProps) {
+export function EpisodeBrowser({ tvId, seasons, selectedSeason, resumeTarget }: EpisodeBrowserProps) {
+  const shouldResumeSeason =
+    resumeTarget?.seasonNumber === selectedSeason.seasonNumber && resumeTarget.episodeNumber !== undefined;
+  const seasonPlayHref = buildWatchHref(
+    "tv",
+    tvId,
+    selectedSeason.seasonNumber,
+    shouldResumeSeason ? resumeTarget.episodeNumber : 1,
+  );
+
   return (
     <section className="space-y-4">
-      <div className="flex items-end justify-between gap-4">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <p className="mb-2 text-xs uppercase tracking-[0.3em] text-[var(--color-brand-strong)]">
             Season guide
           </p>
           <h2 className="display-font text-3xl text-white">{selectedSeason.name}</h2>
         </div>
-        <p className="text-sm text-[var(--color-text-muted)]">
-          {selectedSeason.episodeCount} episodes available
-        </p>
+        <div className="flex flex-wrap items-center gap-3">
+          <SeasonPicker
+            tvId={tvId}
+            seasons={seasons}
+            selectedSeasonNumber={selectedSeason.seasonNumber}
+            routeMode="detail"
+          />
+          <Link
+            href={seasonPlayHref}
+            className="inline-flex min-h-11 items-center rounded-full bg-[var(--color-brand)] px-5 text-sm font-semibold text-[#07111f]"
+          >
+            {shouldResumeSeason ? "Resume Season" : "Play Season"}
+          </Link>
+          <p className="text-sm text-[var(--color-text-muted)]">{selectedSeason.episodeCount} episodes available</p>
+        </div>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">

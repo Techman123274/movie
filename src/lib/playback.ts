@@ -15,14 +15,14 @@ const providers: Record<
     buildUrl: (request) =>
       request.mediaType === "movie"
         ? `https://vidlink.pro/movie/${request.tmdbId}?primaryColor=d6b36d&secondaryColor=0d1724&iconColor=f5f1e8&title=true&poster=true&autoplay=false`
-        : `https://vidlink.pro/tv/${request.tmdbId}/${request.seasonNumber}/${request.episodeNumber}?primaryColor=d6b36d&secondaryColor=0d1724&iconColor=f5f1e8&title=true&poster=true&autoplay=false&nextbutton=true`,
+        : `https://vidlink.pro/tv/${request.tmdbId}/${request.seasonNumber}/${request.episodeNumber}?primaryColor=d6b36d&secondaryColor=0d1724&iconColor=f5f1e8&title=true&poster=true&autoplay=true&nextbutton=true`,
   },
   moviesapi: {
     supportsEpisodes: true,
     buildUrl: (request) =>
       request.mediaType === "movie"
         ? `https://moviesapi.club/movie/${request.tmdbId}`
-        : `https://moviesapi.club/tv/${request.tmdbId}-${request.seasonNumber}-${request.episodeNumber}`,
+        : `https://moviesapi.club/tv/${request.tmdbId}-${request.seasonNumber}-${request.episodeNumber}?autoplay=1`,
   },
 };
 

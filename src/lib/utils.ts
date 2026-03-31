@@ -1,4 +1,5 @@
 import { clsx, type ClassValue } from "clsx";
+import type { SeasonSummary } from "@/lib/types";
 
 export function cn(...inputs: ClassValue[]) {
   return clsx(inputs);
@@ -71,4 +72,43 @@ export function formatEpisodeLabel(seasonNumber?: number, episodeNumber?: number
   }
 
   return `S${seasonNumber} E${episodeNumber}`;
+}
+
+export function parsePositiveInt(value?: string | null) {
+  if (!value) {
+    return undefined;
+  }
+
+  const parsed = Number(value);
+
+  if (!Number.isInteger(parsed) || parsed < 1) {
+    return undefined;
+  }
+
+  return parsed;
+}
+
+export function resolveSeasonSelection(options: {
+  seasons?: SeasonSummary[];
+  requestedSeasonNumber?: number;
+  resumeSeasonNumber?: number;
+}) {
+  const availableSeasonNumbers = options.seasons?.map((season) => season.seasonNumber) ?? [];
+
+  if (!availableSeasonNumbers.length) {
+    return undefined;
+  }
+
+  if (
+    options.requestedSeasonNumber !== undefined &&
+    availableSeasonNumbers.includes(options.requestedSeasonNumber)
+  ) {
+    return options.requestedSeasonNumber;
+  }
+
+  if (options.resumeSeasonNumber !== undefined && availableSeasonNumbers.includes(options.resumeSeasonNumber)) {
+    return options.resumeSeasonNumber;
+  }
+
+  return availableSeasonNumbers[0];
 }

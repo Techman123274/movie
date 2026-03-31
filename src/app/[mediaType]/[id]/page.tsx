@@ -9,6 +9,7 @@ import { UnavailablePanel } from "@/components/unavailable-panel";
 import { getResumeTarget, isInWatchlist } from "@/lib/persistence";
 import { getMediaDetail, getSeasonEpisodes } from "@/lib/tmdb";
 import type { MediaType } from "@/lib/types";
+import { parsePositiveInt, resolveSeasonSelection } from "@/lib/utils";
 import { getViewerContext } from "@/lib/viewer";
 
 type DetailPageProps = {
@@ -16,10 +17,13 @@ type DetailPageProps = {
     mediaType: string;
     id: string;
   }>;
+  searchParams: Promise<{
+    season?: string;
+  }>;
 };
 
-export default async function DetailPage({ params }: DetailPageProps) {
-  const { mediaType, id } = await params;
+export default async function DetailPage({ params, searchParams }: DetailPageProps) {
+  const [{ mediaType, id }, query] = await Promise.all([params, searchParams]);
 
   if (mediaType !== "movie" && mediaType !== "tv") {
     notFound();
@@ -45,9 +49,17 @@ export default async function DetailPage({ params }: DetailPageProps) {
         getResumeTarget(viewer.activeProfile.id, detail.id, detail.mediaType),
       ])
     : [false, null];
+  const selectedSeasonNumber =
+    mediaType === "tv"
+      ? resolveSeasonSelection({
+          seasons: detail.seasons,
+          requestedSeasonNumber: parsePositiveInt(query.season),
+          resumeSeasonNumber: resumeTarget?.seasonNumber,
+        })
+      : undefined;
   const season =
-    mediaType === "tv" && detail.seasons?.[0]
-      ? await getSeasonEpisodes(detail.id, detail.seasons[0].seasonNumber)
+    mediaType === "tv" && selectedSeasonNumber
+      ? await getSeasonEpisodes(detail.id, selectedSeasonNumber)
       : undefined;
 
   return (
@@ -59,7 +71,14 @@ export default async function DetailPage({ params }: DetailPageProps) {
         resumeTarget={resumeTarget}
       />
       <ProviderBadges providers={detail.providers} />
-      {season ? <EpisodeBrowser tvId={detail.id} selectedSeason={season} /> : null}
+      {season && detail.seasons ? (
+        <EpisodeBrowser
+          tvId={detail.id}
+          seasons={detail.seasons}
+          selectedSeason={season}
+          resumeTarget={resumeTarget}
+        />
+      ) : null}
       <CastStrip cast={detail.cast} />
       <MediaRail
         rail={{

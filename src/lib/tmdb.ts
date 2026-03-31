@@ -14,6 +14,20 @@ import type {
 const TMDB_BASE_URL = "https://api.themoviedb.org/3";
 export const TMDB_IMAGE_BASE = "https://image.tmdb.org/t/p";
 const MAX_PROVIDER_RAILS = 12;
+const PROVIDER_CANDIDATE_LIMIT = 24;
+const MIN_PROVIDER_RAIL_ITEMS = 4;
+const PREFERRED_PROVIDER_NAMES = [
+  "netflix",
+  "amazon prime video",
+  "prime video",
+  "disney plus",
+  "hulu",
+  "max",
+  "apple tv plus",
+  "paramount plus",
+  "peacock premium",
+  "crunchyroll",
+];
 
 function tmdbHeaders() {
   if (env.tmdbReadToken) {
@@ -71,6 +85,24 @@ function normalizeProvider(provider: Record<string, unknown>): ProviderInfo {
   };
 }
 
+function getProviderPriority(name: string) {
+  const normalized = name.trim().toLowerCase();
+  const preferredIndex = PREFERRED_PROVIDER_NAMES.findIndex(
+    (preferredName) => normalized === preferredName || normalized.includes(preferredName),
+  );
+
+  return preferredIndex === -1 ? Number.MAX_SAFE_INTEGER : preferredIndex;
+}
+
+function sortProviders(providers: ProviderInfo[]) {
+  return [...providers].sort(
+    (a, b) =>
+      getProviderPriority(a.name) - getProviderPriority(b.name) ||
+      (a.displayPriority ?? 9999) - (b.displayPriority ?? 9999) ||
+      a.name.localeCompare(b.name),
+  );
+}
+
 function normalizeSeasons(seasons: Record<string, unknown>[] | undefined): SeasonSummary[] | undefined {
   if (!seasons?.length) {
     return undefined;
@@ -107,7 +139,7 @@ function mapProviderGroup(label: TitleProviderAvailability["groups"][number]["la
 
   return {
     label,
-    providers: raw.map((provider) => normalizeProvider(provider)),
+    providers: sortProviders(raw.map((provider) => normalizeProvider(provider))),
   };
 }
 
@@ -214,7 +246,58 @@ export async function getCatalogRail(mediaType: MediaType): Promise<MediaRail[] 
   }
 }
 
-export async function searchCatalog(query: string): Promise<MediaSummary[] | null> {
+export async function getShowCatalogRails(): Promise<MediaRail[] | null> {
+  if (!hasTmdbCredentials()) {
+    return null;
+  }
+
+  try {
+    const [trending, airingToday, popular, topRated, onTheAir] = await Promise.all([
+      fetchTmdb<{ results: Record<string, unknown>[] }>("/trending/tv/week"),
+      fetchTmdb<{ results: Record<string, unknown>[] }>("/tv/airing_today"),
+      fetchTmdb<{ results: Record<string, unknown>[] }>("/tv/popular"),
+      fetchTmdb<{ results: Record<string, unknown>[] }>("/tv/top_rated"),
+      fetchTmdb<{ results: Record<string, unknown>[] }>("/tv/on_the_air"),
+    ]);
+
+    return [
+      {
+        id: "tv-trending",
+        title: "Trending Series",
+        eyebrow: "What everyone's starting",
+        items: trending.results.map((item) => normalizeSummary(item, "tv")).slice(0, 12),
+      },
+      {
+        id: "tv-airing-today",
+        title: "Airing Today",
+        eyebrow: "Fresh episodes",
+        items: airingToday.results.map((item) => normalizeSummary(item, "tv")).slice(0, 12),
+      },
+      {
+        id: "tv-popular",
+        title: "Popular Series",
+        eyebrow: "Big TV right now",
+        items: popular.results.map((item) => normalizeSummary(item, "tv")).slice(0, 12),
+      },
+      {
+        id: "tv-top-rated",
+        title: "Top Rated Series",
+        eyebrow: "Prestige picks",
+        items: topRated.results.map((item) => normalizeSummary(item, "tv")).slice(0, 12),
+      },
+      {
+        id: "tv-on-the-air",
+        title: "Currently On The Air",
+        eyebrow: "Week-to-week favorites",
+        items: onTheAir.results.map((item) => normalizeSummary(item, "tv")).slice(0, 12),
+      },
+    ];
+  } catch {
+    return null;
+  }
+}
+
+export async function searchCatalog(query: string, limit = 18): Promise<MediaSummary[] | null> {
   if (!query.trim()) {
     return [];
   }
@@ -231,7 +314,7 @@ export async function searchCatalog(query: string): Promise<MediaSummary[] | nul
     return response.results
       .filter((item) => item.media_type === "movie" || item.media_type === "tv")
       .map((item) => normalizeSummary(item))
-      .slice(0, 18);
+      .slice(0, limit);
   } catch {
     return null;
   }
@@ -379,12 +462,13 @@ export async function getProviderRails(region: string): Promise<ProviderRail[] |
 
     const sortedProviders = Array.from(providerMap.values()).sort(
       (a, b) =>
+        getProviderPriority(a.provider.name) - getProviderPriority(b.provider.name) ||
         (a.provider.displayPriority ?? 9999) - (b.provider.displayPriority ?? 9999) ||
         a.provider.name.localeCompare(b.provider.name),
     );
 
     const sections = await Promise.allSettled(
-      sortedProviders.slice(0, MAX_PROVIDER_RAILS).map(async ({ provider, mediaTypes }) => {
+      sortedProviders.slice(0, PROVIDER_CANDIDATE_LIMIT).map(async ({ provider, mediaTypes }) => {
         const mediaRequests = await Promise.allSettled(
           Array.from(mediaTypes).map(async (mediaType) => {
             const result = await fetchTmdb<{ results: Record<string, unknown>[] }>(
@@ -401,14 +485,19 @@ export async function getProviderRails(region: string): Promise<ProviderRail[] |
 
         const items = combineUniqueMedia(fulfilledItems).slice(0, 10);
 
-        if (!items.length) {
+        if (items.length < MIN_PROVIDER_RAIL_ITEMS) {
           return null;
         }
 
         return {
           id: `provider-${provider.providerId}`,
           title: provider.name,
-          eyebrow: `Streaming in ${normalizedRegion}`,
+          eyebrow:
+            mediaTypes.size > 1
+              ? `Top picks in ${normalizedRegion} · Movies and Series`
+              : mediaTypes.has("movie")
+                ? `Top movie picks in ${normalizedRegion}`
+                : `Top series picks in ${normalizedRegion}`,
           provider,
           items,
           mediaTypes: Array.from(mediaTypes),
@@ -423,7 +512,7 @@ export async function getProviderRails(region: string): Promise<ProviderRail[] |
       }
 
       return accumulator;
-    }, []);
+    }, []).slice(0, MAX_PROVIDER_RAILS);
   } catch {
     return null;
   }

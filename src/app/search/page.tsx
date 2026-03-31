@@ -1,3 +1,4 @@
+import { LiveSearch } from "@/components/live-search";
 import { PageHero } from "@/components/page-hero";
 import { PageFrame } from "@/components/page-frame";
 import { SearchResults } from "@/components/search-results";
@@ -33,21 +34,10 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
       <PageHero
         eyebrow="Search"
         title="Find a film, series, or tonight's next obsession."
-        description="Search stays simple for v1: one focused results page, better spacing, and clearer empty states."
+        description="Search now suggests movies and series while you type, then opens the full results page when you want to dig deeper."
       />
       <section className="surface rounded-[30px] p-6 sm:p-8">
-        <form className="flex flex-col gap-3 sm:flex-row" action="/search">
-          <input
-            type="search"
-            name="q"
-            defaultValue={query}
-            placeholder="Search titles from TMDB..."
-            className="surface min-h-14 flex-1 rounded-full px-5 text-base text-white outline-none placeholder:text-[var(--color-text-muted)]"
-          />
-          <button className="rounded-full bg-[var(--color-brand)] px-6 py-3 text-sm font-semibold text-[#07111f]">
-            Search
-          </button>
-        </form>
+        <LiveSearch initialQuery={query} placeholder="Search titles from TMDB..." variant="full" />
       </section>
       <SearchResults query={query} results={results} />
     </PageFrame>

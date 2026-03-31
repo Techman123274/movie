@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { UserButton, useAuth } from "@clerk/nextjs";
 import { ArrowRight, Menu, Search, Sparkles, UserCircle2 } from "lucide-react";
+import { LiveSearch } from "@/components/live-search";
 import { cn } from "@/lib/utils";
 
 const navItems = [
@@ -53,9 +54,12 @@ export function SiteHeader({ activeHref }: SiteHeaderProps) {
         </nav>
 
         <div className="relative z-20 flex shrink-0 items-center gap-2 pointer-events-auto sm:gap-3">
+          <div className="hidden lg:block">
+            <LiveSearch placeholder="Search movies and series..." />
+          </div>
           <Link
             href="/search"
-            className="surface flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[var(--color-text-muted)] transition hover:text-white"
+            className="surface flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[var(--color-text-muted)] transition hover:text-white lg:hidden"
           >
             <Search size={18} />
           </Link>
@@ -130,6 +134,9 @@ export function SiteHeader({ activeHref }: SiteHeaderProps) {
                     </div>
                   ) : null}
                 </div>
+              </div>
+              <div className="border-b border-white/8 px-4 py-4 md:hidden">
+                <LiveSearch placeholder="Search movies and series..." />
               </div>
               <nav id="site-mobile-nav" className="grid gap-2 px-4 py-4">
                 {navItems.map((item) => (

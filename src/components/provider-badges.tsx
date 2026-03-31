@@ -2,6 +2,14 @@ import Image from "next/image";
 import { getImageUrl } from "@/lib/tmdb";
 import type { TitleProviderAvailability } from "@/lib/types";
 
+const GROUP_LABELS: Record<TitleProviderAvailability["groups"][number]["label"], string> = {
+  stream: "Stream Now",
+  free: "Free To Watch",
+  ads: "With Ads",
+  rent: "Rent",
+  buy: "Buy",
+};
+
 type ProviderBadgesProps = {
   providers?: TitleProviderAvailability;
 };
@@ -30,8 +38,13 @@ export function ProviderBadges({ providers }: ProviderBadgesProps) {
       </div>
       <div className="grid gap-4 lg:grid-cols-2">
         {providers.groups.map((group) => (
-          <div key={group.label} className="surface rounded-[24px] p-5">
-            <p className="mb-4 text-xs uppercase tracking-[0.26em] text-[var(--color-text-muted)]">{group.label}</p>
+          <div
+            key={group.label}
+            className={`${group.label === "stream" ? "surface-strong lg:col-span-2" : "surface"} rounded-[24px] p-5`}
+          >
+            <p className="mb-4 text-xs uppercase tracking-[0.26em] text-[var(--color-text-muted)]">
+              {GROUP_LABELS[group.label]}
+            </p>
             <div className="flex flex-wrap gap-3">
               {group.providers.map((provider) => {
                 const logo = getImageUrl(provider.logoPath, "w342");
