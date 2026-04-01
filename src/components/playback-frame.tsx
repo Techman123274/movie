@@ -54,9 +54,11 @@ export function PlaybackFrame({
   const [autoAdvanceState, setAutoAdvanceState] = useState<"idle" | "advancing" | "complete" | "error">("idle");
   const [fullscreenMessage, setFullscreenMessage] = useState<string | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [showPlayerControls, setShowPlayerControls] = useState(true);
   const [loadedProviderKey, setLoadedProviderKey] = useState("");
   const [isPending, startTransition] = useTransition();
   const handledCompletionRef = useRef(false);
+  const controlsHideTimeoutRef = useRef<number | null>(null);
   const playerShellRef = useRef<HTMLDivElement>(null);
   const canAutoAdvance = provider.provider === "vidlink" && mediaType === "tv" && Boolean(nextEpisodeHref);
   const providerKey = `${provider.provider}-${provider.embedUrl}`;
@@ -167,6 +169,70 @@ export function PlaybackFrame({
       document.removeEventListener("webkitfullscreenchange", syncFullscreenState as EventListener);
     };
   }, []);
+
+  useEffect(() => {
+    return () => {
+      if (controlsHideTimeoutRef.current !== null) {
+        window.clearTimeout(controlsHideTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!frameLoaded) {
+      if (controlsHideTimeoutRef.current !== null) {
+        window.clearTimeout(controlsHideTimeoutRef.current);
+        controlsHideTimeoutRef.current = null;
+      }
+      return;
+    }
+
+    controlsHideTimeoutRef.current = window.setTimeout(() => {
+      setShowPlayerControls(false);
+      controlsHideTimeoutRef.current = null;
+    }, 1800);
+
+    return () => {
+      if (controlsHideTimeoutRef.current !== null) {
+        window.clearTimeout(controlsHideTimeoutRef.current);
+        controlsHideTimeoutRef.current = null;
+      }
+    };
+  }, [frameLoaded, providerKey]);
+
+  function revealPlayerControls() {
+    setShowPlayerControls(true);
+
+    if (controlsHideTimeoutRef.current !== null) {
+      window.clearTimeout(controlsHideTimeoutRef.current);
+    }
+
+    if (!frameLoaded) {
+      controlsHideTimeoutRef.current = null;
+      return;
+    }
+
+    controlsHideTimeoutRef.current = window.setTimeout(() => {
+      setShowPlayerControls(false);
+      controlsHideTimeoutRef.current = null;
+    }, 1800);
+  }
+
+  function hidePlayerControls() {
+    if (controlsHideTimeoutRef.current !== null) {
+      window.clearTimeout(controlsHideTimeoutRef.current);
+      controlsHideTimeoutRef.current = null;
+    }
+
+    if (frameLoaded) {
+      setShowPlayerControls(false);
+    }
+  }
+
+  function handleFrameLoad() {
+    setLoadedProviderKey(providerKey);
+    setShowPlayerControls(true);
+  }
 
   async function handleToggleFullscreen() {
     type FullscreenElement = HTMLDivElement & {
@@ -284,11 +350,19 @@ export function PlaybackFrame({
 
       <div
         ref={playerShellRef}
+        onMouseMove={revealPlayerControls}
+        onMouseEnter={revealPlayerControls}
+        onMouseLeave={hidePlayerControls}
+        onTouchStart={revealPlayerControls}
         className={`relative overflow-hidden border border-white/10 bg-black shadow-[0_24px_80px_rgba(0,0,0,0.5)] ${
           isFullscreen ? "flex h-full w-full items-center justify-center border-0 rounded-none" : "rounded-[32px]"
         }`}
       >
-        <div className="pointer-events-none absolute inset-x-0 top-0 z-20 flex justify-end p-4">
+        <div
+          className={`pointer-events-none absolute inset-x-0 top-0 z-20 flex justify-end p-4 transition duration-300 ${
+            showPlayerControls ? "opacity-100" : "opacity-0"
+          }`}
+        >
           <div className="pointer-events-auto flex flex-wrap items-center gap-2 rounded-full border border-white/10 bg-[rgba(6,12,20,0.78)] px-3 py-3 shadow-lg backdrop-blur-xl">
             <button
               type="button"
@@ -326,7 +400,7 @@ export function PlaybackFrame({
           allowFullScreen
           className={isFullscreen ? "h-full w-full" : "aspect-video w-full"}
           referrerPolicy="origin"
-          onLoad={() => setLoadedProviderKey(providerKey)}
+          onLoad={handleFrameLoad}
         />
       </div>
     </section>
