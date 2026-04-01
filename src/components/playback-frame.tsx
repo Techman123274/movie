@@ -52,9 +52,12 @@ export function PlaybackFrame({
 }: PlaybackFrameProps) {
   const router = useRouter();
   const [autoAdvanceState, setAutoAdvanceState] = useState<"idle" | "advancing" | "complete" | "error">("idle");
+  const [fullscreenMessage, setFullscreenMessage] = useState<string | null>(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const [loadedProviderKey, setLoadedProviderKey] = useState("");
   const [isPending, startTransition] = useTransition();
   const handledCompletionRef = useRef(false);
+  const playerShellRef = useRef<HTMLDivElement>(null);
   const canAutoAdvance = provider.provider === "vidlink" && mediaType === "tv" && Boolean(nextEpisodeHref);
   const providerKey = `${provider.provider}-${provider.embedUrl}`;
   const frameLoaded = loadedProviderKey === providerKey;
@@ -145,6 +148,73 @@ export function PlaybackFrame({
     };
   }, [router, provider.provider, profileId, mediaId, mediaType, seasonNumber, episodeNumber, nextEpisodeHref]);
 
+  useEffect(() => {
+    type FullscreenDocument = Document & {
+      webkitFullscreenElement?: Element;
+    };
+
+    const fullscreenDocument = document as FullscreenDocument;
+    const syncFullscreenState = () => {
+      setIsFullscreen(Boolean(document.fullscreenElement || fullscreenDocument.webkitFullscreenElement));
+    };
+
+    syncFullscreenState();
+    document.addEventListener("fullscreenchange", syncFullscreenState);
+    document.addEventListener("webkitfullscreenchange", syncFullscreenState as EventListener);
+
+    return () => {
+      document.removeEventListener("fullscreenchange", syncFullscreenState);
+      document.removeEventListener("webkitfullscreenchange", syncFullscreenState as EventListener);
+    };
+  }, []);
+
+  async function handleToggleFullscreen() {
+    type FullscreenElement = HTMLDivElement & {
+      webkitRequestFullscreen?: () => Promise<void> | void;
+    };
+    type FullscreenDocument = Document & {
+      webkitExitFullscreen?: () => Promise<void> | void;
+      webkitFullscreenElement?: Element;
+    };
+
+    const playerShell = playerShellRef.current as FullscreenElement | null;
+    const fullscreenDocument = document as FullscreenDocument;
+
+    if (!playerShell) {
+      return;
+    }
+
+    setFullscreenMessage(null);
+
+    try {
+      if (document.fullscreenElement || fullscreenDocument.webkitFullscreenElement) {
+        if (document.exitFullscreen) {
+          await document.exitFullscreen();
+          return;
+        }
+
+        if (fullscreenDocument.webkitExitFullscreen) {
+          await fullscreenDocument.webkitExitFullscreen();
+          return;
+        }
+      }
+
+      if (playerShell.requestFullscreen) {
+        await playerShell.requestFullscreen();
+        return;
+      }
+
+      if (playerShell.webkitRequestFullscreen) {
+        await playerShell.webkitRequestFullscreen();
+        return;
+      }
+
+      setFullscreenMessage("Fullscreen is unavailable in this browser.");
+    } catch {
+      setFullscreenMessage("Fullscreen was blocked here. Open the player in its own tab if needed.");
+    }
+  }
+
   return (
     <section className="space-y-4">
       <div className="flex items-center justify-between gap-4">
@@ -155,9 +225,22 @@ export function PlaybackFrame({
           <h2 className="display-font text-4xl text-white">Watching via {provider.label}</h2>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--color-text-muted)]">{provider.description}</p>
         </div>
-        <div className="rounded-full border border-[rgba(214,179,109,0.35)] px-4 py-2 text-sm text-[var(--color-brand-strong)]">
-          Ready to watch
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          <button
+            type="button"
+            onClick={handleToggleFullscreen}
+            className="surface min-h-11 rounded-full px-4 text-sm text-white transition hover:bg-white/10"
+          >
+            {isFullscreen ? "Exit fullscreen" : "Subflix fullscreen"}
+          </button>
+          <div className="rounded-full border border-[rgba(214,179,109,0.35)] px-4 py-2 text-sm text-[var(--color-brand-strong)]">
+            Ready to watch
+          </div>
         </div>
+      </div>
+      <div className="flex flex-wrap items-center gap-3 text-sm text-[var(--color-text-muted)]">
+        <p>If the provider&apos;s own fullscreen button throws an error, use Subflix fullscreen or open the player in its own tab.</p>
+        {fullscreenMessage ? <p className="text-[var(--color-brand-strong)]">{fullscreenMessage}</p> : null}
       </div>
 
       <div className="flex flex-wrap items-start justify-between gap-3 rounded-[28px] border border-white/10 bg-black/20 px-5 py-4">
@@ -199,7 +282,31 @@ export function PlaybackFrame({
 
       <PlaybackActions embedUrl={provider.embedUrl} title={title} />
 
-      <div className="relative overflow-hidden rounded-[32px] border border-white/10 bg-black shadow-[0_24px_80px_rgba(0,0,0,0.5)]">
+      <div
+        ref={playerShellRef}
+        className={`relative overflow-hidden border border-white/10 bg-black shadow-[0_24px_80px_rgba(0,0,0,0.5)] ${
+          isFullscreen ? "flex h-full w-full items-center justify-center border-0 rounded-none" : "rounded-[32px]"
+        }`}
+      >
+        <div className="pointer-events-none absolute inset-x-0 top-0 z-20 flex justify-end p-4">
+          <div className="pointer-events-auto flex flex-wrap items-center gap-2 rounded-full border border-white/10 bg-[rgba(6,12,20,0.78)] px-3 py-3 shadow-lg backdrop-blur-xl">
+            <button
+              type="button"
+              onClick={handleToggleFullscreen}
+              className="surface min-h-10 rounded-full px-4 text-sm text-white transition hover:bg-white/10"
+            >
+              {isFullscreen ? "Exit fullscreen" : "Subflix fullscreen"}
+            </button>
+            <a
+              href={provider.embedUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="rounded-full bg-[var(--color-brand)] px-4 py-2 text-sm font-semibold text-[#07111f]"
+            >
+              Open player
+            </a>
+          </div>
+        </div>
         {!frameLoaded ? (
           <div className="absolute inset-0 z-10 flex items-center justify-center bg-[linear-gradient(180deg,rgba(6,12,20,0.92),rgba(6,12,20,0.82))]">
             <div className="rounded-[24px] border border-white/10 bg-[rgba(6,12,20,0.74)] px-6 py-5 text-center shadow-xl backdrop-blur-xl">
@@ -217,7 +324,7 @@ export function PlaybackFrame({
           title="Playback"
           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen; remote-playback; display-capture"
           allowFullScreen
-          className="aspect-video w-full"
+          className={isFullscreen ? "h-full w-full" : "aspect-video w-full"}
           referrerPolicy="origin"
           onLoad={() => setLoadedProviderKey(providerKey)}
         />
