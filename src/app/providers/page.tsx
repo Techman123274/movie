@@ -15,8 +15,8 @@ export default async function ProvidersPage() {
     return (
       <PageFrame activeHref="/providers">
         <UnavailablePanel
-          title="Provider sections are unavailable."
-          message="Provider rails now come directly from TMDB watch-provider data. Verify the TMDB configuration and try again."
+          title="Where to watch is unavailable."
+          message="Availability information could not be loaded right now. Please try again in a moment."
         />
       </PageFrame>
     );
@@ -25,9 +25,9 @@ export default async function ProvidersPage() {
   return (
     <PageFrame activeHref="/providers">
       <PageHero
-        eyebrow="Providers"
-        title="Browse Netflix, Hulu, Max, Prime Video, and every other TMDB provider rail."
-        description="Provider discovery lives here now, separate from the playback providers used on watch pages."
+        eyebrow="Where to Watch"
+        title="See where movies and series are available across your favorite services."
+        description="Browse streaming availability by service and keep discovery separate from the watch experience."
       />
 
       {viewer.activeProfile ? <RegionForm profile={viewer.activeProfile} returnTo="/providers" /> : null}
@@ -36,8 +36,8 @@ export default async function ProvidersPage() {
         <ProviderRailList rails={rails} />
       ) : (
         <EmptyState
-          title="No provider rails for this region"
-          message="Try another two-letter region code on the active profile to refresh TMDB provider availability."
+          title="No services found for this region"
+          message="Try a different region on your active profile to refresh availability."
         />
       )}
     </PageFrame>

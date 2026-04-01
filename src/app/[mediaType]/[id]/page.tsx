@@ -5,11 +5,13 @@ import { EpisodeBrowser } from "@/components/episode-browser";
 import { MediaRail } from "@/components/media-rail";
 import { PageFrame } from "@/components/page-frame";
 import { ProviderBadges } from "@/components/provider-badges";
+import { TitleFactsPanel } from "@/components/title-facts-panel";
+import { TitleTrailerPanel } from "@/components/title-trailer-panel";
 import { UnavailablePanel } from "@/components/unavailable-panel";
-import { getResumeTarget, isInWatchlist } from "@/lib/persistence";
+import { getProfileFeedback, getResumeTarget, getWatchlist } from "@/lib/persistence";
 import { getMediaDetail, getSeasonEpisodes } from "@/lib/tmdb";
 import type { MediaType } from "@/lib/types";
-import { parsePositiveInt, resolveSeasonSelection } from "@/lib/utils";
+import { buildMediaKey, parsePositiveInt, resolveSeasonSelection } from "@/lib/utils";
 import { getViewerContext } from "@/lib/viewer";
 
 type DetailPageProps = {
@@ -37,18 +39,23 @@ export default async function DetailPage({ params, searchParams }: DetailPagePro
       <PageFrame activeHref={mediaType === "movie" ? "/movies" : "/shows"}>
         <UnavailablePanel
           title="Title details are unavailable."
-          message="This page now depends on live TMDB metadata only. Verify the TMDB configuration or the title ID and try again."
+          message="The details for this title could not be loaded right now. Please try again in a moment."
         />
       </PageFrame>
     );
   }
 
-  const [inWatchlist, resumeTarget] = viewer.activeProfile
+  const [watchlist, resumeTarget] = viewer.activeProfile
     ? await Promise.all([
-        isInWatchlist(viewer.activeProfile.id, detail.id, detail.mediaType),
+        getWatchlist(viewer.activeProfile.id),
         getResumeTarget(viewer.activeProfile.id, detail.id, detail.mediaType),
       ])
-    : [false, null];
+    : [[], null];
+  const watchlistKeys = watchlist.map((record) => buildMediaKey(record.mediaType, record.mediaId));
+  const inWatchlist = watchlistKeys.includes(buildMediaKey(detail.mediaType, detail.id));
+  const feedback = viewer.activeProfile
+    ? await getProfileFeedback(viewer.activeProfile.id, detail.id, detail.mediaType)
+    : null;
   const selectedSeasonNumber =
     mediaType === "tv"
       ? resolveSeasonSelection({
@@ -69,7 +76,10 @@ export default async function DetailPage({ params, searchParams }: DetailPagePro
         profileId={viewer.activeProfile?.id ?? null}
         inWatchlist={inWatchlist}
         resumeTarget={resumeTarget}
+        feedback={feedback?.value ?? null}
       />
+      <TitleFactsPanel item={detail} />
+      <TitleTrailerPanel trailers={detail.trailers} />
       <ProviderBadges providers={detail.providers} />
       {season && detail.seasons ? (
         <EpisodeBrowser
@@ -85,8 +95,11 @@ export default async function DetailPage({ params, searchParams }: DetailPagePro
           id: "related",
           title: "You may also like",
           eyebrow: "More from the vault",
+          description: "Close the loop with related titles while this story is still top of mind.",
           items: detail.related,
         }}
+        profileId={viewer.activeProfile?.id ?? null}
+        watchlistKeys={watchlistKeys}
       />
     </PageFrame>
   );

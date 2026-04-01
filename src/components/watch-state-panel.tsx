@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState, useTransition } from "react";
-import { CheckCircle2, LoaderCircle, RotateCcw } from "lucide-react";
+import { CheckCircle2, Clock3, LoaderCircle, RotateCcw } from "lucide-react";
 import { useRouter } from "next/navigation";
-import type { MediaType, WatchStateEvent } from "@/lib/types";
+import { postWatchState } from "@/lib/watch-state-client";
+import type { MediaType } from "@/lib/types";
 
 type WatchStatePanelProps = {
   profileId: string | null;
@@ -13,27 +14,6 @@ type WatchStatePanelProps = {
   seasonNumber?: number;
   episodeNumber?: number;
 };
-
-async function postWatchState(payload: {
-  profileId: string | null;
-  mediaId: number;
-  mediaType: MediaType;
-  seasonNumber?: number;
-  episodeNumber?: number;
-  event: WatchStateEvent;
-}) {
-  const response = await fetch("/api/watch-state", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(payload),
-  });
-
-  if (!response.ok) {
-    throw new Error("Watch state request failed.");
-  }
-}
 
 export function WatchStatePanel({
   profileId,
@@ -45,8 +25,10 @@ export function WatchStatePanel({
   const router = useRouter();
   const [syncState, setSyncState] = useState<"idle" | "synced" | "error">("idle");
   const [message, setMessage] = useState<string | null>(null);
+  const [trackedSeconds, setTrackedSeconds] = useState(0);
   const [isPending, startTransition] = useTransition();
   const lastStartedKeyRef = useRef<string | null>(null);
+  const lastProgressSentRef = useRef(0);
   const watchKey = `${profileId ?? "guest"}-${mediaType}-${mediaId}-${seasonNumber ?? 0}-${episodeNumber ?? 0}`;
 
   useEffect(() => {
@@ -84,6 +66,58 @@ export function WatchStatePanel({
     };
   }, [watchKey, profileId, mediaId, mediaType, seasonNumber, episodeNumber]);
 
+  useEffect(() => {
+    if (!profileId) {
+      return;
+    }
+
+    const intervalId = window.setInterval(() => {
+      if (document.visibilityState !== "visible") {
+        return;
+      }
+
+      setTrackedSeconds((current) => current + 5);
+    }, 5000);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, [profileId]);
+
+  useEffect(() => {
+    if (!profileId || trackedSeconds < 15 || trackedSeconds - lastProgressSentRef.current < 15) {
+      return;
+    }
+
+    let isCanceled = false;
+
+    void postWatchState({
+      profileId,
+      mediaId,
+      mediaType,
+      seasonNumber,
+      episodeNumber,
+      progressSeconds: trackedSeconds,
+      event: "progress",
+    })
+      .then(() => {
+        if (!isCanceled) {
+          lastProgressSentRef.current = trackedSeconds;
+          setSyncState("synced");
+        }
+      })
+      .catch(() => {
+        if (!isCanceled) {
+          setSyncState("error");
+          setMessage("Progress sync is temporarily unavailable.");
+        }
+      });
+
+    return () => {
+      isCanceled = true;
+    };
+  }, [trackedSeconds, profileId, mediaId, mediaType, seasonNumber, episodeNumber]);
+
   async function handleMarkWatched() {
     if (!profileId) {
       return;
@@ -117,8 +151,7 @@ export function WatchStatePanel({
         <p className="mb-2 text-xs uppercase tracking-[0.3em] text-[var(--color-brand-strong)]">Watch state</p>
         <h3 className="text-lg font-medium text-white">Sign in to save resume state and recent activity</h3>
         <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--color-text-muted)]">
-          Watch history and continue watching stay tied to your active profile, so you can pick up later from browse,
-          account, and detail pages.
+          Keep your place, save recent activity, and jump back in from home, details, or My Space.
         </p>
         <div className="mt-4">
           <Link
@@ -139,8 +172,7 @@ export function WatchStatePanel({
           <p className="mb-2 text-xs uppercase tracking-[0.3em] text-[var(--color-brand-strong)]">Watch state</p>
           <h3 className="text-lg font-medium text-white">Resume tracking is active for this profile</h3>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--color-text-muted)]">
-            Opening this player updates your resume queue automatically. When you finish, mark it watched to clear it
-            from continue watching and keep it in recent history.
+            Your progress is saved as you watch so Continue Watching stays helpful and easy to trust.
           </p>
         </div>
         <button
@@ -165,6 +197,10 @@ export function WatchStatePanel({
             : syncState === "idle"
               ? "Resume state saving in background"
               : "Resume state synced"}
+        </span>
+        <span className="flex items-center gap-2">
+          <Clock3 size={14} className="text-[var(--color-brand-strong)]" />
+          {Math.max(0, Math.floor(trackedSeconds / 60))}m tracked this session
         </span>
         {message ? <span className="text-[var(--color-brand-strong)]">{message}</span> : null}
       </div>

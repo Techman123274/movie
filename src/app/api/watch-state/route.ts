@@ -1,7 +1,13 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { clearWatchProgress, completeWatch, getProfileForUser, recordWatchStart } from "@/lib/persistence";
+import {
+  clearWatchProgress,
+  completeWatch,
+  getProfileForUser,
+  recordWatchProgress,
+  recordWatchStart,
+} from "@/lib/persistence";
 
 const watchStateSchema = z.object({
   profileId: z.string().trim().min(1),
@@ -9,7 +15,8 @@ const watchStateSchema = z.object({
   mediaType: z.enum(["movie", "tv"]),
   seasonNumber: z.number().int().positive().optional(),
   episodeNumber: z.number().int().positive().optional(),
-  event: z.enum(["start", "complete", "clear"]),
+  progressSeconds: z.number().int().nonnegative().optional(),
+  event: z.enum(["start", "progress", "complete", "clear"]),
 });
 
 export async function POST(request: Request) {
@@ -38,11 +45,17 @@ export async function POST(request: Request) {
     mediaType: parsed.data.mediaType,
     seasonNumber: parsed.data.seasonNumber,
     episodeNumber: parsed.data.episodeNumber,
+    progressSeconds: parsed.data.progressSeconds,
   };
 
   const result =
     parsed.data.event === "start"
       ? await recordWatchStart(payload)
+      : parsed.data.event === "progress"
+        ? await recordWatchProgress({
+            ...payload,
+            progressSeconds: parsed.data.progressSeconds ?? 0,
+          })
       : parsed.data.event === "complete"
         ? await completeWatch(payload)
         : await clearWatchProgress(payload);

@@ -17,7 +17,7 @@ export default async function SignInPage() {
         <p className="text-[10px] uppercase tracking-[0.32em] text-[var(--color-brand-strong)]">Welcome Back</p>
         <h1 className="display-font mt-3 text-4xl text-white">Log in to Subflix</h1>
         <p className="mt-3 text-sm leading-6 text-[var(--color-text-muted)]">
-          Sign in with Clerk to access profiles, continue watching, and region-aware discovery.
+          Sign in to unlock profiles, continue watching, and a more personal home screen.
         </p>
         <div className="mt-6">
           <SignIn path="/sign-in" routing="path" signUpUrl="/sign-up" fallbackRedirectUrl="/browse" />

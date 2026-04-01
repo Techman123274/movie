@@ -3,10 +3,10 @@ import { EmptyState } from "@/components/empty-state";
 import { MediaRail } from "@/components/media-rail";
 import { PageFrame } from "@/components/page-frame";
 import { RouteLinkRow } from "@/components/route-link-row";
-import { RegionForm } from "@/components/region-form";
 import { UnavailablePanel } from "@/components/unavailable-panel";
 import { getWatchlist } from "@/lib/persistence";
 import { getMediaSummariesByIds } from "@/lib/tmdb";
+import { buildMediaKey } from "@/lib/utils";
 import { getViewerContext } from "@/lib/viewer";
 import { getPersonalizedRails } from "@/lib/watch-state";
 
@@ -15,10 +15,10 @@ export default async function AccountPage() {
 
   if (viewer.readinessIssue === "missing-supabase-config" || viewer.readinessIssue === "missing-service-role") {
     return (
-      <PageFrame>
+      <PageFrame activeHref="/account">
         <UnavailablePanel
           title="Account data is unavailable."
-          message="This page now relies on real Supabase-backed user records only. Add the missing Supabase credentials and try again."
+          message="Your account details could not be loaded right now. Please try again in a moment."
         />
       </PageFrame>
     );
@@ -26,7 +26,7 @@ export default async function AccountPage() {
 
   if (!viewer.activeProfile) {
     return (
-      <PageFrame>
+      <PageFrame activeHref="/account">
         <EmptyState
           title="No active profile"
           message="Choose or create a profile before using watchlist and continue watching."
@@ -42,6 +42,7 @@ export default async function AccountPage() {
   const watchlistItems = await getMediaSummariesByIds(
     watchlist.map((record) => ({ mediaType: record.mediaType, mediaId: record.mediaId })),
   );
+  const watchlistKeys = watchlist.map((record) => buildMediaKey(record.mediaType, record.mediaId));
 
   const watchlistRail = {
     id: "watchlist",
@@ -51,8 +52,15 @@ export default async function AccountPage() {
   };
 
   return (
-    <PageFrame>
+    <PageFrame activeHref="/account">
       <AccountOverview
+        activeProfile={{
+          name: viewer.activeProfile.name,
+          avatar: viewer.activeProfile.avatar,
+          accent: viewer.activeProfile.accent,
+          maturityRating: viewer.activeProfile.maturityRating,
+          providerRegion: viewer.activeProfile.providerRegion,
+        }}
         stats={{
           profiles: viewer.profiles.length,
           continueWatching: personalized.continueWatchingCount,
@@ -64,12 +72,30 @@ export default async function AccountPage() {
         items={[
           { href: "/profiles", label: "Switch Profiles" },
           { href: "/settings", label: "Settings" },
-          { href: "/providers", label: "Providers" },
+          { href: "/providers", label: "Where to Watch" },
         ]}
       />
-      <RegionForm profile={viewer.activeProfile} returnTo="/account" />
-      {personalized.continueWatchingRail ? <MediaRail rail={personalized.continueWatchingRail} /> : null}
-      {personalized.recentlyWatchedRail ? <MediaRail rail={personalized.recentlyWatchedRail} /> : null}
+      {personalized.continueWatchingRail ? (
+        <MediaRail
+          rail={personalized.continueWatchingRail}
+          profileId={viewer.activeProfile.id}
+          watchlistKeys={watchlistKeys}
+        />
+      ) : null}
+      {personalized.becauseYouWatchedRail ? (
+        <MediaRail
+          rail={personalized.becauseYouWatchedRail}
+          profileId={viewer.activeProfile.id}
+          watchlistKeys={watchlistKeys}
+        />
+      ) : null}
+      {personalized.recentlyWatchedRail ? (
+        <MediaRail
+          rail={personalized.recentlyWatchedRail}
+          profileId={viewer.activeProfile.id}
+          watchlistKeys={watchlistKeys}
+        />
+      ) : null}
       {!personalized.continueWatchingRail && !personalized.recentlyWatchedRail ? (
         <EmptyState
           title="No watch activity yet"
@@ -77,11 +103,11 @@ export default async function AccountPage() {
         />
       ) : null}
       {watchlistItems.length ? (
-        <MediaRail rail={watchlistRail} />
+        <MediaRail rail={watchlistRail} profileId={viewer.activeProfile.id} watchlistKeys={watchlistKeys} />
       ) : (
         <EmptyState
           title="Watchlist is empty"
-          message="Save titles from a detail page to build this rail with real TMDB-backed artwork and metadata."
+          message="Save titles from any details page to build a queue you can come back to anytime."
         />
       )}
     </PageFrame>

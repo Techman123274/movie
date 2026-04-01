@@ -5,9 +5,15 @@ import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { createProfileForUser, ensureAppUser, toggleWatchlist, updateProfileRegion } from "@/lib/persistence";
+import {
+  createProfileForUser,
+  ensureAppUser,
+  setProfileFeedback,
+  toggleWatchlist,
+  updateProfileRegion,
+} from "@/lib/persistence";
 import { ACTIVE_PROFILE_COOKIE } from "@/lib/viewer";
-import type { MediaType } from "@/lib/types";
+import type { FeedbackValue, MediaType } from "@/lib/types";
 
 const onboardingSchema = z.object({
   name: z.string().trim().min(2).max(32),
@@ -16,6 +22,8 @@ const onboardingSchema = z.object({
   maturityRating: z.string().trim().min(2).max(10),
   providerRegion: z.string().trim().length(2),
 });
+
+const feedbackValues = new Set<FeedbackValue>(["like", "dislike", "not_interested"]);
 
 export async function createInitialProfileAction(formData: FormData) {
   const { userId } = await auth();
@@ -134,6 +142,37 @@ export async function toggleWatchlistAction(formData: FormData) {
 
   await toggleWatchlist(profileId, mediaId, mediaType);
   revalidatePath(returnTo);
+  revalidatePath("/account");
+  redirect(returnTo);
+}
+
+export async function setTitleFeedbackAction(formData: FormData) {
+  const { userId } = await auth();
+
+  if (!userId) {
+    redirect("/account");
+  }
+
+  const profileId = String(formData.get("profileId") || "");
+  const returnTo = String(formData.get("returnTo") || "/");
+  const mediaId = Number(formData.get("mediaId"));
+  const mediaType = String(formData.get("mediaType")) as MediaType;
+  const valueRaw = String(formData.get("value") || "");
+  const value = feedbackValues.has(valueRaw as FeedbackValue) ? (valueRaw as FeedbackValue) : null;
+
+  if (!profileId || !mediaId || (mediaType !== "movie" && mediaType !== "tv")) {
+    redirect(returnTo);
+  }
+
+  await setProfileFeedback({
+    profileId,
+    mediaId,
+    mediaType,
+    value,
+  });
+
+  revalidatePath(returnTo);
+  revalidatePath("/browse");
   revalidatePath("/account");
   redirect(returnTo);
 }

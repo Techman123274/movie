@@ -2,14 +2,15 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PageFrame } from "@/components/page-frame";
 import { ProviderGate } from "@/components/provider-gate";
+import { RouteLinkRow } from "@/components/route-link-row";
 import { SeasonPicker } from "@/components/season-picker";
 import { UnavailablePanel } from "@/components/unavailable-panel";
 import { WatchStatePanel } from "@/components/watch-state-panel";
 import { getResumeTarget } from "@/lib/persistence";
 import { resolvePlaybackOptions } from "@/lib/playback";
-import { getMediaDetail, getSeasonEpisodes } from "@/lib/tmdb";
+import { getImageUrl, getMediaDetail, getSeasonEpisodes } from "@/lib/tmdb";
 import type { MediaType } from "@/lib/types";
-import { buildWatchHref, formatEpisodeLabel, parsePositiveInt, resolveSeasonSelection } from "@/lib/utils";
+import { buildWatchHref, formatEpisodeLabel, formatRuntime, parsePositiveInt, resolveSeasonSelection } from "@/lib/utils";
 import { getViewerContext } from "@/lib/viewer";
 
 type WatchPageProps = {
@@ -38,7 +39,7 @@ export default async function WatchPage({ params, searchParams }: WatchPageProps
       <PageFrame>
         <UnavailablePanel
           title="Watch data is unavailable."
-          message="Playback pages still use the validated playback providers, but the title metadata now comes from live TMDB only."
+          message="This watch page could not be loaded right now. Please try again in a moment."
         />
       </PageFrame>
     );
@@ -108,18 +109,59 @@ export default async function WatchPage({ params, searchParams }: WatchPageProps
           ? buildWatchHref("tv", detail.id, nextSeason.seasonNumber, 1)
           : null
       : null;
+  const watchBackdrop = getImageUrl(detail.backdropPath, "w1280");
+  const enabledProviderCount = providers.filter((provider) => provider.availability === "enabled").length;
+  const resumeMinutes =
+    resumeTarget?.progressSeconds && resumeTarget.progressSeconds > 0
+      ? `${Math.max(1, Math.floor(resumeTarget.progressSeconds / 60))}m saved`
+      : null;
 
   return (
     <PageFrame>
-      <section className="surface-strong rounded-[34px] p-8">
-        <p className="mb-3 text-xs uppercase tracking-[0.32em] text-[var(--color-brand-strong)]">Watch</p>
-        <h1 className="display-font text-5xl text-white">{detail.title}</h1>
-        <p className="mt-4 max-w-3xl text-base leading-7 text-[var(--color-text-muted)]">
-          {mediaType === "tv"
-            ? `Season ${season?.seasonNumber ?? seasonNumber ?? 1}, episode ${currentEpisode?.episodeNumber ?? episodeNumber}. This player now records resume state for the active profile so browse, account, and detail pages can bring you back here quickly.`
-            : "This distraction-free watch shell now updates profile resume state automatically so you can jump back in from the rest of the app."}
-        </p>
+      <section
+        className="relative overflow-hidden rounded-[34px] border border-white/10 px-8 py-8 shadow-[0_24px_80px_rgba(0,0,0,0.45)]"
+        style={{
+          backgroundImage: watchBackdrop
+            ? `linear-gradient(90deg, rgba(6,12,20,0.94) 0%, rgba(6,12,20,0.8) 45%, rgba(6,12,20,0.42) 100%), url(${watchBackdrop})`
+            : "linear-gradient(135deg, rgba(214,179,109,0.16), rgba(6,12,20,0.96))",
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+        }}
+      >
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(214,179,109,0.16),transparent_32%)]" />
+        <div className="relative">
+          <p className="mb-3 text-xs uppercase tracking-[0.32em] text-[var(--color-brand-strong)]">Watch</p>
+          <h1 className="display-font text-5xl text-white">{detail.title}</h1>
+          <p className="mt-4 max-w-3xl text-base leading-7 text-[var(--color-text-muted)]">
+            {mediaType === "tv"
+              ? `Season ${season?.seasonNumber ?? seasonNumber ?? 1}, episode ${currentEpisode?.episodeNumber ?? episodeNumber}. Keep your place, move between servers, and stay ready for the next episode.`
+              : "Pick up the movie, switch servers if needed, and keep your place without leaving the watch page."}
+          </p>
+          <div className="mt-6 flex flex-wrap gap-3 text-xs uppercase tracking-[0.22em] text-[var(--color-text-muted)]">
+            <span className="rounded-full border border-white/10 bg-black/20 px-4 py-2">
+              {enabledProviderCount} servers ready
+            </span>
+            {resumeMinutes ? (
+              <span className="rounded-full border border-[rgba(214,179,109,0.24)] bg-[rgba(214,179,109,0.08)] px-4 py-2 text-[var(--color-brand-strong)]">
+                {resumeMinutes}
+              </span>
+            ) : null}
+            <span className="rounded-full border border-white/10 bg-black/20 px-4 py-2">
+              {mediaType === "tv"
+                ? formatEpisodeLabel(season?.seasonNumber, currentEpisode?.episodeNumber) ?? "Episode ready"
+                : formatRuntime(detail.runtime)}
+            </span>
+          </div>
+        </div>
       </section>
+
+      <RouteLinkRow
+        items={[
+          { href: `/${mediaType}/${detail.id}`, label: "Back to details" },
+          { href: "/browse", label: "For You" },
+          { href: "/account", label: "My Space" },
+        ]}
+      />
 
       {mediaType === "tv" && season && currentEpisode && detail.seasons ? (
         <section className="surface rounded-[30px] p-6">
@@ -164,6 +206,17 @@ export default async function WatchPage({ params, searchParams }: WatchPageProps
         </section>
       ) : null}
 
+      <ProviderGate
+        providers={providers}
+        title={detail.title}
+        profileId={viewer.activeProfile?.id ?? null}
+        mediaId={detail.id}
+        mediaType={mediaType as MediaType}
+        seasonNumber={mediaType === "tv" ? seasonNumber : undefined}
+        episodeNumber={mediaType === "tv" ? episodeNumber : undefined}
+        nextEpisodeHref={nextEpisodeHref}
+      />
+
       <WatchStatePanel
         profileId={viewer.activeProfile?.id ?? null}
         mediaId={detail.id}
@@ -171,8 +224,6 @@ export default async function WatchPage({ params, searchParams }: WatchPageProps
         seasonNumber={mediaType === "tv" ? seasonNumber : undefined}
         episodeNumber={mediaType === "tv" ? episodeNumber : undefined}
       />
-
-      <ProviderGate providers={providers} />
 
       {season?.episodes?.length ? (
         <section className="surface rounded-[30px] p-6">

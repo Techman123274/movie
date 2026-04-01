@@ -1,5 +1,5 @@
 import { clsx, type ClassValue } from "clsx";
-import type { SeasonSummary } from "@/lib/types";
+import type { MediaType, SeasonSummary } from "@/lib/types";
 
 export function cn(...inputs: ClassValue[]) {
   return clsx(inputs);
@@ -38,6 +38,10 @@ export function formatRuntime(runtime?: number) {
 
 export function formatMediaLabel(mediaType: "movie" | "tv") {
   return mediaType === "movie" ? "Movie" : "Series";
+}
+
+export function buildMediaKey(mediaType: MediaType, mediaId: number) {
+  return `${mediaType}-${mediaId}`;
 }
 
 export function buildWatchHref(

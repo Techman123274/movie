@@ -1,14 +1,20 @@
 import { env, hasTmdbCredentials } from "@/lib/env";
 import type {
+  CatalogFilters,
+  GenreOption,
   HomePageData,
   MediaDetail,
   MediaRail,
   MediaSummary,
   MediaType,
+  PersonSummary,
   ProviderInfo,
   ProviderRail,
+  SearchExperienceFilters,
+  SearchExperienceResult,
   SeasonSummary,
   TitleProviderAvailability,
+  TrailerVideo,
 } from "@/lib/types";
 
 const TMDB_BASE_URL = "https://api.themoviedb.org/3";
@@ -16,6 +22,7 @@ export const TMDB_IMAGE_BASE = "https://image.tmdb.org/t/p";
 const MAX_PROVIDER_RAILS = 12;
 const PROVIDER_CANDIDATE_LIMIT = 24;
 const MIN_PROVIDER_RAIL_ITEMS = 4;
+const DEFAULT_DISCOVER_LIMIT = 12;
 const PREFERRED_PROVIDER_NAMES = [
   "netflix",
   "amazon prime video",
@@ -28,6 +35,33 @@ const PREFERRED_PROVIDER_NAMES = [
   "peacock premium",
   "crunchyroll",
 ];
+
+const MOVIE_GENRES: GenreOption[] = [
+  { id: 28, label: "Action", mediaType: "movie" },
+  { id: 12, label: "Adventure", mediaType: "movie" },
+  { id: 35, label: "Comedy", mediaType: "movie" },
+  { id: 18, label: "Drama", mediaType: "movie" },
+  { id: 27, label: "Horror", mediaType: "movie" },
+  { id: 9648, label: "Mystery", mediaType: "movie" },
+  { id: 878, label: "Sci-Fi", mediaType: "movie" },
+  { id: 53, label: "Thriller", mediaType: "movie" },
+];
+
+const TV_GENRES: GenreOption[] = [
+  { id: 10759, label: "Action & Adventure", mediaType: "tv" },
+  { id: 35, label: "Comedy", mediaType: "tv" },
+  { id: 80, label: "Crime", mediaType: "tv" },
+  { id: 18, label: "Drama", mediaType: "tv" },
+  { id: 9648, label: "Mystery", mediaType: "tv" },
+  { id: 10765, label: "Sci-Fi & Fantasy", mediaType: "tv" },
+  { id: 10764, label: "Reality", mediaType: "tv" },
+  { id: 10768, label: "War & Politics", mediaType: "tv" },
+];
+
+type SearchApiFilter = {
+  type?: "all" | MediaType;
+  limit?: number;
+};
 
 function tmdbHeaders() {
   if (env.tmdbReadToken) {
@@ -58,6 +92,11 @@ async function fetchTmdb<T>(path: string): Promise<T> {
 
 function normalizeSummary(item: Record<string, unknown>, fallbackType?: MediaType): MediaSummary {
   const mediaType = (item.media_type as MediaType) || fallbackType || "movie";
+  const genreIds = (item.genre_ids as number[] | undefined) ?? undefined;
+  const genreNames =
+    ((item.genres as { name: string }[] | undefined)?.map((genre) => genre.name) ??
+      genreIds?.map((genreId) => getGenreLabel(mediaType, genreId)) ??
+      []) as string[];
 
   return {
     id: Number(item.id),
@@ -66,12 +105,13 @@ function normalizeSummary(item: Record<string, unknown>, fallbackType?: MediaTyp
     overview: String(item.overview || "No synopsis available."),
     posterPath: (item.poster_path as string | null) ?? null,
     backdropPath: (item.backdrop_path as string | null) ?? null,
-    genreNames:
-      ((item.genres as { name: string }[] | undefined)?.map((genre) => genre.name) ??
-        (item.genre_ids as number[] | undefined)?.map((genreId) => genreId.toString()) ??
-        []) as string[],
+    genreNames,
+    genreIds,
     releaseDate: (item.release_date as string | undefined) || (item.first_air_date as string | undefined),
     voteAverage: typeof item.vote_average === "number" ? item.vote_average : undefined,
+    popularity: typeof item.popularity === "number" ? item.popularity : undefined,
+    originalLanguage: typeof item.original_language === "string" ? item.original_language : undefined,
+    runtime: typeof item.runtime === "number" ? item.runtime : undefined,
   };
 }
 
@@ -80,8 +120,34 @@ function normalizeProvider(provider: Record<string, unknown>): ProviderInfo {
     providerId: Number(provider.provider_id),
     name: String(provider.provider_name || "Unknown"),
     logoPath: (provider.logo_path as string | null) ?? null,
-    displayPriority:
-      typeof provider.display_priority === "number" ? provider.display_priority : undefined,
+    displayPriority: typeof provider.display_priority === "number" ? provider.display_priority : undefined,
+  };
+}
+
+function normalizeTrailer(video: Record<string, unknown>): TrailerVideo {
+  return {
+    id: String(video.id || crypto.randomUUID()),
+    key: String(video.key || ""),
+    name: String(video.name || "Trailer"),
+    site: video.site === "YouTube" ? "YouTube" : "Unknown",
+    type: String(video.type || "Trailer"),
+    official: Boolean(video.official),
+  };
+}
+
+function normalizePerson(person: Record<string, unknown>): PersonSummary {
+  const knownForItems =
+    ((person.known_for as Record<string, unknown>[] | undefined) ?? [])
+      .filter((item) => item.media_type === "movie" || item.media_type === "tv")
+      .map((item) => normalizeSummary(item))
+      .slice(0, 4);
+
+  return {
+    id: Number(person.id),
+    name: String(person.name || "Unknown"),
+    knownForDepartment: typeof person.known_for_department === "string" ? person.known_for_department : undefined,
+    profilePath: (person.profile_path as string | null) ?? null,
+    knownFor: knownForItems,
   };
 }
 
@@ -119,8 +185,8 @@ function normalizeSeasons(seasons: Record<string, unknown>[] | undefined): Seaso
     }));
 }
 
-function combineUniqueMedia(items: MediaSummary[]) {
-  const seen = new Set<string>();
+function combineUniqueMedia(items: MediaSummary[], excludeKeys: Set<string> = new Set()) {
+  const seen = new Set<string>(excludeKeys);
 
   return items.filter((item) => {
     const key = `${item.mediaType}-${item.id}`;
@@ -143,12 +209,110 @@ function mapProviderGroup(label: TitleProviderAvailability["groups"][number]["la
   };
 }
 
+function getGenreLabel(mediaType: MediaType, genreId: number) {
+  const match = [...MOVIE_GENRES, ...TV_GENRES].find((genre) => genre.mediaType === mediaType && genre.id === genreId);
+  return match?.label ?? String(genreId);
+}
+
+function buildDiscoverQuery(filters: CatalogFilters) {
+  const searchParams = new URLSearchParams();
+  searchParams.set(
+    "sort_by",
+    filters.sort ??
+      (filters.mediaType === "movie" ? "popularity.desc" : "popularity.desc"),
+  );
+  searchParams.set("include_adult", "false");
+  searchParams.set("include_null_first_air_dates", "false");
+
+  if (filters.genreId) {
+    searchParams.set("with_genres", String(filters.genreId));
+  }
+
+  if (filters.language) {
+    searchParams.set("with_original_language", filters.language);
+  }
+
+  return `/discover/${filters.mediaType}?${searchParams.toString()}`;
+}
+
+function applyTitleFilters(
+  items: MediaSummary[],
+  filters: SearchExperienceFilters,
+): MediaSummary[] {
+  const normalizedQuery = filters.query.trim().toLowerCase();
+  const filtered = items.filter((item) => {
+    if (filters.type !== "all" && filters.type !== "person" && item.mediaType !== filters.type) {
+      return false;
+    }
+
+    if (filters.year) {
+      const itemYear = item.releaseDate ? new Date(item.releaseDate).getFullYear() : undefined;
+      if (itemYear !== filters.year) {
+        return false;
+      }
+    }
+
+    if (filters.language && item.originalLanguage !== filters.language) {
+      return false;
+    }
+
+    return true;
+  });
+
+  const scored = filtered.map((item) => {
+    const title = item.title.toLowerCase();
+    const overview = item.overview.toLowerCase();
+    let score = 0;
+
+    if (title === normalizedQuery) {
+      score += 140;
+    }
+    if (title.startsWith(normalizedQuery)) {
+      score += 90;
+    }
+    if (title.includes(normalizedQuery)) {
+      score += 45;
+    }
+    if (overview.includes(normalizedQuery)) {
+      score += 8;
+    }
+
+    score += Math.round((item.popularity ?? 0) / 10);
+    score += Math.round((item.voteAverage ?? 0) * 2);
+
+    return {
+      item,
+      score,
+    };
+  });
+
+  if (filters.sort === "rating") {
+    scored.sort((a, b) => (b.item.voteAverage ?? 0) - (a.item.voteAverage ?? 0) || b.score - a.score);
+  } else if (filters.sort === "popularity") {
+    scored.sort((a, b) => (b.item.popularity ?? 0) - (a.item.popularity ?? 0) || b.score - a.score);
+  } else if (filters.sort === "release_date") {
+    scored.sort(
+      (a, b) =>
+        new Date(b.item.releaseDate ?? "1900-01-01").getTime() -
+          new Date(a.item.releaseDate ?? "1900-01-01").getTime() || b.score - a.score,
+    );
+  } else {
+    scored.sort((a, b) => b.score - a.score || (b.item.popularity ?? 0) - (a.item.popularity ?? 0));
+  }
+
+  return scored.map((entry) => entry.item);
+}
+
 export function getImageUrl(path: string | null, size: "w342" | "w780" | "w1280" = "w780") {
   if (!path) {
     return null;
   }
 
   return `${TMDB_IMAGE_BASE}/${size}${path}`;
+}
+
+export function getGenreOptions(mediaType: MediaType) {
+  return mediaType === "movie" ? MOVIE_GENRES : TV_GENRES;
 }
 
 export async function getMediaSummary(mediaType: MediaType, id: number): Promise<MediaSummary | null> {
@@ -171,14 +335,76 @@ export async function getMediaSummariesByIds(
   return results.filter((item): item is MediaSummary => Boolean(item));
 }
 
+export async function getRecommendedTitlesFromSeeds(
+  refs: Array<{ mediaType: MediaType; mediaId: number }>,
+  options?: { exclude?: Array<{ mediaType: MediaType; mediaId: number }>; limit?: number },
+): Promise<MediaSummary[]> {
+  if (!hasTmdbCredentials() || !refs.length) {
+    return [];
+  }
+
+  try {
+    const exclude = new Set(
+      (options?.exclude ?? []).map((entry) => `${entry.mediaType}-${entry.mediaId}`),
+    );
+    const settled = await Promise.allSettled(
+      refs.slice(0, 3).map((ref) =>
+        fetchTmdb<{ results: Record<string, unknown>[] }>(`/${ref.mediaType}/${ref.mediaId}/recommendations`),
+      ),
+    );
+
+    const combined = settled.flatMap((result, index) =>
+      result.status === "fulfilled"
+        ? result.value.results.map((item) => normalizeSummary(item, refs[index]?.mediaType))
+        : [],
+    );
+
+    return combineUniqueMedia(combined, exclude).slice(0, options?.limit ?? DEFAULT_DISCOVER_LIMIT);
+  } catch {
+    return [];
+  }
+}
+
+export async function discoverByGenres(options: {
+  mediaType: MediaType;
+  genreIds: number[];
+  exclude?: Array<{ mediaType: MediaType; mediaId: number }>;
+  limit?: number;
+}): Promise<MediaSummary[]> {
+  if (!hasTmdbCredentials() || !options.genreIds.length) {
+    return [];
+  }
+
+  try {
+    const response = await fetchTmdb<{ results: Record<string, unknown>[] }>(
+      `/discover/${options.mediaType}?with_genres=${options.genreIds.slice(0, 3).join(",")}&sort_by=popularity.desc`,
+    );
+
+    const exclude = new Set(
+      (options.exclude ?? []).map((entry) => `${entry.mediaType}-${entry.mediaId}`),
+    );
+
+    return combineUniqueMedia(
+      response.results.map((item) => normalizeSummary(item, options.mediaType)),
+      exclude,
+    ).slice(0, options.limit ?? DEFAULT_DISCOVER_LIMIT);
+  } catch {
+    return [];
+  }
+}
+
 export async function getHomePageData(): Promise<HomePageData | null> {
   if (!hasTmdbCredentials()) {
     return null;
   }
 
   try {
-    const [trending, topRatedMovies, topRatedShows] = await Promise.all([
+    const [trending, moviePopular, tvPopular, newMovies, newSeries, topRatedMovies, topRatedShows] = await Promise.all([
       fetchTmdb<{ results: Record<string, unknown>[] }>("/trending/all/week"),
+      fetchTmdb<{ results: Record<string, unknown>[] }>("/movie/popular"),
+      fetchTmdb<{ results: Record<string, unknown>[] }>("/tv/popular"),
+      fetchTmdb<{ results: Record<string, unknown>[] }>("/movie/now_playing"),
+      fetchTmdb<{ results: Record<string, unknown>[] }>("/tv/on_the_air"),
       fetchTmdb<{ results: Record<string, unknown>[] }>("/movie/top_rated"),
       fetchTmdb<{ results: Record<string, unknown>[] }>("/tv/top_rated"),
     ]);
@@ -186,21 +412,51 @@ export async function getHomePageData(): Promise<HomePageData | null> {
     const trendingItems = trending.results
       .filter((item) => item.media_type === "movie" || item.media_type === "tv")
       .map((item) => normalizeSummary(item))
-      .slice(0, 8);
+      .slice(0, 10);
 
     const rails: MediaRail[] = [
-      { id: "trending", title: "Trending Now", eyebrow: "Live from TMDB", items: trendingItems },
+      {
+        id: "new-this-week",
+        title: "New This Week",
+        eyebrow: "Fresh drops",
+        description: "Recently surfaced picks to kickstart a faster movie-night decision.",
+        items: combineUniqueMedia(
+          [
+            ...newMovies.results.map((item) => normalizeSummary(item, "movie")),
+            ...newSeries.results.map((item) => normalizeSummary(item, "tv")),
+          ],
+        ).slice(0, 12),
+      },
+      {
+        id: "trending",
+        title: "Trending Now",
+        eyebrow: "Live from TMDB",
+        description: "The titles drawing the most momentum right now.",
+        items: trendingItems,
+      },
+      {
+        id: "popular-movies",
+        title: "Popular Movies",
+        eyebrow: "Big-screen momentum",
+        items: moviePopular.results.map((item) => normalizeSummary(item, "movie")).slice(0, 12),
+      },
+      {
+        id: "popular-series",
+        title: "Popular Series",
+        eyebrow: "Binge radar",
+        items: tvPopular.results.map((item) => normalizeSummary(item, "tv")).slice(0, 12),
+      },
       {
         id: "top-rated-movies",
         title: "Top Rated Movies",
-        eyebrow: "Big-screen prestige",
-        items: topRatedMovies.results.map((item) => normalizeSummary(item, "movie")).slice(0, 8),
+        eyebrow: "Prestige picks",
+        items: topRatedMovies.results.map((item) => normalizeSummary(item, "movie")).slice(0, 12),
       },
       {
         id: "top-rated-shows",
         title: "Top Rated Series",
-        eyebrow: "Season-stretching drama",
-        items: topRatedShows.results.map((item) => normalizeSummary(item, "tv")).slice(0, 8),
+        eyebrow: "Critic-proof favorites",
+        items: topRatedShows.results.map((item) => normalizeSummary(item, "tv")).slice(0, 12),
       },
     ];
 
@@ -214,31 +470,78 @@ export async function getHomePageData(): Promise<HomePageData | null> {
   }
 }
 
-export async function getCatalogRail(mediaType: MediaType): Promise<MediaRail[] | null> {
+export async function getCatalogRail(
+  mediaType: MediaType,
+  filters?: Omit<CatalogFilters, "mediaType">,
+): Promise<MediaRail[] | null> {
   if (!hasTmdbCredentials()) {
     return null;
   }
 
   try {
-    const path = mediaType === "movie" ? "/movie/now_playing" : "/tv/popular";
-    const secondaryPath = mediaType === "movie" ? "/movie/upcoming" : "/tv/top_rated";
-    const [primary, secondary] = await Promise.all([
-      fetchTmdb<{ results: Record<string, unknown>[] }>(path),
-      fetchTmdb<{ results: Record<string, unknown>[] }>(secondaryPath),
+    const [heroDiscover, topRated, fresh, genreSpotlight] = await Promise.all([
+      fetchTmdb<{ results: Record<string, unknown>[] }>(
+        buildDiscoverQuery({
+          mediaType,
+          genreId: filters?.genreId,
+          language: filters?.language,
+          sort: filters?.sort,
+        }),
+      ),
+      fetchTmdb<{ results: Record<string, unknown>[] }>(
+        buildDiscoverQuery({
+          mediaType,
+          sort: "vote_average.desc",
+          language: filters?.language,
+          genreId: filters?.genreId,
+        }),
+      ),
+      fetchTmdb<{ results: Record<string, unknown>[] }>(
+        mediaType === "movie"
+          ? "/movie/upcoming"
+          : "/tv/on_the_air",
+      ),
+      fetchTmdb<{ results: Record<string, unknown>[] }>(
+        buildDiscoverQuery({
+          mediaType,
+          genreId: filters?.genreId ?? getGenreOptions(mediaType)[0]?.id,
+          language: filters?.language,
+          sort: "popularity.desc",
+        }),
+      ),
     ]);
+
+    const currentGenre = filters?.genreId
+      ? getGenreLabel(mediaType, filters.genreId)
+      : mediaType === "movie"
+        ? "Movies"
+        : "Series";
 
     return [
       {
-        id: `${mediaType}-primary`,
-        title: mediaType === "movie" ? "Now Playing" : "Popular Series",
-        eyebrow: "Curated by TMDB",
-        items: primary.results.map((item) => normalizeSummary(item, mediaType)).slice(0, 12),
+        id: `${mediaType}-spotlight`,
+        title: `${currentGenre} Spotlight`,
+        eyebrow: "Browse with intent",
+        description: "A denser browse lane built for faster picks instead of endless scrolling.",
+        items: heroDiscover.results.map((item) => normalizeSummary(item, mediaType)).slice(0, 14),
       },
       {
-        id: `${mediaType}-secondary`,
-        title: mediaType === "movie" ? "Coming Soon" : "Top Rated Seasons",
-        eyebrow: "Fresh additions",
-        items: secondary.results.map((item) => normalizeSummary(item, mediaType)).slice(0, 12),
+        id: `${mediaType}-fresh`,
+        title: mediaType === "movie" ? "Recently Arrived" : "Fresh Episodes",
+        eyebrow: "Keep it current",
+        items: fresh.results.map((item) => normalizeSummary(item, mediaType)).slice(0, 14),
+      },
+      {
+        id: `${mediaType}-top-rated`,
+        title: "Highest Rated",
+        eyebrow: "When quality matters",
+        items: topRated.results.map((item) => normalizeSummary(item, mediaType)).slice(0, 14),
+      },
+      {
+        id: `${mediaType}-genre`,
+        title: `${getGenreLabel(mediaType, filters?.genreId ?? getGenreOptions(mediaType)[0]?.id ?? 0)} Picks`,
+        eyebrow: "Genre-driven",
+        items: genreSpotlight.results.map((item) => normalizeSummary(item, mediaType)).slice(0, 14),
       },
     ];
   } catch {
@@ -246,58 +549,11 @@ export async function getCatalogRail(mediaType: MediaType): Promise<MediaRail[] 
   }
 }
 
-export async function getShowCatalogRails(): Promise<MediaRail[] | null> {
-  if (!hasTmdbCredentials()) {
-    return null;
-  }
-
-  try {
-    const [trending, airingToday, popular, topRated, onTheAir] = await Promise.all([
-      fetchTmdb<{ results: Record<string, unknown>[] }>("/trending/tv/week"),
-      fetchTmdb<{ results: Record<string, unknown>[] }>("/tv/airing_today"),
-      fetchTmdb<{ results: Record<string, unknown>[] }>("/tv/popular"),
-      fetchTmdb<{ results: Record<string, unknown>[] }>("/tv/top_rated"),
-      fetchTmdb<{ results: Record<string, unknown>[] }>("/tv/on_the_air"),
-    ]);
-
-    return [
-      {
-        id: "tv-trending",
-        title: "Trending Series",
-        eyebrow: "What everyone's starting",
-        items: trending.results.map((item) => normalizeSummary(item, "tv")).slice(0, 12),
-      },
-      {
-        id: "tv-airing-today",
-        title: "Airing Today",
-        eyebrow: "Fresh episodes",
-        items: airingToday.results.map((item) => normalizeSummary(item, "tv")).slice(0, 12),
-      },
-      {
-        id: "tv-popular",
-        title: "Popular Series",
-        eyebrow: "Big TV right now",
-        items: popular.results.map((item) => normalizeSummary(item, "tv")).slice(0, 12),
-      },
-      {
-        id: "tv-top-rated",
-        title: "Top Rated Series",
-        eyebrow: "Prestige picks",
-        items: topRated.results.map((item) => normalizeSummary(item, "tv")).slice(0, 12),
-      },
-      {
-        id: "tv-on-the-air",
-        title: "Currently On The Air",
-        eyebrow: "Week-to-week favorites",
-        items: onTheAir.results.map((item) => normalizeSummary(item, "tv")).slice(0, 12),
-      },
-    ];
-  } catch {
-    return null;
-  }
+export async function getShowCatalogRails(filters?: Omit<CatalogFilters, "mediaType">): Promise<MediaRail[] | null> {
+  return getCatalogRail("tv", filters);
 }
 
-export async function searchCatalog(query: string, limit = 18): Promise<MediaSummary[] | null> {
+export async function searchCatalog(query: string, options?: SearchApiFilter): Promise<MediaSummary[] | null> {
   if (!query.trim()) {
     return [];
   }
@@ -307,14 +563,84 @@ export async function searchCatalog(query: string, limit = 18): Promise<MediaSum
   }
 
   try {
+    const searchType = options?.type && options.type !== "all" ? options.type : "multi";
     const response = await fetchTmdb<{ results: Record<string, unknown>[] }>(
-      `/search/multi?query=${encodeURIComponent(query)}`,
+      `/search/${searchType}?query=${encodeURIComponent(query)}`,
     );
 
     return response.results
+      .filter((item) => item.media_type === "movie" || item.media_type === "tv" || searchType !== "multi")
+      .map((item) => normalizeSummary(item, options?.type && options.type !== "all" ? options.type : undefined))
+      .slice(0, options?.limit ?? 18);
+  } catch {
+    return null;
+  }
+}
+
+export async function getPersonCredits(personId: number): Promise<PersonSummary | null> {
+  if (!hasTmdbCredentials()) {
+    return null;
+  }
+
+  try {
+    const [person, credits] = await Promise.all([
+      fetchTmdb<Record<string, unknown>>(`/person/${personId}`),
+      fetchTmdb<{ cast?: Record<string, unknown>[]; crew?: Record<string, unknown>[] }>(
+        `/person/${personId}/combined_credits`,
+      ),
+    ]);
+
+    return {
+      id: Number(person.id),
+      name: String(person.name || "Unknown"),
+      knownForDepartment: typeof person.known_for_department === "string" ? person.known_for_department : undefined,
+      profilePath: (person.profile_path as string | null) ?? null,
+      knownFor: combineUniqueMedia(
+        [...(credits.cast ?? []), ...(credits.crew ?? [])]
+          .filter((item) => item.media_type === "movie" || item.media_type === "tv")
+          .map((item) => normalizeSummary(item)),
+      ).slice(0, 20),
+    };
+  } catch {
+    return null;
+  }
+}
+
+export async function searchCatalogExperience(filters: SearchExperienceFilters): Promise<SearchExperienceResult | null> {
+  if (!filters.query.trim()) {
+    return { titles: [], people: [] };
+  }
+
+  if (!hasTmdbCredentials()) {
+    return null;
+  }
+
+  try {
+    if (filters.personId) {
+      const person = await getPersonCredits(filters.personId);
+
+      return {
+        titles: applyTitleFilters(person?.knownFor ?? [], filters),
+        people: person ? [person] : [],
+      };
+    }
+
+    const response = await fetchTmdb<{ results: Record<string, unknown>[] }>(
+      `/search/multi?query=${encodeURIComponent(filters.query)}`,
+    );
+
+    const titles = response.results
       .filter((item) => item.media_type === "movie" || item.media_type === "tv")
-      .map((item) => normalizeSummary(item))
-      .slice(0, limit);
+      .map((item) => normalizeSummary(item));
+    const people = response.results
+      .filter((item) => item.media_type === "person")
+      .map((item) => normalizePerson(item))
+      .slice(0, 8);
+
+    return {
+      titles: applyTitleFilters(titles, filters).slice(0, 30),
+      people,
+    };
   } catch {
     return null;
   }
@@ -365,9 +691,18 @@ export async function getMediaDetail(
 
   try {
     const [detail, providers] = await Promise.all([
-      fetchTmdb<Record<string, unknown>>(`/${mediaType}/${id}?append_to_response=credits,recommendations`),
+      fetchTmdb<Record<string, unknown>>(`/${mediaType}/${id}?append_to_response=credits,recommendations,videos`),
       getTitleProviderAvailability(mediaType, id, region),
     ]);
+
+    const trailers = ((detail.videos as { results?: Record<string, unknown>[] } | undefined)?.results ?? [])
+      .map((video) => normalizeTrailer(video))
+      .filter((video) => video.site === "YouTube" && (video.type === "Trailer" || video.type === "Teaser"));
+    const heroTrailer =
+      trailers.find((video) => video.official && video.type === "Trailer") ??
+      trailers.find((video) => video.type === "Trailer") ??
+      trailers[0] ??
+      null;
 
     return {
       ...normalizeSummary(detail, mediaType),
@@ -375,7 +710,13 @@ export async function getMediaDetail(
         mediaType === "movie"
           ? (detail.runtime as number | undefined)
           : ((detail.episode_run_time as number[] | undefined)?.[0] ?? undefined),
+      tagline: typeof detail.tagline === "string" ? detail.tagline : undefined,
+      status: typeof detail.status === "string" ? detail.status : undefined,
       numberOfSeasons: detail.number_of_seasons as number | undefined,
+      spokenLanguages:
+        ((detail.spoken_languages as Record<string, unknown>[] | undefined) ?? [])
+          .map((language) => String(language.english_name || language.name || ""))
+          .filter(Boolean),
       cast:
         ((detail.credits as { cast?: Record<string, unknown>[] } | undefined)?.cast ?? [])
           .slice(0, 12)
@@ -391,6 +732,8 @@ export async function getMediaDetail(
           .slice(0, 8)
           .map((item) => normalizeSummary(item, mediaType)),
       providers: providers ?? undefined,
+      trailers,
+      heroTrailer,
     };
   } catch {
     return null;

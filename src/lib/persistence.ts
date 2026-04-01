@@ -2,7 +2,9 @@ import { getSupabaseAdminClient, getSupabaseReadClient } from "@/lib/supabase";
 import { buildWatchHref } from "@/lib/utils";
 import type {
   CatalogUnavailableReason,
+  FeedbackValue,
   MediaType,
+  ProfileFeedbackRecord,
   ProfileRecord,
   ResumeTarget,
   WatchHistoryRecord,
@@ -34,6 +36,63 @@ function mapProfile(profile: Record<string, unknown>): ProfileRecord {
   };
 }
 
+function mapSupabaseReadiness(message: string): CatalogUnavailableReason | null {
+  if (message.includes("public.profiles")) {
+    return "missing-profiles-table";
+  }
+
+  return null;
+}
+
+function mapWatchProgressRecord(record: Record<string, unknown>): WatchProgressRecord {
+  const seasonNumber = typeof record.season_number === "number" ? record.season_number : undefined;
+  const episodeNumber = typeof record.episode_number === "number" ? record.episode_number : undefined;
+
+  return {
+    profileId: String(record.profile_id),
+    mediaId: Number(record.media_id),
+    mediaType: record.media_type as MediaType,
+    seasonNumber,
+    episodeNumber,
+    progressSeconds: Number(record.progress_seconds ?? 0),
+    updatedAt: String(record.updated_at),
+  };
+}
+
+function toResumeTarget(record: WatchProgressRecord): ResumeTarget {
+  return {
+    ...record,
+    watchHref: buildWatchHref(record.mediaType, record.mediaId, record.seasonNumber, record.episodeNumber),
+  };
+}
+
+function mapWatchHistoryRecord(record: Record<string, unknown>): WatchHistoryRecord {
+  const mediaType = record.media_type as MediaType;
+  const mediaId = Number(record.media_id);
+  const seasonNumber = typeof record.season_number === "number" ? record.season_number : undefined;
+  const episodeNumber = typeof record.episode_number === "number" ? record.episode_number : undefined;
+
+  return {
+    profileId: String(record.profile_id),
+    mediaId,
+    mediaType,
+    seasonNumber,
+    episodeNumber,
+    watchedAt: String(record.watched_at),
+    watchHref: buildWatchHref(mediaType, mediaId, seasonNumber, episodeNumber),
+  };
+}
+
+function mapProfileFeedbackRecord(record: Record<string, unknown>): ProfileFeedbackRecord {
+  return {
+    profileId: String(record.profile_id),
+    mediaId: Number(record.media_id),
+    mediaType: record.media_type as MediaType,
+    value: record.value as FeedbackValue,
+    updatedAt: String(record.updated_at),
+  };
+}
+
 export async function ensureAppUser(userId: string, email: string | null) {
   const client = getSupabaseAdminClient();
 
@@ -61,53 +120,6 @@ export async function ensureAppUser(userId: string, email: string | null) {
 
   return {
     success: true as const,
-  };
-}
-
-function mapSupabaseReadiness(message: string): CatalogUnavailableReason | null {
-  if (message.includes("public.profiles")) {
-    return "missing-profiles-table";
-  }
-
-  return null;
-}
-
-function mapWatchProgressRecord(record: Record<string, unknown>): WatchProgressRecord {
-  const seasonNumber = typeof record.season_number === "number" ? record.season_number : undefined;
-  const episodeNumber = typeof record.episode_number === "number" ? record.episode_number : undefined;
-
-  return {
-    profileId: String(record.profile_id),
-    mediaId: Number(record.media_id),
-    mediaType: record.media_type as MediaType,
-    seasonNumber,
-    episodeNumber,
-    progressSeconds: Number(record.progress_seconds),
-    updatedAt: String(record.updated_at),
-  };
-}
-
-function toResumeTarget(record: WatchProgressRecord): ResumeTarget {
-  return {
-    ...record,
-    watchHref: buildWatchHref(record.mediaType, record.mediaId, record.seasonNumber, record.episodeNumber),
-  };
-}
-
-function mapWatchHistoryRecord(record: Record<string, unknown>): WatchHistoryRecord {
-  const mediaType = record.media_type as MediaType;
-  const mediaId = Number(record.media_id);
-  const seasonNumber = typeof record.season_number === "number" ? record.season_number : undefined;
-  const episodeNumber = typeof record.episode_number === "number" ? record.episode_number : undefined;
-
-  return {
-    profileId: String(record.profile_id),
-    mediaId,
-    mediaType,
-    seasonNumber,
-    episodeNumber,
-    watchedAt: String(record.watched_at),
-    watchHref: buildWatchHref(mediaType, mediaId, seasonNumber as number | undefined, episodeNumber as number | undefined),
   };
 }
 
@@ -283,6 +295,52 @@ export async function getWatchlist(profileId: string): Promise<WatchlistRecord[]
   }));
 }
 
+export async function getProfileFeedbackMap(profileId: string) {
+  const client = getSupabaseReadClient();
+
+  if (!client) {
+    return new Map<string, ProfileFeedbackRecord>();
+  }
+
+  const { data, error } = await client
+    .from("profile_feedback")
+    .select("*")
+    .eq("profile_id", profileId);
+
+  if (error || !data) {
+    return new Map<string, ProfileFeedbackRecord>();
+  }
+
+  return new Map(
+    data.map((record) => {
+      const mapped = mapProfileFeedbackRecord(record);
+      return [`${mapped.mediaType}-${mapped.mediaId}`, mapped] as const;
+    }),
+  );
+}
+
+export async function getProfileFeedback(profileId: string, mediaId: number, mediaType: MediaType) {
+  const client = getSupabaseReadClient();
+
+  if (!client) {
+    return null;
+  }
+
+  const { data, error } = await client
+    .from("profile_feedback")
+    .select("*")
+    .eq("profile_id", profileId)
+    .eq("media_id", mediaId)
+    .eq("media_type", mediaType)
+    .maybeSingle();
+
+  if (error || !data) {
+    return null;
+  }
+
+  return mapProfileFeedbackRecord(data);
+}
+
 export async function isInWatchlist(profileId: string, mediaId: number, mediaType: MediaType) {
   const client = getSupabaseReadClient();
 
@@ -340,6 +398,68 @@ export async function toggleWatchlist(profileId: string, mediaId: number, mediaT
   return { success: true as const, state: "added" as const };
 }
 
+export async function setProfileFeedback(options: {
+  profileId: string;
+  mediaId: number;
+  mediaType: MediaType;
+  value: FeedbackValue | null;
+}) {
+  const admin = getSupabaseAdminClient();
+  const read = getSupabaseReadClient();
+
+  if (!admin || !read) {
+    return { success: false as const, error: "Supabase is not fully configured." };
+  }
+
+  const { data: existing } = await read
+    .from("profile_feedback")
+    .select("id")
+    .eq("profile_id", options.profileId)
+    .eq("media_id", options.mediaId)
+    .eq("media_type", options.mediaType)
+    .maybeSingle();
+
+  if (!options.value) {
+    if (!existing?.id) {
+      return { success: true as const };
+    }
+
+    const { error } = await admin.from("profile_feedback").delete().eq("id", existing.id);
+
+    if (error) {
+      return { success: false as const, error: error.message };
+    }
+
+    return { success: true as const };
+  }
+
+  const payload = {
+    profile_id: options.profileId,
+    media_id: options.mediaId,
+    media_type: options.mediaType,
+    value: options.value,
+    updated_at: new Date().toISOString(),
+  };
+
+  if (existing?.id) {
+    const { error } = await admin.from("profile_feedback").update(payload).eq("id", existing.id);
+
+    if (error) {
+      return { success: false as const, error: error.message };
+    }
+
+    return { success: true as const };
+  }
+
+  const { error } = await admin.from("profile_feedback").insert(payload);
+
+  if (error) {
+    return { success: false as const, error: error.message };
+  }
+
+  return { success: true as const };
+}
+
 export async function getProfileForUser(profileId: string, userId: string): Promise<ProfileRecord | null> {
   const client = getSupabaseAdminClient();
 
@@ -367,6 +487,7 @@ async function upsertWatchProgress(record: {
   mediaType: MediaType;
   seasonNumber?: number;
   episodeNumber?: number;
+  progressSeconds?: number;
 }) {
   const admin = getSupabaseAdminClient();
 
@@ -376,7 +497,7 @@ async function upsertWatchProgress(record: {
 
   const { data: existing, error: selectError } = await admin
     .from("watch_progress")
-    .select("id")
+    .select("id, progress_seconds")
     .eq("profile_id", record.profileId)
     .eq("media_id", record.mediaId)
     .eq("media_type", record.mediaType)
@@ -386,13 +507,18 @@ async function upsertWatchProgress(record: {
     return { success: false as const, error: selectError.message };
   }
 
+  const nextProgressSeconds = Math.max(
+    Number(existing?.progress_seconds ?? 0),
+    Math.max(0, Math.floor(record.progressSeconds ?? 0)),
+  );
+
   const payload = {
     profile_id: record.profileId,
     media_id: record.mediaId,
     media_type: record.mediaType,
     season_number: record.seasonNumber ?? null,
     episode_number: record.episodeNumber ?? null,
-    progress_seconds: 0,
+    progress_seconds: nextProgressSeconds,
     updated_at: new Date().toISOString(),
   };
 
@@ -403,7 +529,7 @@ async function upsertWatchProgress(record: {
       return { success: false as const, error: error.message };
     }
 
-    return { success: true as const };
+    return { success: true as const, progressSeconds: nextProgressSeconds };
   }
 
   const { error } = await admin.from("watch_progress").insert(payload);
@@ -412,7 +538,7 @@ async function upsertWatchProgress(record: {
     return { success: false as const, error: error.message };
   }
 
-  return { success: true as const };
+  return { success: true as const, progressSeconds: nextProgressSeconds };
 }
 
 async function touchWatchHistory(record: {
@@ -500,6 +626,17 @@ export async function recordWatchStart(record: {
   }
 
   return touchWatchHistory(record);
+}
+
+export async function recordWatchProgress(record: {
+  profileId: string;
+  mediaId: number;
+  mediaType: MediaType;
+  seasonNumber?: number;
+  episodeNumber?: number;
+  progressSeconds: number;
+}) {
+  return upsertWatchProgress(record);
 }
 
 export async function clearWatchProgress(record: {

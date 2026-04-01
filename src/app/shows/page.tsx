@@ -1,20 +1,38 @@
 import { MediaRail } from "@/components/media-rail";
 import { PageFrame } from "@/components/page-frame";
 import { PageHero } from "@/components/page-hero";
+import { RouteLinkRow } from "@/components/route-link-row";
 import { UnavailablePanel } from "@/components/unavailable-panel";
-import { getShowCatalogRails } from "@/lib/tmdb";
+import { getWatchlist } from "@/lib/persistence";
+import { getGenreOptions, getShowCatalogRails } from "@/lib/tmdb";
+import { buildMediaKey, parsePositiveInt } from "@/lib/utils";
 import { getViewerContext } from "@/lib/viewer";
 
-export default async function ShowsPage() {
-  await getViewerContext({ redirectToOnboarding: true });
-  const rails = await getShowCatalogRails();
+type ShowsPageProps = {
+  searchParams: Promise<{
+    genre?: string;
+  }>;
+};
+
+export default async function ShowsPage({ searchParams }: ShowsPageProps) {
+  const viewer = await getViewerContext({ redirectToOnboarding: true });
+  const params = await searchParams;
+  const genreId = parsePositiveInt(params.genre);
+  const genreOptions = getGenreOptions("tv");
+  const [rails, watchlist] = await Promise.all([
+    getShowCatalogRails({
+      genreId,
+    }),
+    viewer.activeProfile ? getWatchlist(viewer.activeProfile.id) : Promise.resolve([]),
+  ]);
+  const watchlistKeys = watchlist.map((record) => buildMediaKey(record.mediaType, record.mediaId));
 
   if (!rails) {
     return (
       <PageFrame activeHref="/shows">
         <UnavailablePanel
           title="Series are unavailable right now."
-          message="This page now depends on live TMDB responses only. Verify the TMDB keys and try again."
+          message="The series collection could not be loaded right now. Please try again in a moment."
         />
       </PageFrame>
     );
@@ -24,12 +42,27 @@ export default async function ShowsPage() {
     <PageFrame activeHref="/shows">
       <PageHero
         eyebrow="Series"
-        title="Season-spanning drama, thrillers, and prestige television."
-        description="Move through trending series, fresh weekly drops, and deeper TV shelves without needing to search first."
+        title="Season-spanning stories and standout television."
+        description="Browse by genre, keep pace with new episodes, and move into your next series without the clutter."
         backdropPath={rails[0]?.items[0]?.backdropPath ?? null}
       />
+      <RouteLinkRow
+        items={[
+          { href: "/browse", label: "For You" },
+          { href: "/search", label: "Search" },
+          ...genreOptions.slice(0, 6).map((genre) => ({
+            href: `/shows?genre=${genre.id}`,
+            label: genreId === genre.id ? `${genre.label} / Active` : genre.label,
+          })),
+        ]}
+      />
       {rails.map((rail) => (
-        <MediaRail key={rail.id} rail={rail} />
+        <MediaRail
+          key={rail.id}
+          rail={rail}
+          profileId={viewer.activeProfile?.id ?? null}
+          watchlistKeys={watchlistKeys}
+        />
       ))}
     </PageFrame>
   );

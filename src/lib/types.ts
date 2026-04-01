@@ -1,5 +1,7 @@
 export type MediaType = "movie" | "tv";
 
+export type FeedbackValue = "like" | "dislike" | "not_interested";
+
 export type MediaSummary = {
   id: number;
   mediaType: MediaType;
@@ -8,11 +10,25 @@ export type MediaSummary = {
   posterPath: string | null;
   backdropPath: string | null;
   genreNames: string[];
+  genreIds?: number[];
   releaseDate?: string;
   voteAverage?: number;
+  popularity?: number;
+  originalLanguage?: string;
+  runtime?: number;
   hrefOverride?: string;
   actionLabel?: string;
   contextLabel?: string;
+  progressSeconds?: number;
+  feedback?: FeedbackValue | null;
+};
+
+export type PersonSummary = {
+  id: number;
+  name: string;
+  knownForDepartment?: string;
+  profilePath: string | null;
+  knownFor: MediaSummary[];
 };
 
 export type ProviderInfo = {
@@ -39,6 +55,15 @@ export type CastMember = {
   profilePath: string | null;
 };
 
+export type TrailerVideo = {
+  id: string;
+  key: string;
+  name: string;
+  site: "YouTube" | "Unknown";
+  type: string;
+  official: boolean;
+};
+
 export type EpisodeSummary = {
   id: number;
   name: string;
@@ -58,18 +83,24 @@ export type SeasonSummary = {
 };
 
 export type MediaDetail = MediaSummary & {
-  runtime?: number;
+  tagline?: string;
+  status?: string;
   numberOfSeasons?: number;
+  spokenLanguages: string[];
   cast: CastMember[];
   seasons?: SeasonSummary[];
   related: MediaSummary[];
   providers?: TitleProviderAvailability;
+  trailers: TrailerVideo[];
+  heroTrailer: TrailerVideo | null;
 };
 
 export type MediaRail = {
   id: string;
   title: string;
   eyebrow?: string;
+  description?: string;
+  variant?: "default" | "continue" | "editorial";
   items: MediaSummary[];
 };
 
@@ -89,6 +120,33 @@ export type HomePageData = {
   rails: MediaRail[];
 };
 
+export type SearchExperienceFilters = {
+  query: string;
+  type: "all" | MediaType | "person";
+  year?: number;
+  language?: string;
+  sort: "relevance" | "rating" | "popularity" | "release_date";
+  personId?: number;
+};
+
+export type SearchExperienceResult = {
+  titles: MediaSummary[];
+  people: PersonSummary[];
+};
+
+export type GenreOption = {
+  id: number;
+  label: string;
+  mediaType: MediaType;
+};
+
+export type CatalogFilters = {
+  mediaType: MediaType;
+  genreId?: number;
+  sort?: "popularity.desc" | "vote_average.desc" | "primary_release_date.desc" | "first_air_date.desc";
+  language?: string;
+};
+
 export type ProfileRecord = {
   id: string;
   userId: string;
@@ -97,6 +155,14 @@ export type ProfileRecord = {
   accent: string;
   maturityRating: string;
   providerRegion: string;
+};
+
+export type ProfileFeedbackRecord = {
+  profileId: string;
+  mediaId: number;
+  mediaType: MediaType;
+  value: FeedbackValue;
+  updatedAt: string;
 };
 
 export type WatchProgressRecord = {
@@ -130,7 +196,7 @@ export type WatchlistRecord = {
   addedAt: string;
 };
 
-export type WatchStateEvent = "start" | "complete" | "clear";
+export type WatchStateEvent = "start" | "progress" | "complete" | "clear";
 
 export type WatchStatePayload = {
   profileId: string;
@@ -138,6 +204,7 @@ export type WatchStatePayload = {
   mediaType: MediaType;
   seasonNumber?: number;
   episodeNumber?: number;
+  progressSeconds?: number;
   event: WatchStateEvent;
 };
 
@@ -150,11 +217,16 @@ export type PlaybackRequest = {
 
 export type PlaybackProviderResult = {
   provider: "vidlink" | "moviesapi";
+  label: string;
+  description: string;
   embedUrl: string;
   supportedMediaType: MediaType;
   supportsEpisodes: boolean;
+  capabilities: string[];
   availability: "enabled" | "disabled" | "pending-review";
   statusMessage: string;
+  rank: number;
+  recommended: boolean;
 };
 
 export type CatalogUnavailableReason =

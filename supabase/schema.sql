@@ -44,6 +44,15 @@ create table if not exists public.watch_history (
   watched_at timestamptz not null default now()
 );
 
+create table if not exists public.profile_feedback (
+  id bigint generated always as identity primary key,
+  profile_id text not null references public.profiles(id) on delete cascade,
+  media_id bigint not null,
+  media_type text not null check (media_type in ('movie', 'tv')),
+  value text not null check (value in ('like', 'dislike', 'not_interested')),
+  updated_at timestamptz not null default now()
+);
+
 create unique index if not exists watchlists_profile_media_unique
 on public.watchlists (profile_id, media_type, media_id);
 
@@ -58,3 +67,9 @@ on public.watch_history (profile_id, watched_at desc);
 
 create index if not exists watch_history_profile_media_episode_idx
 on public.watch_history (profile_id, media_type, media_id, season_number, episode_number, watched_at desc);
+
+create unique index if not exists profile_feedback_profile_media_unique
+on public.profile_feedback (profile_id, media_type, media_id);
+
+create index if not exists profile_feedback_profile_updated_idx
+on public.profile_feedback (profile_id, updated_at desc);

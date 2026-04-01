@@ -34,6 +34,7 @@ export function LiveSearch({ initialQuery = "", placeholder, variant = "compact"
   const [isLoading, setIsLoading] = useState(false);
   const deferredQuery = useDeferredValue(query);
   const trimmedDeferredQuery = deferredQuery.trim();
+  const supportsQuickResults = true;
 
   useEffect(() => {
     return () => {
@@ -44,6 +45,12 @@ export function LiveSearch({ initialQuery = "", placeholder, variant = "compact"
   }, []);
 
   useEffect(() => {
+    if (!supportsQuickResults) {
+      setResults([]);
+      setIsLoading(false);
+      return;
+    }
+
     if (trimmedDeferredQuery.length < 2) {
       setResults([]);
       setIsLoading(false);
@@ -78,7 +85,7 @@ export function LiveSearch({ initialQuery = "", placeholder, variant = "compact"
       controller.abort();
       clearTimeout(timeoutId);
     };
-  }, [trimmedDeferredQuery]);
+  }, [supportsQuickResults, trimmedDeferredQuery]);
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -101,10 +108,20 @@ export function LiveSearch({ initialQuery = "", placeholder, variant = "compact"
     }, 140);
   }
 
-  const showDropdown = isOpen && trimmedDeferredQuery.length >= 2;
+  const showDropdown = supportsQuickResults && isOpen && trimmedDeferredQuery.length >= 2;
+  const dropdownClassName =
+    variant === "compact"
+      ? "absolute left-0 right-0 top-full z-[130] mt-3 overflow-hidden rounded-[26px] border border-white/10 bg-[linear-gradient(180deg,rgba(12,21,35,0.98),rgba(5,11,19,0.98))] shadow-2xl"
+      : "mt-4 overflow-hidden rounded-[26px] border border-white/10 bg-[linear-gradient(180deg,rgba(12,21,35,0.98),rgba(5,11,19,0.98))] shadow-2xl";
 
   return (
-    <div className={cn("relative", variant === "compact" ? "w-full max-w-[22rem]" : "w-full")}>
+    <div
+      className={cn(
+        "relative isolate",
+        showDropdown ? "z-[120]" : "z-0",
+        variant === "compact" ? "w-full max-w-[22rem]" : "w-full",
+      )}
+    >
       <form
         onSubmit={handleSubmit}
         onFocus={handleFocus}
@@ -132,9 +149,9 @@ export function LiveSearch({ initialQuery = "", placeholder, variant = "compact"
       </form>
 
       {showDropdown ? (
-        <div className="absolute left-0 right-0 top-full z-50 mt-3 overflow-hidden rounded-[26px] border border-white/10 bg-[linear-gradient(180deg,rgba(12,21,35,0.98),rgba(5,11,19,0.98))] shadow-2xl">
+        <div className={dropdownClassName}>
           <div className="border-b border-white/8 px-4 py-3 text-xs uppercase tracking-[0.24em] text-[var(--color-brand-strong)]">
-            Quick results
+            {variant === "compact" ? "Quick results" : "Suggestions"}
           </div>
           {isLoading ? (
             <div className="flex items-center gap-3 px-4 py-4 text-sm text-[var(--color-text-muted)]">

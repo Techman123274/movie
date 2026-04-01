@@ -9,7 +9,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ results: [] });
   }
 
-  const results = await searchCatalog(query, 6);
+  const results = await searchCatalog(query, { limit: 6 });
 
   if (results === null) {
     return NextResponse.json({ results: [] }, { status: 503 });

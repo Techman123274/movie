@@ -16,7 +16,7 @@ const displayFont = Cormorant_Garamond({
 
 export const metadata: Metadata = {
   title: "Subflix",
-  description: "Subflix.tech is a premium streaming interface for movies, series, and sports powered by TMDB.",
+  description: "Subflix is a premium streaming home for movies, series, and live sports.",
 };
 
 export default function RootLayout({

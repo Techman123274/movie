@@ -1,30 +1,29 @@
-"use client";
-
 import Link from "next/link";
-import { UserButton, useAuth } from "@clerk/nextjs";
+import { auth } from "@clerk/nextjs/server";
 import { ArrowRight, Menu, Search, Sparkles, UserCircle2 } from "lucide-react";
 import { LiveSearch } from "@/components/live-search";
 import { cn } from "@/lib/utils";
 
 const navItems = [
-  { href: "/browse", label: "Browse" },
+  { href: "/browse", label: "Home" },
   { href: "/movies", label: "Movies" },
   { href: "/shows", label: "Series" },
   { href: "/sports", label: "Sports" },
-  { href: "/providers", label: "Providers" },
+  { href: "/providers", label: "Where to Watch" },
   { href: "/search", label: "Search" },
-  { href: "/profiles", label: "Profiles" },
+  { href: "/account", label: "My Space" },
 ];
 
 type SiteHeaderProps = {
   activeHref?: string;
 };
 
-export function SiteHeader({ activeHref }: SiteHeaderProps) {
-  const { isSignedIn } = useAuth();
+export async function SiteHeader({ activeHref }: SiteHeaderProps) {
+  const { userId } = await auth();
+  const isSignedIn = Boolean(userId);
 
   return (
-    <header className="sticky top-0 z-40 border-b border-white/8 bg-[rgba(5,11,19,0.72)] backdrop-blur-xl">
+    <header className="sticky top-0 z-[90] overflow-visible border-b border-white/8 bg-[rgba(5,11,19,0.82)] backdrop-blur-xl">
       <div className="mx-auto grid max-w-7xl grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-4 py-4 sm:px-8 md:flex md:items-center md:justify-between">
         <Link href="/browse" className="flex min-w-0 items-center gap-3 overflow-hidden md:flex-1">
           <div className="gold-ring flex h-10 w-10 items-center justify-center rounded-full bg-[rgba(214,179,109,0.12)] text-sm font-semibold tracking-[0.32em] text-[var(--color-brand-strong)]">
@@ -33,7 +32,7 @@ export function SiteHeader({ activeHref }: SiteHeaderProps) {
           <div className="min-w-0">
             <p className="display-font truncate text-xl leading-none sm:text-2xl">Subflix</p>
             <p className="truncate text-[10px] uppercase tracking-[0.28em] text-[var(--color-text-muted)] sm:text-[11px] sm:tracking-[0.32em]">
-              subflix.tech
+              Stream beautifully
             </p>
           </div>
         </Link>
@@ -44,7 +43,7 @@ export function SiteHeader({ activeHref }: SiteHeaderProps) {
               key={item.href}
               href={item.href}
               className={cn(
-                "rounded-full px-4 py-2 text-sm text-[var(--color-text-muted)] transition hover:text-white",
+                "rounded-full px-4 py-2 text-sm text-[var(--color-text-muted)] transition hover:bg-white/6 hover:text-white",
                 activeHref === item.href && "bg-white/8 text-white",
               )}
             >
@@ -83,9 +82,8 @@ export function SiteHeader({ activeHref }: SiteHeaderProps) {
           {isSignedIn ? (
             <div className="hidden surface items-center gap-3 rounded-full px-3 py-2 sm:flex">
               <Link href="/account" className="text-sm text-[var(--color-text-muted)] transition hover:text-white">
-                Account
+                My Space
               </Link>
-              <UserButton />
             </div>
           ) : null}
           <details className="group relative md:hidden">
@@ -125,12 +123,9 @@ export function SiteHeader({ activeHref }: SiteHeaderProps) {
                     </div>
                   ) : null}
                   {isSignedIn ? (
-                    <div className="mt-4 flex items-center justify-between rounded-2xl border border-white/8 bg-white/4 px-4 py-3">
-                      <div>
-                        <p className="text-sm font-medium text-white">Signed in</p>
-                        <p className="text-xs uppercase tracking-[0.24em] text-[var(--color-text-muted)]">Account ready</p>
-                      </div>
-                      <UserButton />
+                    <div className="mt-4 rounded-2xl border border-white/8 bg-white/4 px-4 py-3">
+                      <p className="text-sm font-medium text-white">Signed in</p>
+                      <p className="text-xs uppercase tracking-[0.24em] text-[var(--color-text-muted)]">Account ready</p>
                     </div>
                   ) : null}
                 </div>
@@ -152,26 +147,15 @@ export function SiteHeader({ activeHref }: SiteHeaderProps) {
                     <ArrowRight size={16} className="text-[var(--color-brand-strong)]" />
                   </Link>
                 ))}
-                <Link
-                  href="/search"
-                  className="flex items-center justify-between rounded-2xl border border-white/8 bg-white/4 px-4 py-3 text-sm text-[var(--color-text-muted)] transition hover:bg-white/8 hover:text-white"
-                >
-                  <span>Quick search</span>
-                  <Search size={16} className="text-[var(--color-brand-strong)]" />
-                </Link>
                 {!isSignedIn ? (
                   <div className="rounded-2xl border border-dashed border-white/10 px-4 py-3 text-sm leading-6 text-[var(--color-text-muted)]">
-                    Use <span className="text-white">Log in</span> above to access profiles, continue watching, and account tools on mobile.
+                    Use <span className="text-white">Log in</span> above to unlock profiles, continue watching, and the full My Space area.
                   </div>
                 ) : null}
                 {isSignedIn ? (
-                  <Link
-                    href="/account"
-                    className="flex items-center justify-between rounded-2xl border border-white/8 bg-white/4 px-4 py-3 text-sm text-[var(--color-text-muted)] transition hover:bg-white/8 hover:text-white"
-                  >
-                    <span>Account</span>
-                    <ArrowRight size={16} className="text-[var(--color-brand-strong)]" />
-                  </Link>
+                  <div className="rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm leading-6 text-[var(--color-text-muted)]">
+                    Profile switching stays in <span className="text-white">My Space</span> so mobile navigation feels simpler and faster.
+                  </div>
                 ) : null}
               </nav>
             </div>

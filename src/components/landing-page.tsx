@@ -17,13 +17,13 @@ export function LandingPage({ featuredItems }: LandingPageProps) {
           <div className="grid items-center gap-10 lg:grid-cols-[0.92fr_1.08fr]">
             <div className="animate-[fade-rise_800ms_ease-out]">
               <p className="mb-4 text-xs uppercase tracking-[0.36em] text-[var(--color-brand-strong)]">
-                subflix.tech
+                Subflix
               </p>
               <h1 className="display-font text-5xl leading-none text-white sm:text-7xl lg:text-8xl">
                 One cinematic front door for tonight&apos;s watchlist.
               </h1>
               <p className="mt-5 max-w-2xl text-base leading-7 text-[var(--color-text-muted)] sm:mt-6 sm:text-lg sm:leading-8">
-                Subflix blends TMDB-powered movie and series discovery with a separate sports lane, so the whole experience feels sharp, focused, and easy to trust.
+                Subflix brings movies, series, and live sports into one polished streaming experience with faster discovery, richer details, and a cleaner way to press play.
               </p>
               <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
                 <Link href="/browse" className="rounded-full bg-[var(--color-brand)] px-6 py-3 text-center text-sm font-semibold text-[#07111f]">
@@ -38,7 +38,7 @@ export function LandingPage({ featuredItems }: LandingPageProps) {
               items={featuredItems}
               eyebrow="Featured artwork"
               title="The catalog should feel premium before a single click."
-              description="Subflix now opens with a richer visual lead: live backdrops, stronger poster treatment, and imagery that makes the whole product feel closer to a real streaming launch."
+              description="A stronger visual lead, richer artwork, and sharper presentation make the experience feel premium from the first moment."
             />
           </div>
         </section>
@@ -47,9 +47,9 @@ export function LandingPage({ featuredItems }: LandingPageProps) {
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             {[
               { icon: Film, title: "Movies", copy: "Hero sliders, rich detail pages, and premium discovery rails." },
-              { icon: Tv, title: "Series", copy: "Follow season arcs, episode lists, and provider availability." },
-              { icon: Trophy, title: "Sports", copy: "Dedicated league hubs, live event cards, and StreamCenter watch access." },
-              { icon: PlayCircle, title: "Ad-Gated Playback", copy: "External players stay behind explicit validation controls." },
+              { icon: Tv, title: "Series", copy: "Follow season arcs, episode guides, and beautifully organized watch pages." },
+              { icon: Trophy, title: "Sports", copy: "Dedicated league hubs and live-event discovery keep the action separate and easy to follow." },
+              { icon: PlayCircle, title: "Fast Playback", copy: "A cleaner watch flow with quick access to the titles you want to start right away." },
             ].map((item, index) => (
               <article
                 key={item.title}
@@ -67,9 +67,9 @@ export function LandingPage({ featuredItems }: LandingPageProps) {
         <section className="mx-auto max-w-7xl px-4 py-8 sm:px-8 sm:py-12">
           <div className="grid gap-4 md:grid-cols-3">
             {[
-              "Slideshows for featured movies and shows instead of a single hero card.",
-              "Provider-specific discovery for Netflix, Hulu, Prime Video, Max, and more.",
-              "Separate sports watch surfaces so movies and live games never feel mashed together.",
+              "A cinematic homepage built to help you choose faster.",
+              "Clear paths into movies, series, and the services you already use.",
+              "Separate sports surfaces so movies and live events always feel intentional.",
             ].map((item) => (
               <div key={item} className="surface rounded-[26px] p-6 text-sm leading-7 text-[var(--color-text-muted)]">
                 {item}

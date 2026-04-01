@@ -26,7 +26,7 @@ export default async function OnboardingPage({ searchParams }: OnboardingPagePro
       <PageFrame>
         <UnavailablePanel
           title="Profile onboarding is unavailable."
-          message="Real user onboarding needs Supabase read and service-role credentials."
+          message="Profile setup is temporarily unavailable. Please try again shortly."
         />
       </PageFrame>
     );
@@ -43,8 +43,8 @@ export default async function OnboardingPage({ searchParams }: OnboardingPagePro
     return (
       <PageFrame>
         <UnavailablePanel
-          title="Profiles table is missing."
-          message="Apply the SQL in supabase/schema.sql to your Supabase project so the public.profiles table and provider_region column exist before onboarding can create a profile."
+          title="Profile setup is unavailable."
+          message="We could not finish account setup right now. Please try again shortly."
         />
       </PageFrame>
     );
@@ -54,14 +54,14 @@ export default async function OnboardingPage({ searchParams }: OnboardingPagePro
     <PageFrame>
       <PageHero
         eyebrow="Onboarding"
-        title="Create the profile that powers your v1 experience."
-        description="Pick a name, accent, and region once, then jump straight into browse with a cleaner account setup."
+        title="Create the profile that sets the tone for your watch experience."
+        description="Choose a name, look, and region, then jump straight into a more personal home screen."
       />
       {params.error ? (
         <section className="surface rounded-[28px] p-5 text-sm leading-6 text-[var(--color-danger)]">
           {params.error === "invalid-profile"
             ? "The submitted profile data was invalid. Please review the form and try again."
-            : `Onboarding error: ${params.error}`}
+            : "We could not create your profile right now. Please try again."}
         </section>
       ) : null}
       <ProfileOnboardingForm />

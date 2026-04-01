@@ -7,9 +7,11 @@ import { MediaCard } from "@/components/media-card";
 
 type MediaRailProps = {
   rail: MediaRailType;
+  profileId?: string | null;
+  watchlistKeys?: string[];
 };
 
-export function MediaRail({ rail }: MediaRailProps) {
+export function MediaRail({ rail, profileId = null, watchlistKeys = [] }: MediaRailProps) {
   const railRef = useRef<HTMLDivElement>(null);
 
   if (!rail.items.length) {
@@ -40,6 +42,9 @@ export function MediaRail({ rail }: MediaRailProps) {
             </p>
           ) : null}
           <h2 className="display-font text-3xl text-white sm:text-4xl">{rail.title}</h2>
+          {rail.description ? (
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--color-text-muted)]">{rail.description}</p>
+          ) : null}
         </div>
         <div className="hidden items-center gap-2 md:flex">
           <button
@@ -60,10 +65,16 @@ export function MediaRail({ rail }: MediaRailProps) {
       </div>
       <div
         ref={railRef}
-        className="hide-scrollbar flex snap-x snap-mandatory gap-4 overflow-x-auto pb-3"
+        className="hide-scrollbar flex snap-x snap-mandatory gap-4 overflow-x-auto pb-4 pt-1"
       >
         {rail.items.map((item) => (
-          <MediaCard key={`${rail.id}-${item.id}`} item={item} />
+          <MediaCard
+            key={`${rail.id}-${item.id}`}
+            item={item}
+            variant={rail.variant ?? "default"}
+            profileId={profileId}
+            inWatchlist={watchlistKeys.includes(`${item.mediaType}-${item.id}`)}
+          />
         ))}
       </div>
     </section>

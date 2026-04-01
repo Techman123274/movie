@@ -32,6 +32,7 @@ export function CinematicGallery({ items, eyebrow, title, description }: Cinemat
             fill
             sizes="(max-width: 1024px) 100vw, 60vw"
             preload
+            loading="eager"
             className="object-cover"
           />
         ) : null}
@@ -44,7 +45,7 @@ export function CinematicGallery({ items, eyebrow, title, description }: Cinemat
           <div className="mt-6 flex flex-wrap items-center gap-3 text-xs uppercase tracking-[0.22em] text-[var(--color-text-muted)]">
             <span className="flex items-center gap-2">
               <Star size={14} className="text-[var(--color-brand-strong)]" />
-              Live TMDB artwork
+              Rich cinematic artwork
             </span>
             <span className="flex items-center gap-2">
               <Ticket size={14} className="text-[var(--color-brand-strong)]" />

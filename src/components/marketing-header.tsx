@@ -1,7 +1,5 @@
-"use client";
-
 import Link from "next/link";
-import { useAuth } from "@clerk/nextjs";
+import { auth } from "@clerk/nextjs/server";
 import { ArrowRight, Menu, Sparkles } from "lucide-react";
 
 const navItems = [
@@ -10,11 +8,12 @@ const navItems = [
   { href: "/providers", label: "Providers" },
 ];
 
-export function MarketingHeader() {
-  const { isSignedIn } = useAuth();
+export async function MarketingHeader() {
+  const { userId } = await auth();
+  const isSignedIn = Boolean(userId);
 
   return (
-    <header className="sticky top-0 z-40 border-b border-white/8 bg-[rgba(5,11,19,0.68)] backdrop-blur-xl">
+    <header className="sticky top-0 z-[90] overflow-visible border-b border-white/8 bg-[rgba(5,11,19,0.68)] backdrop-blur-xl">
       <div className="mx-auto grid max-w-7xl grid-cols-[minmax(0,1fr)_auto] items-center gap-4 px-5 py-4 sm:px-8 md:flex md:items-center md:justify-between">
         <Link href="/" className="flex min-w-0 items-center gap-3 overflow-hidden md:flex-1">
           <div className="gold-ring flex h-10 w-10 items-center justify-center rounded-full bg-[rgba(214,179,109,0.12)] text-sm font-semibold tracking-[0.32em] text-[var(--color-brand-strong)]">

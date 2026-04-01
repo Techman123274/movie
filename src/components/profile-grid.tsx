@@ -28,10 +28,10 @@ export function ProfileGrid({ profiles, activeProfileId }: ProfileGridProps) {
             </div>
             <h3 className="display-font text-3xl text-white">{profile.name}</h3>
             <p className="mt-2 text-sm uppercase tracking-[0.2em] text-[var(--color-text-muted)]">
-              {profile.maturityRating} • {profile.providerRegion}
+              {profile.maturityRating} / {profile.providerRegion}
             </p>
             <p className="mt-4 text-sm leading-6 text-[var(--color-text-muted)]">
-              Personal watchlist, continue watching, and provider rails all flow through the active profile.
+              Watch history, saved titles, and home recommendations all stay tuned to the active profile.
             </p>
             <form action={switchActiveProfileAction} className="mt-6">
               <input type="hidden" name="profileId" value={profile.id} />

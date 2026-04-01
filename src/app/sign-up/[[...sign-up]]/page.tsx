@@ -17,7 +17,7 @@ export default async function SignUpPage() {
         <p className="text-[10px] uppercase tracking-[0.32em] text-[var(--color-brand-strong)]">Start Watching</p>
         <h1 className="display-font mt-3 text-4xl text-white">Create your Subflix account</h1>
         <p className="mt-3 text-sm leading-6 text-[var(--color-text-muted)]">
-          Set up Clerk sign-up so mobile and desktop users can move straight into the app after creating an account.
+          Create your account and move straight into a cleaner, more personal streaming experience.
         </p>
         <div className="mt-6">
           <SignUp path="/sign-up" routing="path" signInUrl="/sign-in" fallbackRedirectUrl="/browse" />

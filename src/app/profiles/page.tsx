@@ -13,14 +13,14 @@ export default async function ProfilesPage() {
       <PageHero
         eyebrow="Profiles"
         title="Multiple moods, separate rails, one account."
-        description="Each profile keeps its own watchlist, continue-watching flow, and provider region without turning v1 into a full recommendation engine."
+        description="Each profile keeps its own watchlist, continue watching, and regional availability so every home screen feels more personal."
       />
       {profiles.length ? (
         <ProfileGrid profiles={profiles} activeProfileId={viewer.activeProfile?.id ?? null} />
       ) : (
         <EmptyState
           title="No profiles yet"
-          message="Create your first profile to unlock region-aware providers, watchlist syncing, and continue watching."
+          message="Create your first profile to unlock saved titles, continue watching, and a more personalized home."
         />
       )}
     </PageFrame>
