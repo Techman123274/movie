@@ -6,6 +6,7 @@ import { RouteLinkRow } from "@/components/route-link-row";
 import { SeasonPicker } from "@/components/season-picker";
 import { UnavailablePanel } from "@/components/unavailable-panel";
 import { WatchStatePanel } from "@/components/watch-state-panel";
+import { withMinimumDelay } from "@/lib/loading";
 import { getResumeTarget } from "@/lib/persistence";
 import { resolvePlaybackOptions } from "@/lib/playback";
 import { getImageUrl, getMediaDetail, getSeasonEpisodes } from "@/lib/tmdb";
@@ -32,7 +33,7 @@ export default async function WatchPage({ params, searchParams }: WatchPageProps
   }
 
   const viewer = await getViewerContext({ redirectToOnboarding: true });
-  const detail = await getMediaDetail(mediaType as MediaType, Number(id), viewer.providerRegion);
+  const detail = await withMinimumDelay(getMediaDetail(mediaType as MediaType, Number(id), viewer.providerRegion));
 
   if (!detail) {
     return (
@@ -122,13 +123,13 @@ export default async function WatchPage({ params, searchParams }: WatchPageProps
         className="relative overflow-hidden rounded-[34px] border border-white/10 px-8 py-8 shadow-[0_24px_80px_rgba(0,0,0,0.45)]"
         style={{
           backgroundImage: watchBackdrop
-            ? `linear-gradient(90deg, rgba(6,12,20,0.94) 0%, rgba(6,12,20,0.8) 45%, rgba(6,12,20,0.42) 100%), url(${watchBackdrop})`
-            : "linear-gradient(135deg, rgba(214,179,109,0.16), rgba(6,12,20,0.96))",
+            ? `linear-gradient(90deg, rgba(8,8,10,0.95) 0%, rgba(8,8,10,0.82) 45%, rgba(8,8,10,0.42) 100%), url(${watchBackdrop})`
+            : "linear-gradient(135deg, rgba(229,9,20,0.16), rgba(8,8,10,0.96))",
           backgroundSize: "cover",
           backgroundPosition: "center",
         }}
       >
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(214,179,109,0.16),transparent_32%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(229,9,20,0.18),transparent_32%)]" />
         <div className="relative">
           <p className="mb-3 text-xs uppercase tracking-[0.32em] text-[var(--color-brand-strong)]">Watch</p>
           <h1 className="display-font text-5xl text-white">{detail.title}</h1>
@@ -142,7 +143,7 @@ export default async function WatchPage({ params, searchParams }: WatchPageProps
               {enabledProviderCount} servers ready
             </span>
             {resumeMinutes ? (
-              <span className="rounded-full border border-[rgba(214,179,109,0.24)] bg-[rgba(214,179,109,0.08)] px-4 py-2 text-[var(--color-brand-strong)]">
+              <span className="theme-chip rounded-full px-4 py-2 text-[var(--color-brand-strong)]">
                 {resumeMinutes}
               </span>
             ) : null}
@@ -159,7 +160,7 @@ export default async function WatchPage({ params, searchParams }: WatchPageProps
         items={[
           { href: `/${mediaType}/${detail.id}`, label: "Back to details" },
           { href: "/browse", label: "For You" },
-          { href: "/account", label: "My Space" },
+          { href: "/account", label: "My Profile" },
         ]}
       />
 
@@ -188,7 +189,7 @@ export default async function WatchPage({ params, searchParams }: WatchPageProps
               {previousEpisodeHref ? (
                 <Link
                   href={previousEpisodeHref}
-                  className="surface inline-flex min-h-11 items-center rounded-full px-4 text-sm text-white transition hover:bg-white/10"
+                  className="theme-button-secondary inline-flex min-h-11 items-center rounded-full px-4 text-sm text-white"
                 >
                   Previous episode
                 </Link>
@@ -196,7 +197,7 @@ export default async function WatchPage({ params, searchParams }: WatchPageProps
               {nextEpisodeHref ? (
                 <Link
                   href={nextEpisodeHref}
-                  className="inline-flex min-h-11 items-center rounded-full bg-[var(--color-brand)] px-4 text-sm font-semibold text-[#07111f]"
+                  className="theme-button-primary inline-flex min-h-11 items-center rounded-full px-4 text-sm font-semibold"
                 >
                   Next episode
                 </Link>
@@ -240,8 +241,8 @@ export default async function WatchPage({ params, searchParams }: WatchPageProps
                 href={`/tv/${detail.id}/watch?season=${season.seasonNumber}&episode=${episode.episodeNumber}`}
                 className={`rounded-[22px] border px-4 py-4 text-sm transition ${
                   episode.episodeNumber === episodeNumber
-                    ? "border-[rgba(214,179,109,0.45)] bg-[rgba(214,179,109,0.12)] text-white"
-                    : "border-white/10 bg-black/20 text-[var(--color-text-muted)] hover:border-[rgba(214,179,109,0.35)] hover:text-white"
+                    ? "border-[var(--color-brand-line)] bg-[var(--color-brand-soft)] text-white"
+                    : "border-white/10 bg-black/20 text-[var(--color-text-muted)] hover:border-[var(--color-brand-line)] hover:text-white"
                 }`}
               >
                 <p className="font-medium">Episode {episode.episodeNumber}: {episode.name}</p>

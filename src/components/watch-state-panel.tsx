@@ -151,12 +151,12 @@ export function WatchStatePanel({
         <p className="mb-2 text-xs uppercase tracking-[0.3em] text-[var(--color-brand-strong)]">Watch state</p>
         <h3 className="text-lg font-medium text-white">Sign in to save resume state and recent activity</h3>
         <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--color-text-muted)]">
-          Keep your place, save recent activity, and jump back in from home, details, or My Space.
+          Keep your place, save recent activity, and jump back in from home, details, or My Profile.
         </p>
         <div className="mt-4">
           <Link
             href="/sign-in"
-            className="inline-flex min-h-11 items-center rounded-full bg-[var(--color-brand)] px-5 text-sm font-semibold text-[#07111f]"
+            className="theme-button-primary inline-flex min-h-11 items-center rounded-full px-5 text-sm font-semibold"
           >
             Sign in to sync
           </Link>
@@ -179,7 +179,7 @@ export function WatchStatePanel({
           type="button"
           onClick={handleMarkWatched}
           disabled={isPending}
-          className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-[var(--color-brand)] px-5 text-sm font-semibold text-[#07111f] disabled:cursor-not-allowed disabled:opacity-70"
+          className="theme-button-primary inline-flex min-h-11 items-center justify-center gap-2 rounded-full px-5 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-70"
         >
           {isPending ? <LoaderCircle size={16} className="animate-spin" /> : <CheckCircle2 size={16} />}
           Mark watched

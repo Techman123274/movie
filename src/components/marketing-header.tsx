@@ -13,10 +13,10 @@ export async function MarketingHeader() {
   const isSignedIn = Boolean(userId);
 
   return (
-    <header className="sticky top-0 z-[90] overflow-visible border-b border-white/8 bg-[rgba(5,11,19,0.68)] backdrop-blur-xl">
+    <header className="theme-header sticky top-0 z-[90] overflow-visible">
       <div className="mx-auto grid max-w-7xl grid-cols-[minmax(0,1fr)_auto] items-center gap-4 px-5 py-4 sm:px-8 md:flex md:items-center md:justify-between">
         <Link href="/" className="flex min-w-0 items-center gap-3 overflow-hidden md:flex-1">
-          <div className="gold-ring flex h-10 w-10 items-center justify-center rounded-full bg-[rgba(214,179,109,0.12)] text-sm font-semibold tracking-[0.32em] text-[var(--color-brand-strong)]">
+          <div className="theme-logo-mark flex h-10 w-10 items-center justify-center rounded-full text-sm font-semibold tracking-[0.32em]">
             S
           </div>
           <div className="min-w-0">
@@ -27,7 +27,7 @@ export async function MarketingHeader() {
 
         <nav className="hidden items-center gap-6 md:flex">
           {navItems.map((item) => (
-            <Link key={item.href} href={item.href} className="text-sm text-[var(--color-text-muted)] transition hover:text-white">
+            <Link key={item.href} href={item.href} className="theme-nav-link rounded-full px-4 py-2 text-sm">
               {item.label}
             </Link>
           ))}
@@ -38,34 +38,34 @@ export async function MarketingHeader() {
             <>
               <Link
                 href="/sign-in"
-                className="hidden surface rounded-full px-4 py-2 text-sm text-[var(--color-text-muted)] transition hover:text-white sm:block"
+                className="theme-button-secondary hidden rounded-full px-4 py-2 text-sm text-[var(--color-text-muted)] sm:block"
               >
                 Sign in
               </Link>
               <Link
                 href="/sign-up"
-                className="hidden rounded-full bg-[var(--color-brand)] px-4 py-2 text-sm font-semibold text-[#07111f] transition hover:bg-[var(--color-brand-strong)] sm:block"
+                className="theme-button-primary hidden rounded-full px-4 py-2 text-sm font-semibold sm:block"
               >
                 Start watching
               </Link>
             </>
           ) : null}
           {isSignedIn ? (
-            <Link href="/browse" className="hidden rounded-full bg-[var(--color-brand)] px-4 py-2 text-sm font-semibold text-[#07111f] sm:block">
+            <Link href="/browse" className="theme-button-primary hidden rounded-full px-4 py-2 text-sm font-semibold sm:block">
               Open app
             </Link>
           ) : null}
           <details className="group relative md:hidden">
             <summary
-              className="surface relative z-20 flex h-10 w-10 shrink-0 list-none touch-manipulation items-center justify-center rounded-full text-[var(--color-text-muted)] transition hover:text-white [&::-webkit-details-marker]:hidden"
+              className="theme-button-secondary relative z-20 flex h-10 w-10 shrink-0 list-none touch-manipulation items-center justify-center rounded-full text-[var(--color-text-muted)] [&::-webkit-details-marker]:hidden"
               aria-label="Toggle landing navigation menu"
             >
               <Menu size={18} />
             </summary>
-            <div className="absolute right-0 top-full z-50 mt-3 w-[min(23rem,calc(100vw-1.25rem))] overflow-hidden rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(12,21,35,0.98),rgba(5,11,19,0.98))] shadow-2xl">
+            <div className="theme-menu-panel absolute right-0 top-full z-50 mt-3 w-[min(23rem,calc(100vw-1.25rem))] overflow-hidden rounded-[28px]">
               <div className="border-b border-white/8 px-5 py-4">
                 <p className="text-[10px] uppercase tracking-[0.32em] text-[var(--color-brand-strong)]">Get Started</p>
-                <div className="mt-3 rounded-[22px] border border-white/8 bg-white/4 p-4">
+                <div className="theme-input-shell mt-3 rounded-[22px] p-4">
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <p className="display-font text-2xl text-white">Subflix</p>
@@ -79,13 +79,13 @@ export async function MarketingHeader() {
                     <div className="mt-4 grid grid-cols-2 gap-2">
                       <Link
                         href="/sign-in"
-                        className="surface flex min-h-11 items-center justify-center rounded-2xl px-4 text-sm font-medium text-white transition hover:bg-white/10"
+                        className="theme-button-secondary flex min-h-11 items-center justify-center rounded-2xl px-4 text-sm font-medium text-white"
                       >
                         Log in
                       </Link>
                       <Link
                         href="/sign-up"
-                        className="flex min-h-11 items-center justify-center rounded-2xl bg-[var(--color-brand)] px-4 text-sm font-semibold text-[#07111f] transition hover:bg-[var(--color-brand-strong)]"
+                        className="theme-button-primary flex min-h-11 items-center justify-center rounded-2xl px-4 text-sm font-semibold"
                       >
                         Start now
                       </Link>
@@ -94,7 +94,7 @@ export async function MarketingHeader() {
                   {isSignedIn ? (
                     <Link
                       href="/browse"
-                      className="mt-4 flex items-center justify-between rounded-2xl bg-[var(--color-brand)] px-4 py-3 text-sm font-semibold text-[#07111f]"
+                      className="theme-button-primary mt-4 flex items-center justify-between rounded-2xl px-4 py-3 text-sm font-semibold"
                     >
                       <span>Open app</span>
                       <ArrowRight size={16} />
@@ -107,7 +107,7 @@ export async function MarketingHeader() {
                   <Link
                     key={item.href}
                     href={item.href}
-                    className="flex items-center justify-between rounded-2xl border border-white/8 bg-white/4 px-4 py-3 text-sm text-[var(--color-text-muted)] transition hover:bg-white/8 hover:text-white"
+                    className="theme-nav-link flex items-center justify-between rounded-2xl px-4 py-3 text-sm"
                   >
                     <span>{item.label}</span>
                     <ArrowRight size={16} className="text-[var(--color-brand-strong)]" />
@@ -121,7 +121,7 @@ export async function MarketingHeader() {
                 {isSignedIn ? (
                   <Link
                     href="/browse"
-                    className="flex items-center justify-between rounded-2xl border border-[rgba(214,179,109,0.35)] bg-[rgba(214,179,109,0.12)] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[rgba(214,179,109,0.18)]"
+                    className="theme-nav-link-active flex items-center justify-between rounded-2xl px-4 py-3 text-sm font-semibold text-white"
                   >
                     <span>Open app</span>
                     <ArrowRight size={16} className="text-[var(--color-brand-strong)]" />

@@ -40,7 +40,7 @@ function PersonResultCard({ person }: { person: PersonSummary }) {
           </div>
           <Link
             href={`/search?q=${encodeURIComponent(person.name)}&person=${person.id}`}
-            className="mt-4 inline-flex rounded-full bg-[var(--color-brand)] px-4 py-2 text-sm font-semibold text-[#07111f]"
+            className="mt-4 inline-flex rounded-full bg-[var(--color-brand)] px-4 py-2 text-sm font-semibold text-white"
           >
             Browse credits
           </Link>

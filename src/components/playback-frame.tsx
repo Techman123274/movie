@@ -375,7 +375,7 @@ export function PlaybackFrame({
               href={provider.embedUrl}
               target="_blank"
               rel="noreferrer"
-              className="rounded-full bg-[var(--color-brand)] px-4 py-2 text-sm font-semibold text-[#07111f]"
+              className="rounded-full bg-[var(--color-brand)] px-4 py-2 text-sm font-semibold text-white"
             >
               Open player
             </a>

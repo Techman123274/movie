@@ -2,10 +2,11 @@ import Link from "next/link";
 import { PageFrame } from "@/components/page-frame";
 import { PageHero } from "@/components/page-hero";
 import { UnavailablePanel } from "@/components/unavailable-panel";
+import { withMinimumDelay } from "@/lib/loading";
 import { getSportsHomeData } from "@/lib/sports";
 
 export default async function SportsPage() {
-  const groups = await getSportsHomeData();
+  const groups = await withMinimumDelay(getSportsHomeData());
 
   if (!groups) {
     return (

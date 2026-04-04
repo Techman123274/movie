@@ -27,10 +27,10 @@ export function LandingPage({ featuredItems }: LandingPageProps) {
                 Subflix brings movies, series, and live sports into one polished streaming experience with faster discovery, richer details, a more social household pulse, and a cleaner way to press play.
               </p>
               <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
-                <Link href="/browse" className="rounded-full bg-[var(--color-brand)] px-6 py-3 text-center text-sm font-semibold text-[#07111f]">
+                <Link href="/browse" className="theme-button-primary rounded-full px-6 py-3 text-center text-sm font-semibold">
                   Browse now
                 </Link>
-                <Link href="/sports" className="surface rounded-full px-6 py-3 text-center text-sm text-white transition hover:bg-white/10">
+                <Link href="/sports" className="theme-button-secondary rounded-full px-6 py-3 text-center text-sm text-white">
                   Explore sports
                 </Link>
               </div>

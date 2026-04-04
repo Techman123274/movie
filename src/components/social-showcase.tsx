@@ -49,12 +49,12 @@ export function SocialShowcase() {
           <div className="mt-8 flex flex-wrap gap-3">
             <Link
               href="/profiles"
-              className="rounded-full bg-[var(--color-brand)] px-5 py-3 text-sm font-semibold text-[#07111f]"
+              className="theme-button-primary rounded-full px-5 py-3 text-sm font-semibold"
             >
               Explore profiles
             </Link>
-            <Link href="/account" className="surface rounded-full px-5 py-3 text-sm text-white transition hover:bg-white/10">
-              Open My Space
+            <Link href="/account" className="theme-button-secondary rounded-full px-5 py-3 text-sm text-white">
+              Open My Profile
             </Link>
           </div>
         </div>

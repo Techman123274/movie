@@ -18,7 +18,7 @@ export function AccountOverview({ activeProfile, stats }: AccountOverviewProps) 
   return (
     <div className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
       <section className="surface-strong rounded-[30px] p-8">
-        <p className="mb-3 text-xs uppercase tracking-[0.3em] text-[var(--color-brand-strong)]">My Space</p>
+        <p className="mb-3 text-xs uppercase tracking-[0.3em] text-[var(--color-brand-strong)]">My Profile</p>
         <h1 className="display-font text-5xl text-white">Your profile, progress, and next picks in one place.</h1>
         <p className="mt-5 max-w-2xl text-base leading-7 text-[var(--color-text-muted)]">
           Keep every profile separate, jump back into what you were watching, and let the household pulse reveal where your queues and reactions are starting to overlap.
@@ -48,7 +48,7 @@ export function AccountOverview({ activeProfile, stats }: AccountOverviewProps) 
         <div className="rounded-[24px] border border-white/10 bg-black/20 p-5">
           <div className="flex items-start gap-4">
             <div
-              className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl text-2xl font-semibold text-[#07111f]"
+              className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl text-2xl font-semibold text-white"
               style={{ backgroundColor: activeProfile.accent }}
             >
               {activeProfile.avatar}

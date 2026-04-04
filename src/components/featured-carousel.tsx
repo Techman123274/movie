@@ -88,13 +88,13 @@ export function FeaturedCarousel({ items }: FeaturedCarouselProps) {
           style={{
             backgroundImage: background
               ? `url(${background})`
-              : "linear-gradient(135deg, rgba(214,179,109,0.18), rgba(6,12,20,0.96))",
+              : "linear-gradient(135deg, rgba(229,9,20,0.18), rgba(8,8,10,0.96))",
             transform: dragOffset ? `translateX(${dragOffset * 0.08}px)` : undefined,
           }}
         />
-        <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(4,8,14,0.95)_0%,rgba(4,8,14,0.74)_40%,rgba(4,8,14,0.24)_100%)]" />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(214,179,109,0.2),transparent_28%)]" />
-        <div className="absolute -right-16 top-16 h-56 w-56 rounded-full bg-[rgba(214,179,109,0.08)] blur-3xl animate-[ambient-float_8s_ease-in-out_infinite_alternate]" />
+        <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(8,8,10,0.96)_0%,rgba(8,8,10,0.78)_40%,rgba(8,8,10,0.24)_100%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(229,9,20,0.22),transparent_28%)]" />
+        <div className="absolute -right-16 top-16 h-56 w-56 rounded-full bg-[rgba(229,9,20,0.1)] blur-3xl animate-[ambient-float_8s_ease-in-out_infinite_alternate]" />
       </div>
 
       <div className="relative min-h-[470px] px-4 py-12 sm:min-h-[520px] sm:px-10 sm:py-16 lg:px-14 lg:py-20">
@@ -102,7 +102,7 @@ export function FeaturedCarousel({ items }: FeaturedCarouselProps) {
           <div key={`${activeItem.mediaType}-${activeItem.id}`} className="max-w-3xl animate-[fade-rise_700ms_ease-out]">
             <div className="mb-5 flex flex-wrap items-center gap-3 text-xs uppercase tracking-[0.32em] text-[var(--color-brand-strong)]">
               <span>Featured lineup</span>
-              <span className="rounded-full border border-[rgba(214,179,109,0.24)] bg-[rgba(214,179,109,0.08)] px-3 py-1 text-[10px] tracking-[0.22em] text-white">
+              <span className="theme-chip rounded-full px-3 py-1 text-[10px] tracking-[0.22em] text-white">
                 {isPaused ? "Paused" : "Auto rotating"}
               </span>
             </div>
@@ -125,13 +125,13 @@ export function FeaturedCarousel({ items }: FeaturedCarouselProps) {
             <div className="mt-6 flex flex-col gap-3 sm:mt-8 sm:flex-row sm:flex-wrap">
               <Link
                 href={`/${activeItem.mediaType}/${activeItem.id}/watch`}
-                className="inline-flex items-center justify-center gap-2 rounded-full bg-[var(--color-brand)] px-6 py-3 text-sm font-semibold text-[#07111f] transition hover:bg-[var(--color-brand-strong)]"
+                className="theme-button-primary inline-flex items-center justify-center gap-2 rounded-full px-6 py-3 text-sm font-semibold"
               >
                 <Play size={16} fill="currentColor" /> Watch now
               </Link>
               <Link
                 href={`/${activeItem.mediaType}/${activeItem.id}`}
-                className="surface inline-flex items-center justify-center gap-2 rounded-full px-6 py-3 text-sm text-white transition hover:bg-white/10"
+                className="theme-button-secondary inline-flex items-center justify-center gap-2 rounded-full px-6 py-3 text-sm text-white"
               >
                 View details
               </Link>
@@ -139,20 +139,20 @@ export function FeaturedCarousel({ items }: FeaturedCarouselProps) {
           </div>
 
           <div className="hidden lg:grid lg:gap-3">
-            <div className="rounded-[28px] border border-white/10 bg-[rgba(6,12,20,0.56)] p-5 backdrop-blur-xl">
+            <div className="rounded-[28px] border border-white/10 bg-[rgba(10,10,12,0.64)] p-5 backdrop-blur-xl">
               <p className="text-[10px] uppercase tracking-[0.28em] text-[var(--color-brand-strong)]">Tonight&apos;s pick</p>
               <p className="mt-3 text-2xl font-medium text-white">{activeItem.title}</p>
               <p className="mt-2 text-sm leading-6 text-[var(--color-text-muted)]">
                 Start here for the cinematic lead, then drop into more tailored rails below.
               </p>
             </div>
-            <div className="rounded-[28px] border border-white/10 bg-[rgba(6,12,20,0.56)] p-5 backdrop-blur-xl">
+            <div className="rounded-[28px] border border-white/10 bg-[rgba(10,10,12,0.64)] p-5 backdrop-blur-xl">
               <p className="text-[10px] uppercase tracking-[0.28em] text-[var(--color-brand-strong)]">Coming up next</p>
               <div className="mt-3 space-y-3">
                 {upcomingItems.map((item, offset) => (
                   <div
                     key={`${item.mediaType}-${item.id}`}
-                    className="rounded-[20px] border border-white/8 bg-black/20 px-4 py-3"
+                    className="rounded-[20px] border border-white/8 bg-black/30 px-4 py-3"
                   >
                     <p className="text-[10px] uppercase tracking-[0.22em] text-[var(--color-brand-strong)]">
                       Up next {offset + 1}
@@ -181,14 +181,14 @@ export function FeaturedCarousel({ items }: FeaturedCarouselProps) {
         <div className="flex items-center gap-2">
           <button
             onClick={() => moveTo(index - 1)}
-            className="surface flex h-10 w-10 items-center justify-center rounded-full text-white transition hover:bg-white/10 sm:h-11 sm:w-11"
+            className="theme-button-secondary flex h-10 w-10 items-center justify-center rounded-full text-white sm:h-11 sm:w-11"
             aria-label="Previous slide"
           >
             <ChevronLeft size={18} />
           </button>
           <button
             onClick={() => moveTo(index + 1)}
-            className="surface flex h-10 w-10 items-center justify-center rounded-full text-white transition hover:bg-white/10 sm:h-11 sm:w-11"
+            className="theme-button-secondary flex h-10 w-10 items-center justify-center rounded-full text-white sm:h-11 sm:w-11"
             aria-label="Next slide"
           >
             <ChevronRight size={18} />

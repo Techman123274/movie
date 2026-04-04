@@ -49,14 +49,14 @@ export function MediaRail({ rail, profileId = null, watchlistKeys = [] }: MediaR
         <div className="hidden items-center gap-2 md:flex">
           <button
             onClick={() => scrollRail("left")}
-            className="surface flex h-11 w-11 items-center justify-center rounded-full text-white transition hover:bg-white/10"
+            className="theme-button-secondary flex h-11 w-11 items-center justify-center rounded-full text-white"
             aria-label={`Scroll ${rail.title} left`}
           >
             <ChevronLeft size={18} />
           </button>
           <button
             onClick={() => scrollRail("right")}
-            className="surface flex h-11 w-11 items-center justify-center rounded-full text-white transition hover:bg-white/10"
+            className="theme-button-secondary flex h-11 w-11 items-center justify-center rounded-full text-white"
             aria-label={`Scroll ${rail.title} right`}
           >
             <ChevronRight size={18} />

@@ -32,7 +32,7 @@ export function RegionForm({ profile, returnTo }: RegionFormProps) {
           className="surface min-h-12 flex-1 rounded-full px-5 text-sm uppercase tracking-[0.2em] text-white outline-none"
           aria-label="Playback region"
         />
-        <button className="rounded-full bg-[var(--color-brand)] px-5 py-3 text-sm font-semibold text-[#07111f]">
+        <button className="rounded-full bg-[var(--color-brand)] px-5 py-3 text-sm font-semibold text-white">
           Save region
         </button>
       </div>

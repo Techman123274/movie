@@ -114,6 +114,14 @@ export type ProviderRail = {
   region: string;
 };
 
+export type ProviderCatalog = {
+  provider: ProviderInfo;
+  region: string;
+  mediaTypes: MediaType[];
+  movies: MediaSummary[];
+  series: MediaSummary[];
+};
+
 export type HomePageData = {
   featured: MediaSummary | null;
   featuredSlides: MediaSummary[];

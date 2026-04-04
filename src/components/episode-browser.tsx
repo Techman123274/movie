@@ -39,7 +39,7 @@ export function EpisodeBrowser({ tvId, seasons, selectedSeason, resumeTarget }: 
           />
           <Link
             href={seasonPlayHref}
-            className="inline-flex min-h-11 items-center rounded-full bg-[var(--color-brand)] px-5 text-sm font-semibold text-[#07111f]"
+            className="inline-flex min-h-11 items-center rounded-full bg-[var(--color-brand)] px-5 text-sm font-semibold text-white"
           >
             {shouldResumeSeason ? "Resume Season" : "Play Season"}
           </Link>

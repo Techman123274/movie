@@ -4,6 +4,7 @@ import { PageFrame } from "@/components/page-frame";
 import { SearchFilterBar } from "@/components/search-filter-bar";
 import { SearchResults } from "@/components/search-results";
 import { UnavailablePanel } from "@/components/unavailable-panel";
+import { withMinimumDelay } from "@/lib/loading";
 import { getWatchlist } from "@/lib/persistence";
 import { searchCatalogExperience } from "@/lib/tmdb";
 import { buildMediaKey, parsePositiveInt } from "@/lib/utils";
@@ -29,15 +30,17 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
       ? params.sort
       : "relevance";
   const personId = parsePositiveInt(params.person);
-  const [results, watchlist] = await Promise.all([
-    searchCatalogExperience({
-      query,
-      type: selectedType,
-      sort: selectedSort,
-      personId,
-    }),
-    viewer.activeProfile ? getWatchlist(viewer.activeProfile.id) : Promise.resolve([]),
-  ]);
+  const [results, watchlist] = await withMinimumDelay(
+    Promise.all([
+      searchCatalogExperience({
+        query,
+        type: selectedType,
+        sort: selectedSort,
+        personId,
+      }),
+      viewer.activeProfile ? getWatchlist(viewer.activeProfile.id) : Promise.resolve([]),
+    ]),
+  );
   const watchlistKeys = watchlist.map((record) => buildMediaKey(record.mediaType, record.mediaId));
 
   if (results === null) {

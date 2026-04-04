@@ -15,7 +15,7 @@ export function ProfileGrid({ profiles, activeProfileId }: ProfileGridProps) {
           <article key={profile.id} className="surface group rounded-[28px] p-6 transition hover:-translate-y-1">
             <div className="mb-5 flex items-start justify-between gap-3">
               <div
-                className="flex h-16 w-16 items-center justify-center rounded-2xl text-2xl font-semibold text-[#07111f]"
+                className="flex h-16 w-16 items-center justify-center rounded-2xl text-2xl font-semibold text-white"
                 style={{ backgroundColor: profile.accent }}
               >
                 {profile.avatar}
@@ -36,7 +36,7 @@ export function ProfileGrid({ profiles, activeProfileId }: ProfileGridProps) {
             <form action={switchActiveProfileAction} className="mt-6">
               <input type="hidden" name="profileId" value={profile.id} />
               <input type="hidden" name="returnTo" value="/profiles" />
-              <button className="rounded-full bg-[var(--color-brand)] px-4 py-2 text-sm font-semibold text-[#07111f]">
+              <button className="rounded-full bg-[var(--color-brand)] px-4 py-2 text-sm font-semibold text-white">
                 {activeProfileId === profile.id ? "Current profile" : "Switch profile"}
               </button>
             </form>

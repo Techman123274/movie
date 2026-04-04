@@ -55,7 +55,7 @@ export function PlaybackActions({ embedUrl, title }: PlaybackActionsProps) {
             href={embedUrl}
             target="_blank"
             rel="noreferrer"
-            className="flex min-h-11 items-center gap-2 rounded-full bg-[var(--color-brand)] px-4 text-sm font-semibold text-[#07111f]"
+            className="flex min-h-11 items-center gap-2 rounded-full bg-[var(--color-brand)] px-4 text-sm font-semibold text-white"
           >
             <ExternalLink size={16} />
             Open Player

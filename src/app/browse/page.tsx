@@ -1,10 +1,9 @@
 import { FeaturedCarousel } from "@/components/featured-carousel";
-import { HouseholdPulse } from "@/components/household-pulse";
 import { MediaRail } from "@/components/media-rail";
 import { PageFrame } from "@/components/page-frame";
 import { UnavailablePanel } from "@/components/unavailable-panel";
+import { withMinimumDelay } from "@/lib/loading";
 import { getWatchlist } from "@/lib/persistence";
-import { getHouseholdSocialState } from "@/lib/social";
 import { getHomePageData } from "@/lib/tmdb";
 import { buildMediaKey } from "@/lib/utils";
 import { getViewerContext } from "@/lib/viewer";
@@ -12,13 +11,14 @@ import { getPersonalizedRails } from "@/lib/watch-state";
 
 export default async function BrowsePage() {
   const viewer = await getViewerContext({ redirectToOnboarding: true });
-  const [data, personalized, watchlist] = await Promise.all([
-    getHomePageData(),
-    viewer.activeProfile ? getPersonalizedRails(viewer.activeProfile.id) : Promise.resolve(null),
-    viewer.activeProfile ? getWatchlist(viewer.activeProfile.id) : Promise.resolve([]),
-  ]);
+  const [data, personalized, watchlist] = await withMinimumDelay(
+    Promise.all([
+      getHomePageData(),
+      viewer.activeProfile ? getPersonalizedRails(viewer.activeProfile.id) : Promise.resolve(null),
+      viewer.activeProfile ? getWatchlist(viewer.activeProfile.id) : Promise.resolve([]),
+    ]),
+  );
   const watchlistKeys = watchlist.map((record) => buildMediaKey(record.mediaType, record.mediaId));
-  const householdPulse = await getHouseholdSocialState(viewer.profiles, viewer.activeProfile?.id ?? null);
 
   if (!data) {
     return (
@@ -34,18 +34,6 @@ export default async function BrowsePage() {
   return (
     <PageFrame activeHref="/browse">
       <FeaturedCarousel items={data.featuredSlides} />
-      <section className="surface rounded-[28px] p-6">
-        <p className="mb-2 text-xs uppercase tracking-[0.28em] text-[var(--color-brand-strong)]">Your home screen</p>
-        <h2 className="display-font text-3xl text-white">Made for faster picks and smoother nights in.</h2>
-        <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--color-text-muted)]">
-          Continue watching, fresh arrivals, tailored suggestions, and a household social pulse all live here so your next watch is never far away.
-        </p>
-      </section>
-      <HouseholdPulse
-        state={householdPulse}
-        profileId={viewer.activeProfile?.id ?? null}
-        watchlistKeys={watchlistKeys}
-      />
       {personalized?.continueWatchingRail ? (
         <MediaRail
           rail={personalized.continueWatchingRail}

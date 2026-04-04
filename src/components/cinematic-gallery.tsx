@@ -24,7 +24,7 @@ export function CinematicGallery({ items, eyebrow, title, description }: Cinemat
 
   return (
     <div className="grid gap-4 lg:grid-cols-[minmax(0,1.15fr)_220px]">
-      <article className="relative min-h-[340px] overflow-hidden rounded-[34px] border border-white/10 bg-[rgba(8,14,23,0.92)] shadow-[0_28px_90px_rgba(0,0,0,0.48)]">
+      <article className="relative min-h-[340px] overflow-hidden rounded-[34px] border border-white/10 bg-[rgba(10,10,12,0.94)] shadow-[0_28px_90px_rgba(0,0,0,0.48)]">
         {heroBackdrop ? (
           <Image
             src={heroBackdrop}
@@ -36,8 +36,8 @@ export function CinematicGallery({ items, eyebrow, title, description }: Cinemat
             className="object-cover"
           />
         ) : null}
-        <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(4,8,14,0.16),rgba(4,8,14,0.86)_60%,rgba(4,8,14,0.98))]" />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(214,179,109,0.24),transparent_28%)]" />
+        <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(8,8,10,0.14),rgba(8,8,10,0.86)_60%,rgba(8,8,10,0.98))]" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(229,9,20,0.24),transparent_28%)]" />
         <div className="relative flex h-full flex-col justify-end p-6 sm:p-8">
           <p className="text-[10px] uppercase tracking-[0.34em] text-[var(--color-brand-strong)]">{eyebrow}</p>
           <h2 className="display-font mt-3 max-w-xl text-4xl leading-none text-white sm:text-5xl">{title}</h2>
@@ -71,7 +71,7 @@ export function CinematicGallery({ items, eyebrow, title, description }: Cinemat
           return (
             <article
               key={`${item.mediaType}-${item.id}`}
-              className="relative min-h-[164px] overflow-hidden rounded-[28px] border border-white/10 bg-[rgba(8,14,23,0.92)]"
+              className="relative min-h-[164px] overflow-hidden rounded-[28px] border border-white/10 bg-[rgba(10,10,12,0.94)]"
             >
               {poster ? (
                 <Image
@@ -82,7 +82,7 @@ export function CinematicGallery({ items, eyebrow, title, description }: Cinemat
                   className="object-cover"
                 />
               ) : null}
-              <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(4,8,14,0.04),rgba(4,8,14,0.92))]" />
+              <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(8,8,10,0.04),rgba(8,8,10,0.92))]" />
               <div className="relative flex h-full flex-col justify-end p-4">
                 <p className="text-[10px] uppercase tracking-[0.24em] text-[var(--color-brand-strong)]">
                   {item.mediaType === "movie" ? "Movie" : "Series"}

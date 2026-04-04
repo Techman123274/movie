@@ -16,13 +16,13 @@ export function HeroSpotlight({ item }: HeroSpotlightProps) {
       className="relative overflow-hidden rounded-[40px] border border-white/10 px-6 py-16 shadow-[0_30px_120px_rgba(0,0,0,0.55)] sm:px-10 lg:px-14 lg:py-24"
       style={{
         backgroundImage: background
-          ? `linear-gradient(90deg, rgba(4,8,14,0.92) 0%, rgba(4,8,14,0.74) 38%, rgba(4,8,14,0.2) 100%), url(${background})`
-          : "linear-gradient(135deg, rgba(214,179,109,0.25), rgba(6,12,20,0.95))",
+          ? `linear-gradient(90deg, rgba(8,8,10,0.94) 0%, rgba(8,8,10,0.76) 38%, rgba(8,8,10,0.24) 100%), url(${background})`
+          : "linear-gradient(135deg, rgba(229,9,20,0.2), rgba(8,8,10,0.95))",
         backgroundSize: "cover",
         backgroundPosition: "center",
       }}
     >
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(214,179,109,0.18),transparent_28%)]" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(229,9,20,0.22),transparent_28%)]" />
       <div className="relative max-w-3xl">
         <p className="mb-4 text-xs uppercase tracking-[0.35em] text-[var(--color-brand-strong)]">
           Featured tonight
@@ -46,13 +46,13 @@ export function HeroSpotlight({ item }: HeroSpotlightProps) {
         <div className="mt-8 flex flex-wrap gap-3">
           <Link
             href={`/${item.mediaType}/${item.id}/watch`}
-            className="inline-flex items-center gap-2 rounded-full bg-[var(--color-brand)] px-6 py-3 text-sm font-semibold text-[#07111f] transition hover:bg-[var(--color-brand-strong)]"
+            className="theme-button-primary inline-flex items-center gap-2 rounded-full px-6 py-3 text-sm font-semibold"
           >
             <Play size={16} fill="currentColor" /> Watch now
           </Link>
           <Link
             href={`/${item.mediaType}/${item.id}`}
-            className="surface inline-flex items-center gap-2 rounded-full px-6 py-3 text-sm text-white transition hover:bg-white/10"
+            className="theme-button-secondary inline-flex items-center gap-2 rounded-full px-6 py-3 text-sm text-white"
           >
             <Plus size={16} /> View details
           </Link>

@@ -18,7 +18,7 @@ export function PageHero({ eyebrow, title, description, actions, backdropPath }:
       style={
         background
           ? {
-              backgroundImage: `linear-gradient(100deg, rgba(4,8,14,0.94) 0%, rgba(4,8,14,0.78) 48%, rgba(4,8,14,0.24) 100%), url(${background})`,
+              backgroundImage: `linear-gradient(100deg, rgba(6,6,8,0.96) 0%, rgba(8,8,10,0.82) 48%, rgba(8,8,10,0.26) 100%), url(${background})`,
               backgroundSize: "cover",
               backgroundPosition: "center",
             }
@@ -26,7 +26,7 @@ export function PageHero({ eyebrow, title, description, actions, backdropPath }:
       }
     >
       {background ? (
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(214,179,109,0.18),transparent_30%)]" />
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(229,9,20,0.22),transparent_30%)]" />
       ) : null}
       <div className="relative">
         <p className="mb-3 text-xs uppercase tracking-[0.32em] text-[var(--color-brand-strong)]">{eyebrow}</p>

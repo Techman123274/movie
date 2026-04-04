@@ -42,7 +42,7 @@ export function HouseholdPulse({ state, profileId = null, watchlistKeys = [] }: 
             <article key={profile.id} className="surface rounded-[26px] p-5">
               <div className="flex items-start justify-between gap-3">
                 <div
-                  className="flex h-14 w-14 items-center justify-center rounded-2xl text-xl font-semibold text-[#07111f]"
+                  className="flex h-14 w-14 items-center justify-center rounded-2xl text-xl font-semibold text-white"
                   style={{ backgroundColor: profile.accent }}
                 >
                   {profile.avatar}

@@ -9,6 +9,7 @@ import { ProviderBadges } from "@/components/provider-badges";
 import { TitleFactsPanel } from "@/components/title-facts-panel";
 import { TitleTrailerPanel } from "@/components/title-trailer-panel";
 import { UnavailablePanel } from "@/components/unavailable-panel";
+import { withMinimumDelay } from "@/lib/loading";
 import { getProfileFeedback, getResumeTarget, getWatchlist } from "@/lib/persistence";
 import { getMediaDetail, getSeasonEpisodes } from "@/lib/tmdb";
 import type { MediaType } from "@/lib/types";
@@ -33,7 +34,7 @@ export default async function DetailPage({ params, searchParams }: DetailPagePro
   }
 
   const viewer = await getViewerContext({ redirectToOnboarding: true });
-  const detail = await getMediaDetail(mediaType as MediaType, Number(id), viewer.providerRegion);
+  const detail = await withMinimumDelay(getMediaDetail(mediaType as MediaType, Number(id), viewer.providerRegion));
 
   if (!detail) {
     return (
@@ -93,7 +94,7 @@ export default async function DetailPage({ params, searchParams }: DetailPagePro
             <span className="rounded-full border border-white/10 bg-black/20 px-4 py-2">
               {viewer.profiles.length} profile{viewer.profiles.length === 1 ? "" : "s"} in the mix
             </span>
-            <span className="rounded-full border border-[rgba(214,179,109,0.28)] bg-[rgba(214,179,109,0.1)] px-4 py-2 text-[var(--color-brand-strong)]">
+            <span className="theme-chip rounded-full px-4 py-2 text-[var(--color-brand-strong)]">
               Reactions shape discovery
             </span>
           </div>
@@ -112,10 +113,10 @@ export default async function DetailPage({ params, searchParams }: DetailPagePro
             </div>
           </div>
           <div className="mt-6 flex flex-wrap gap-3">
-            <Link href="/account" className="rounded-full bg-[var(--color-brand)] px-4 py-2 text-sm font-semibold text-[#07111f]">
-              Open My Space
+            <Link href="/account" className="theme-button-primary rounded-full px-4 py-2 text-sm font-semibold">
+              Open My Profile
             </Link>
-            <Link href="/profiles" className="surface rounded-full px-4 py-2 text-sm text-white transition hover:bg-white/10">
+            <Link href="/profiles" className="theme-button-secondary rounded-full px-4 py-2 text-sm text-white">
               Switch profiles
             </Link>
           </div>

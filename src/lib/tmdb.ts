@@ -8,6 +8,7 @@ import type {
   MediaSummary,
   MediaType,
   PersonSummary,
+  ProviderCatalog,
   ProviderInfo,
   ProviderRail,
   SearchExperienceFilters,
@@ -22,16 +23,27 @@ export const TMDB_IMAGE_BASE = "https://image.tmdb.org/t/p";
 const MAX_PROVIDER_RAILS = 12;
 const PROVIDER_CANDIDATE_LIMIT = 24;
 const MIN_PROVIDER_RAIL_ITEMS = 4;
+const PROVIDER_RAIL_PAGE_COUNT = 1;
+const PROVIDER_CATALOG_PAGE_COUNT = 3;
+const PROVIDER_CATALOG_MEDIA_LIMIT = 60;
 const DEFAULT_DISCOVER_LIMIT = 12;
 const PREFERRED_PROVIDER_NAMES = [
   "netflix",
+  "hulu",
+  "disney plus",
   "amazon prime video",
   "prime video",
-  "disney plus",
-  "hulu",
   "max",
+  "hbo",
   "apple tv plus",
   "paramount plus",
+  "paramount+",
+  "tubi",
+  "tubi tv",
+  "zeus",
+  "zeus network",
+  "kayo",
+  "kayo sports",
   "peacock premium",
   "crunchyroll",
 ];
@@ -167,6 +179,67 @@ function sortProviders(providers: ProviderInfo[]) {
       (a.displayPriority ?? 9999) - (b.displayPriority ?? 9999) ||
       a.name.localeCompare(b.name),
   );
+}
+
+type ProviderDirectoryEntry = {
+  provider: ProviderInfo;
+  mediaTypes: Set<MediaType>;
+};
+
+async function getProviderDirectory() {
+  const [movieProviders, tvProviders] = await Promise.all([
+    fetchTmdb<{ results: Record<string, unknown>[] }>("/watch/providers/movie"),
+    fetchTmdb<{ results: Record<string, unknown>[] }>("/watch/providers/tv"),
+  ]);
+
+  const providerMap = new Map<number, ProviderDirectoryEntry>();
+
+  movieProviders.results.forEach((entry) => {
+    const provider = normalizeProvider(entry);
+    providerMap.set(provider.providerId, {
+      provider,
+      mediaTypes: new Set<MediaType>(["movie"]),
+    });
+  });
+
+  tvProviders.results.forEach((entry) => {
+    const provider = normalizeProvider(entry);
+    const existing = providerMap.get(provider.providerId);
+
+    if (existing) {
+      existing.mediaTypes.add("tv");
+      return;
+    }
+
+    providerMap.set(provider.providerId, {
+      provider,
+      mediaTypes: new Set<MediaType>(["tv"]),
+    });
+  });
+
+  return providerMap;
+}
+
+async function discoverProviderTitles(options: {
+  mediaType: MediaType;
+  providerId: number;
+  region: string;
+  pageCount?: number;
+  limit?: number;
+}) {
+  const settled = await Promise.allSettled(
+    Array.from({ length: options.pageCount ?? PROVIDER_RAIL_PAGE_COUNT }, (_, index) =>
+      fetchTmdb<{ results: Record<string, unknown>[] }>(
+        `/discover/${options.mediaType}?watch_region=${encodeURIComponent(options.region)}&with_watch_providers=${options.providerId}&sort_by=popularity.desc&page=${index + 1}`,
+      ),
+    ),
+  );
+
+  const items = settled
+    .filter((request): request is PromiseFulfilledResult<{ results: Record<string, unknown>[] }> => request.status === "fulfilled")
+    .flatMap((request) => request.value.results.map((item) => normalizeSummary(item, options.mediaType)));
+
+  return combineUniqueMedia(items).slice(0, options.limit ?? PROVIDER_CATALOG_MEDIA_LIMIT);
 }
 
 function normalizeSeasons(seasons: Record<string, unknown>[] | undefined): SeasonSummary[] | undefined {
@@ -775,33 +848,7 @@ export async function getProviderRails(region: string): Promise<ProviderRail[] |
 
   try {
     const normalizedRegion = region.toUpperCase();
-    const [movieProviders, tvProviders] = await Promise.all([
-      fetchTmdb<{ results: Record<string, unknown>[] }>("/watch/providers/movie"),
-      fetchTmdb<{ results: Record<string, unknown>[] }>("/watch/providers/tv"),
-    ]);
-
-    const providerMap = new Map<number, { provider: ProviderInfo; mediaTypes: Set<MediaType> }>();
-
-    movieProviders.results.forEach((entry) => {
-      const provider = normalizeProvider(entry);
-      providerMap.set(provider.providerId, {
-        provider,
-        mediaTypes: new Set<MediaType>(["movie"]),
-      });
-    });
-
-    tvProviders.results.forEach((entry) => {
-      const provider = normalizeProvider(entry);
-      const existing = providerMap.get(provider.providerId);
-      if (existing) {
-        existing.mediaTypes.add("tv");
-      } else {
-        providerMap.set(provider.providerId, {
-          provider,
-          mediaTypes: new Set<MediaType>(["tv"]),
-        });
-      }
-    });
+    const providerMap = await getProviderDirectory();
 
     const sortedProviders = Array.from(providerMap.values()).sort(
       (a, b) =>
@@ -813,13 +860,15 @@ export async function getProviderRails(region: string): Promise<ProviderRail[] |
     const sections = await Promise.allSettled(
       sortedProviders.slice(0, PROVIDER_CANDIDATE_LIMIT).map(async ({ provider, mediaTypes }) => {
         const mediaRequests = await Promise.allSettled(
-          Array.from(mediaTypes).map(async (mediaType) => {
-            const result = await fetchTmdb<{ results: Record<string, unknown>[] }>(
-              `/discover/${mediaType}?watch_region=${encodeURIComponent(normalizedRegion)}&with_watch_providers=${provider.providerId}&sort_by=popularity.desc`,
-            );
-
-            return result.results.map((item) => normalizeSummary(item, mediaType)).slice(0, 6);
-          }),
+          Array.from(mediaTypes).map((mediaType) =>
+            discoverProviderTitles({
+              mediaType,
+              providerId: provider.providerId,
+              region: normalizedRegion,
+              pageCount: PROVIDER_RAIL_PAGE_COUNT,
+              limit: 6,
+            }),
+          ),
         );
 
         const fulfilledItems = mediaRequests
@@ -856,6 +905,53 @@ export async function getProviderRails(region: string): Promise<ProviderRail[] |
 
       return accumulator;
     }, []).slice(0, MAX_PROVIDER_RAILS);
+  } catch {
+    return null;
+  }
+}
+
+export async function getProviderCatalog(providerId: number, region: string): Promise<ProviderCatalog | null> {
+  if (!hasTmdbCredentials()) {
+    return null;
+  }
+
+  try {
+    const normalizedRegion = region.toUpperCase();
+    const providerMap = await getProviderDirectory();
+    const entry = providerMap.get(providerId);
+
+    if (!entry) {
+      return null;
+    }
+
+    const [movies, series] = await Promise.all([
+      entry.mediaTypes.has("movie")
+        ? discoverProviderTitles({
+            mediaType: "movie",
+            providerId,
+            region: normalizedRegion,
+            pageCount: PROVIDER_CATALOG_PAGE_COUNT,
+            limit: PROVIDER_CATALOG_MEDIA_LIMIT,
+          })
+        : Promise.resolve([]),
+      entry.mediaTypes.has("tv")
+        ? discoverProviderTitles({
+            mediaType: "tv",
+            providerId,
+            region: normalizedRegion,
+            pageCount: PROVIDER_CATALOG_PAGE_COUNT,
+            limit: PROVIDER_CATALOG_MEDIA_LIMIT,
+          })
+        : Promise.resolve([]),
+    ]);
+
+    return {
+      provider: entry.provider,
+      region: normalizedRegion,
+      mediaTypes: Array.from(entry.mediaTypes),
+      movies,
+      series,
+    };
   } catch {
     return null;
   }

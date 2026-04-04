@@ -68,7 +68,7 @@ export function ProfileOnboardingForm() {
           ))}
         </div>
       </div>
-      <button className="mt-8 rounded-full bg-[var(--color-brand)] px-6 py-3 text-sm font-semibold text-[#07111f]">
+      <button className="mt-8 rounded-full bg-[var(--color-brand)] px-6 py-3 text-sm font-semibold text-white">
         Create profile
       </button>
     </form>

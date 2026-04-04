@@ -27,13 +27,13 @@ export function DetailHero({ item, profileId, inWatchlist, resumeTarget, feedbac
       className="relative overflow-hidden rounded-[36px] border border-white/10 px-6 py-14 sm:px-10"
       style={{
         backgroundImage: background
-          ? `linear-gradient(90deg, rgba(6,12,20,0.93) 0%, rgba(6,12,20,0.72) 45%, rgba(6,12,20,0.3) 100%), url(${background})`
-          : "linear-gradient(135deg, rgba(214,179,109,0.18), rgba(6,12,20,0.96))",
+          ? `linear-gradient(90deg, rgba(8,8,10,0.94) 0%, rgba(8,8,10,0.76) 45%, rgba(8,8,10,0.3) 100%), url(${background})`
+          : "linear-gradient(135deg, rgba(229,9,20,0.16), rgba(8,8,10,0.96))",
         backgroundSize: "cover",
         backgroundPosition: "center",
       }}
     >
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(214,179,109,0.18),transparent_30%)]" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(229,9,20,0.22),transparent_30%)]" />
       <div className="relative max-w-3xl">
         <p className="mb-4 text-xs uppercase tracking-[0.34em] text-[var(--color-brand-strong)]">
           {formatMediaLabel(item.mediaType)}
@@ -53,7 +53,7 @@ export function DetailHero({ item, profileId, inWatchlist, resumeTarget, feedbac
           </p>
         ) : null}
         {item.tagline ? (
-          <div className="mt-4 inline-flex items-center gap-2 rounded-full border border-[rgba(214,179,109,0.24)] bg-[rgba(214,179,109,0.08)] px-4 py-2 text-sm text-white">
+          <div className="theme-chip mt-4 inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm text-white">
             <Sparkles size={16} className="text-[var(--color-brand-strong)]" />
             <span>{item.tagline}</span>
           </div>
@@ -61,12 +61,12 @@ export function DetailHero({ item, profileId, inWatchlist, resumeTarget, feedbac
         <div className="mt-8 flex flex-wrap gap-3">
           <Link
             href={resumeTarget?.watchHref ?? `/${item.mediaType}/${item.id}/watch`}
-            className="inline-flex items-center gap-2 rounded-full bg-[var(--color-brand)] px-6 py-3 text-sm font-semibold text-[#07111f]"
+            className="theme-button-primary inline-flex items-center gap-2 rounded-full px-6 py-3 text-sm font-semibold"
           >
             <Play size={16} fill="currentColor" /> {resumeTarget ? "Resume Watching" : "Start Watching"}
           </Link>
           {item.heroTrailer ? (
-            <a href="#trailers" className="surface inline-flex items-center gap-2 rounded-full px-6 py-3 text-sm text-white">
+            <a href="#trailers" className="theme-button-secondary inline-flex items-center gap-2 rounded-full px-6 py-3 text-sm text-white">
               Watch trailer
             </a>
           ) : null}

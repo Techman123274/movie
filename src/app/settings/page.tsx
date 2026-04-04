@@ -30,7 +30,7 @@ export default async function SettingsPage() {
 
       <RouteLinkRow
         items={[
-          { href: "/account", label: "Back to My Space" },
+          { href: "/account", label: "Back to My Profile" },
           { href: "/profiles", label: "Profiles" },
           { href: "/providers", label: "Where to Watch" },
         ]}
@@ -71,7 +71,7 @@ export default async function SettingsPage() {
               <p className="mb-2 text-xs uppercase tracking-[0.24em] text-[var(--color-brand-strong)]">Active profile</p>
               <div className="flex items-start gap-4">
                 <div
-                  className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl text-xl font-semibold text-[#07111f]"
+                  className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl text-xl font-semibold text-white"
                   style={{ backgroundColor: viewer.activeProfile.accent }}
                 >
                   {viewer.activeProfile.avatar}
@@ -89,7 +89,7 @@ export default async function SettingsPage() {
               <div className="mt-5 flex flex-wrap gap-2">
                 <Link
                   href="/profiles"
-                  className="rounded-full bg-[var(--color-brand)] px-4 py-2 text-sm font-semibold text-[#07111f]"
+                  className="rounded-full bg-[var(--color-brand)] px-4 py-2 text-sm font-semibold text-white"
                 >
                   Switch profile
                 </Link>
@@ -97,7 +97,7 @@ export default async function SettingsPage() {
                   href="/account"
                   className="surface rounded-full px-4 py-2 text-sm text-white transition hover:bg-white/10"
                 >
-                  Open My Space
+                  Open My Profile
                 </Link>
               </div>
             </section>

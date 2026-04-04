@@ -57,7 +57,7 @@ function CardWatchlistButton({
       <Link
         href="/account"
         aria-label="Open account to save titles"
-        className="surface inline-flex h-11 w-11 items-center justify-center rounded-full text-white transition hover:bg-white/10"
+        className="theme-button-secondary inline-flex h-11 w-11 items-center justify-center rounded-full text-white"
       >
         <Plus size={16} />
       </Link>
@@ -76,8 +76,8 @@ function CardWatchlistButton({
         aria-label={inWatchlist ? "Remove from watchlist" : "Add to watchlist"}
         className={`inline-flex h-11 w-11 items-center justify-center rounded-full transition ${
           inWatchlist
-            ? "bg-[rgba(214,179,109,0.16)] text-[var(--color-brand-strong)]"
-            : "surface text-white hover:bg-white/10"
+            ? "theme-chip text-[var(--color-brand-strong)]"
+            : "theme-button-secondary text-white"
         } disabled:cursor-not-allowed disabled:opacity-70`}
       >
         {inWatchlist ? <Check size={16} /> : <Plus size={16} />}
@@ -112,7 +112,7 @@ export function MediaCard({ item, variant = "default", profileId = null, inWatch
     "opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100";
   const variantAccentClass =
     variant === "continue"
-      ? "border-[rgba(214,179,109,0.22)] bg-[rgba(214,179,109,0.07)]"
+      ? "border-[var(--color-brand-line)] bg-[var(--color-brand-soft)]"
       : "border-white/10 bg-[rgba(255,255,255,0.03)]";
 
   return (
@@ -129,25 +129,25 @@ export function MediaCard({ item, variant = "default", profileId = null, inWatch
             className="aspect-[2/3] bg-cover bg-center transition duration-500 sm:group-hover:scale-[1.06] sm:group-focus-within:scale-[1.06]"
             style={{
               backgroundImage: posterImage
-                ? `linear-gradient(180deg, rgba(6,12,20,0.08), rgba(6,12,20,0.85)), url(${posterImage})`
-                : "linear-gradient(180deg, rgba(214,179,109,0.25), rgba(4,9,18,0.95))",
+                ? `linear-gradient(180deg, rgba(10,10,12,0.08), rgba(10,10,12,0.9)), url(${posterImage})`
+                : "linear-gradient(180deg, rgba(229,9,20,0.26), rgba(6,6,8,0.96))",
             }}
           />
         </Link>
 
         <div className="pointer-events-none absolute inset-0">
           <div className="absolute inset-x-3 top-3 flex items-center justify-between gap-2">
-            <span className="rounded-full bg-[rgba(6,12,20,0.72)] px-3 py-1 text-[10px] uppercase tracking-[0.22em] text-white">
+            <span className="rounded-full bg-[rgba(10,10,12,0.78)] px-3 py-1 text-[10px] uppercase tracking-[0.22em] text-white">
               {formatMediaLabel(item.mediaType)}
             </span>
             <div className="flex items-center gap-2">
               {item.feedback === "like" ? (
-                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[rgba(214,179,109,0.18)] text-[var(--color-brand-strong)]">
+                <span className="theme-chip flex h-8 w-8 items-center justify-center rounded-full text-[var(--color-brand-strong)]">
                   <Heart size={14} fill="currentColor" />
                 </span>
               ) : null}
               {inWatchlist ? (
-                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[rgba(214,179,109,0.18)] text-[var(--color-brand-strong)]">
+                <span className="theme-chip flex h-8 w-8 items-center justify-center rounded-full text-[var(--color-brand-strong)]">
                   <Check size={14} />
                 </span>
               ) : null}
@@ -155,10 +155,10 @@ export function MediaCard({ item, variant = "default", profileId = null, inWatch
           </div>
 
           <div
-            className={`absolute inset-x-3 top-14 hidden rounded-[22px] border border-white/10 bg-[rgba(6,12,20,0.78)] p-3 text-xs leading-5 text-[var(--color-text-muted)] shadow-xl transition duration-300 sm:block ${previewPanelClass}`}
+            className={`absolute inset-x-3 top-14 hidden rounded-[22px] border border-white/10 bg-[rgba(10,10,12,0.8)] p-3 text-xs leading-5 text-[var(--color-text-muted)] shadow-xl transition duration-300 sm:block ${previewPanelClass}`}
             style={{
               backgroundImage: previewImage
-                ? `linear-gradient(180deg, rgba(6,12,20,0.86), rgba(6,12,20,0.94)), url(${previewImage})`
+                ? `linear-gradient(180deg, rgba(10,10,12,0.88), rgba(10,10,12,0.95)), url(${previewImage})`
                 : undefined,
               backgroundSize: "cover",
               backgroundPosition: "center",
@@ -178,7 +178,7 @@ export function MediaCard({ item, variant = "default", profileId = null, inWatch
           </div>
         </div>
 
-        <div className="absolute inset-x-0 bottom-0 bg-[linear-gradient(180deg,rgba(4,9,18,0.03),rgba(4,9,18,0.97))] p-3 sm:p-4">
+          <div className="absolute inset-x-0 bottom-0 bg-[linear-gradient(180deg,rgba(6,6,8,0.02),rgba(6,6,8,0.97))] p-3 sm:p-4">
           <div className="mb-2 flex items-center gap-2 text-[10px] uppercase tracking-[0.22em] text-[var(--color-text-muted)] sm:text-[11px]">
             <span>{formatYear(item.releaseDate)}</span>
             {item.genreNames[0] ? (
@@ -209,7 +209,7 @@ export function MediaCard({ item, variant = "default", profileId = null, inWatch
               </span>
             ) : null}
             {progressLabel ? (
-              <span className="inline-flex items-center gap-1 rounded-full border border-[rgba(214,179,109,0.24)] bg-[rgba(214,179,109,0.08)] px-2.5 py-1 text-[var(--color-brand-strong)]">
+              <span className="theme-chip inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[var(--color-brand-strong)]">
                 <Clock3 size={12} />
                 {progressLabel}
               </span>
@@ -237,7 +237,7 @@ export function MediaCard({ item, variant = "default", profileId = null, inWatch
             <div className="grid grid-cols-[minmax(0,1fr)_auto_auto] gap-2">
               <Link
                 href={watchHref}
-                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-[var(--color-brand)] px-4 text-sm font-semibold text-[#07111f] transition hover:bg-[var(--color-brand-strong)]"
+                className="theme-button-primary inline-flex min-h-11 items-center justify-center gap-2 rounded-full px-4 text-sm font-semibold"
               >
                 <Play size={15} fill="currentColor" />
                 {item.actionLabel ?? (variant === "continue" ? "Resume" : "Watch")}
@@ -254,7 +254,7 @@ export function MediaCard({ item, variant = "default", profileId = null, inWatch
               <Link
                 href={detailHref}
                 aria-label={`More info about ${item.title}`}
-                className="surface inline-flex h-11 w-11 items-center justify-center rounded-full text-white transition hover:bg-white/10"
+                className="theme-button-secondary inline-flex h-11 w-11 items-center justify-center rounded-full text-white"
               >
                 <Info size={16} />
               </Link>

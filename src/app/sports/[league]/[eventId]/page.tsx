@@ -65,7 +65,7 @@ export default async function SportsEventPage({ params }: SportsEventPageProps) 
             href={group.streamcenterUrl}
             target="_blank"
             rel="noreferrer"
-            className="rounded-full bg-[var(--color-brand)] px-6 py-3 text-sm font-semibold text-[#07111f]"
+            className="rounded-full bg-[var(--color-brand)] px-6 py-3 text-sm font-semibold text-white"
           >
             Open StreamCenter
           </a>

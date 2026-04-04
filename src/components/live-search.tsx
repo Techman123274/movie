@@ -111,8 +111,8 @@ export function LiveSearch({ initialQuery = "", placeholder, variant = "compact"
   const showDropdown = supportsQuickResults && isOpen && trimmedDeferredQuery.length >= 2;
   const dropdownClassName =
     variant === "compact"
-      ? "absolute left-0 right-0 top-full z-[130] mt-3 overflow-hidden rounded-[26px] border border-white/10 bg-[linear-gradient(180deg,rgba(12,21,35,0.98),rgba(5,11,19,0.98))] shadow-2xl"
-      : "mt-4 overflow-hidden rounded-[26px] border border-white/10 bg-[linear-gradient(180deg,rgba(12,21,35,0.98),rgba(5,11,19,0.98))] shadow-2xl";
+      ? "theme-menu-panel absolute left-0 right-0 top-full z-[130] mt-3 overflow-hidden rounded-[26px]"
+      : "theme-menu-panel mt-4 overflow-hidden rounded-[26px]";
 
   return (
     <div
@@ -129,8 +129,8 @@ export function LiveSearch({ initialQuery = "", placeholder, variant = "compact"
         className={cn(
           "flex items-center gap-3",
           variant === "compact"
-            ? "surface min-h-11 rounded-full px-4"
-            : "surface min-h-14 rounded-full px-5",
+            ? "theme-input-shell min-h-11 rounded-full px-4"
+            : "theme-input-shell min-h-14 rounded-full px-5",
         )}
       >
         <Search size={variant === "compact" ? 16 : 18} className="shrink-0 text-[var(--color-text-muted)]" />
@@ -142,7 +142,7 @@ export function LiveSearch({ initialQuery = "", placeholder, variant = "compact"
           className="min-w-0 flex-1 bg-transparent text-white outline-none placeholder:text-[var(--color-text-muted)]"
         />
         {variant === "full" ? (
-          <button className="rounded-full bg-[var(--color-brand)] px-6 py-3 text-sm font-semibold text-[#07111f]">
+          <button className="theme-button-primary rounded-full px-6 py-3 text-sm font-semibold">
             Search
           </button>
         ) : null}

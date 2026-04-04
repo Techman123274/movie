@@ -1,11 +1,13 @@
+import Link from "next/link";
+import { Play } from "lucide-react";
 import { MediaRail } from "@/components/media-rail";
 import { PageFrame } from "@/components/page-frame";
 import { PageHero } from "@/components/page-hero";
-import { RouteLinkRow } from "@/components/route-link-row";
 import { UnavailablePanel } from "@/components/unavailable-panel";
+import { withMinimumDelay } from "@/lib/loading";
 import { getWatchlist } from "@/lib/persistence";
-import { getGenreOptions, getShowCatalogRails } from "@/lib/tmdb";
-import { buildMediaKey, parsePositiveInt } from "@/lib/utils";
+import { getGenreOptions, getImageUrl, getShowCatalogRails } from "@/lib/tmdb";
+import { buildMediaKey, cn, formatRating, formatYear, parsePositiveInt } from "@/lib/utils";
 import { getViewerContext } from "@/lib/viewer";
 
 type ShowsPageProps = {
@@ -19,13 +21,18 @@ export default async function ShowsPage({ searchParams }: ShowsPageProps) {
   const params = await searchParams;
   const genreId = parsePositiveInt(params.genre);
   const genreOptions = getGenreOptions("tv");
-  const [rails, watchlist] = await Promise.all([
-    getShowCatalogRails({
-      genreId,
-    }),
-    viewer.activeProfile ? getWatchlist(viewer.activeProfile.id) : Promise.resolve([]),
-  ]);
+  const [rails, watchlist] = await withMinimumDelay(
+    Promise.all([
+      getShowCatalogRails({
+        genreId,
+      }),
+      viewer.activeProfile ? getWatchlist(viewer.activeProfile.id) : Promise.resolve([]),
+    ]),
+  );
   const watchlistKeys = watchlist.map((record) => buildMediaKey(record.mediaType, record.mediaId));
+  const activeGenreLabel = genreOptions.find((genre) => genre.id === genreId)?.label ?? null;
+  const featured = rails?.find((rail) => rail.items.length)?.items[0] ?? null;
+  const featuredBackdrop = getImageUrl(featured?.backdropPath ?? null, "w1280");
 
   if (!rails) {
     return (
@@ -42,20 +49,125 @@ export default async function ShowsPage({ searchParams }: ShowsPageProps) {
     <PageFrame activeHref="/shows">
       <PageHero
         eyebrow="Series"
-        title="Season-spanning stories and standout television."
-        description="Browse by genre, keep pace with new episodes, and move into your next series without the clutter."
+        title="Series designed for binge energy and better browsing."
+        description="Follow the strongest shows, move by genre without friction, and keep the page built around what deserves the next episode click."
         backdropPath={rails[0]?.items[0]?.backdropPath ?? null}
+        actions={
+          <>
+            {featured ? (
+              <Link
+                href={`/${featured.mediaType}/${featured.id}/watch`}
+                className="theme-button-primary inline-flex items-center gap-2 rounded-full px-6 py-3 text-sm font-semibold"
+              >
+                <Play size={16} fill="currentColor" />
+                Start featured
+              </Link>
+            ) : null}
+            <Link href="/account" className="theme-button-secondary inline-flex rounded-full px-6 py-3 text-sm text-white">
+              My Profile
+            </Link>
+          </>
+        }
       />
-      <RouteLinkRow
-        items={[
-          { href: "/browse", label: "For You" },
-          { href: "/search", label: "Search" },
-          ...genreOptions.slice(0, 6).map((genre) => ({
-            href: `/shows?genre=${genre.id}`,
-            label: genreId === genre.id ? `${genre.label} / Active` : genre.label,
-          })),
-        ]}
-      />
+      <section className="grid gap-4 xl:grid-cols-[1.08fr_0.92fr]">
+        <article
+          className="relative min-h-[360px] overflow-hidden rounded-[32px] border border-white/10 bg-[rgba(10,10,12,0.95)] shadow-[0_26px_80px_rgba(0,0,0,0.44)]"
+          style={
+            featuredBackdrop
+              ? {
+                  backgroundImage: `linear-gradient(90deg, rgba(8,8,10,0.95) 0%, rgba(8,8,10,0.76) 48%, rgba(8,8,10,0.28) 100%), url(${featuredBackdrop})`,
+                  backgroundSize: "cover",
+                  backgroundPosition: "center",
+                }
+              : undefined
+          }
+        >
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(229,9,20,0.2),transparent_30%)]" />
+          <div className="relative flex h-full flex-col justify-end p-6 sm:p-8">
+            <p className="text-[10px] uppercase tracking-[0.34em] text-[var(--color-brand-strong)]">Series spotlight</p>
+            <h2 className="display-font mt-3 max-w-2xl text-4xl leading-none text-white sm:text-5xl">
+              {featured?.title ?? "The next binge starts here."}
+            </h2>
+            {featured ? (
+              <div className="mt-4 flex flex-wrap items-center gap-2 text-xs text-[var(--color-text-muted)] sm:text-sm">
+                {featured.releaseDate ? <span>{formatYear(featured.releaseDate)}</span> : null}
+                {featured.voteAverage ? (
+                  <>
+                    <span className="h-1 w-1 rounded-full bg-white/35" />
+                    <span>{formatRating(featured.voteAverage)}</span>
+                  </>
+                ) : null}
+                {featured.genreNames.slice(0, 2).map((genre) => (
+                  <span key={genre} className="rounded-full border border-white/12 px-3 py-1">
+                    {genre}
+                  </span>
+                ))}
+              </div>
+            ) : null}
+            <p className="mt-4 max-w-2xl text-sm leading-7 text-[var(--color-text-muted)] sm:text-base">
+              {featured?.overview || "A sharper series catalog with stronger category entry points, better artwork, and less clutter between you and the next season to start."}
+            </p>
+            {featured ? (
+              <div className="mt-6 flex flex-wrap gap-3">
+                <Link
+                  href={`/${featured.mediaType}/${featured.id}/watch`}
+                  className="theme-button-primary inline-flex items-center gap-2 rounded-full px-5 py-3 text-sm font-semibold"
+                >
+                  <Play size={16} fill="currentColor" />
+                  Watch now
+                </Link>
+                <Link
+                  href={`/${featured.mediaType}/${featured.id}`}
+                  className="theme-button-secondary inline-flex rounded-full px-5 py-3 text-sm text-white"
+                >
+                  View details
+                </Link>
+              </div>
+            ) : null}
+          </div>
+        </article>
+
+        <div className="grid gap-4">
+          <section className="surface-strong rounded-[30px] p-6">
+            <p className="text-[10px] uppercase tracking-[0.3em] text-[var(--color-brand-strong)]">Browse filters</p>
+            <h2 className="display-font mt-3 text-3xl text-white">Jump into the right lane faster.</h2>
+            <div className="mt-5 flex flex-wrap gap-2">
+              <Link
+                href="/shows"
+                className={cn("theme-nav-link rounded-full px-4 py-2 text-sm", !genreId && "theme-nav-link-active")}
+              >
+                All series
+              </Link>
+              {genreOptions.slice(0, 8).map((genre) => (
+                <Link
+                  key={genre.id}
+                  href={`/shows?genre=${genre.id}`}
+                  className={cn("theme-nav-link rounded-full px-4 py-2 text-sm", genreId === genre.id && "theme-nav-link-active")}
+                >
+                  {genre.label}
+                </Link>
+              ))}
+            </div>
+          </section>
+
+          <section className="surface rounded-[30px] p-6">
+            <p className="text-[10px] uppercase tracking-[0.28em] text-[var(--color-brand-strong)]">Catalog pulse</p>
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              <div className="rounded-[22px] border border-white/10 bg-black/20 px-4 py-4">
+                <p className="text-xs uppercase tracking-[0.2em] text-[var(--color-text-muted)]">Active filter</p>
+                <p className="mt-2 text-xl text-white">{activeGenreLabel ?? "Everything"}</p>
+              </div>
+              <div className="rounded-[22px] border border-white/10 bg-black/20 px-4 py-4">
+                <p className="text-xs uppercase tracking-[0.2em] text-[var(--color-text-muted)]">Curated rails</p>
+                <p className="mt-2 text-xl text-white">{rails.length}</p>
+              </div>
+            </div>
+            <p className="mt-4 text-sm leading-6 text-[var(--color-text-muted)]">
+              Series can stay focused on binge-worthy discovery now that search and profile tools already live up in the header.
+            </p>
+          </section>
+        </div>
+      </section>
       {rails.map((rail) => (
         <MediaRail
           key={rail.id}
