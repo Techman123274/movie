@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { auth } from "@clerk/nextjs/server";
 import { ArrowRight, Menu, Sparkles } from "lucide-react";
@@ -16,8 +17,8 @@ export async function MarketingHeader() {
     <header className="theme-header sticky top-0 z-[90] overflow-visible">
       <div className="mx-auto grid max-w-7xl grid-cols-[minmax(0,1fr)_auto] items-center gap-4 px-5 py-4 sm:px-8 md:flex md:items-center md:justify-between">
         <Link href="/" className="flex min-w-0 items-center gap-3 overflow-hidden md:flex-1">
-          <div className="theme-logo-mark flex h-10 w-10 items-center justify-center rounded-full text-sm font-semibold tracking-[0.32em]">
-            S
+          <div className="theme-logo-mark relative flex h-10 w-10 items-center justify-center overflow-hidden rounded-full">
+            <Image src="/brand/subflix-mark.svg" alt="Subflix logo" fill sizes="40px" className="object-cover" />
           </div>
           <div className="min-w-0">
             <p className="display-font truncate text-2xl leading-none">Subflix</p>

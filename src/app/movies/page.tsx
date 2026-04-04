@@ -13,18 +13,31 @@ import { getViewerContext } from "@/lib/viewer";
 type MoviesPageProps = {
   searchParams: Promise<{
     genre?: string;
+    sort?: string;
   }>;
 };
+
+const MOVIE_SORT_OPTIONS = [
+  { key: "popular", label: "Popular", sort: "popularity.desc" as const },
+  { key: "top-rated", label: "Top rated", sort: "vote_average.desc" as const },
+  { key: "new", label: "Newest", sort: "primary_release_date.desc" as const },
+];
+
+function parseMovieSort(sortParam?: string) {
+  return MOVIE_SORT_OPTIONS.find((option) => option.key === sortParam) ?? MOVIE_SORT_OPTIONS[0];
+}
 
 export default async function MoviesPage({ searchParams }: MoviesPageProps) {
   const viewer = await getViewerContext({ redirectToOnboarding: true });
   const params = await searchParams;
   const genreId = parsePositiveInt(params.genre);
+  const activeSort = parseMovieSort(params.sort);
   const genreOptions = getGenreOptions("movie");
   const [rails, watchlist] = await withMinimumDelay(
     Promise.all([
       getCatalogRail("movie", {
         genreId,
+        sort: activeSort.sort,
       }),
       viewer.activeProfile ? getWatchlist(viewer.activeProfile.id) : Promise.resolve([]),
     ]),
@@ -33,6 +46,20 @@ export default async function MoviesPage({ searchParams }: MoviesPageProps) {
   const activeGenreLabel = genreOptions.find((genre) => genre.id === genreId)?.label ?? null;
   const featured = rails?.find((rail) => rail.items.length)?.items[0] ?? null;
   const featuredBackdrop = getImageUrl(featured?.backdropPath ?? null, "w1280");
+  const buildBrowseHref = (options: { genreId?: number; sort?: string }) => {
+    const hrefParams = new URLSearchParams();
+
+    if (options.genreId) {
+      hrefParams.set("genre", String(options.genreId));
+    }
+
+    if (options.sort && options.sort !== MOVIE_SORT_OPTIONS[0].key) {
+      hrefParams.set("sort", options.sort);
+    }
+
+    const query = hrefParams.toString();
+    return query ? `/movies?${query}` : "/movies";
+  };
 
   if (!rails) {
     return (
@@ -49,8 +76,8 @@ export default async function MoviesPage({ searchParams }: MoviesPageProps) {
     <PageFrame activeHref="/movies">
       <PageHero
         eyebrow="Movies"
-        title="Movies built like a premium catalog, not a crowded grid."
-        description="Drop straight into the biggest film picks, sharpen the collection by genre, and keep the page focused on what actually looks worth pressing play on."
+        title="Movies built for cleaner browsing and stronger picks."
+        description="Home stays light, so Movies can do the deeper work with sharper filters, a stronger spotlight, and rails that feel worth scanning."
         backdropPath={rails[0]?.items[0]?.backdropPath ?? null}
         actions={
           <>
@@ -129,41 +156,51 @@ export default async function MoviesPage({ searchParams }: MoviesPageProps) {
 
         <div className="grid gap-4">
           <section className="surface-strong rounded-[30px] p-6">
-            <p className="text-[10px] uppercase tracking-[0.3em] text-[var(--color-brand-strong)]">Browse filters</p>
-            <h2 className="display-font mt-3 text-3xl text-white">Quick ways into the catalog.</h2>
+            <p className="text-[10px] uppercase tracking-[0.3em] text-[var(--color-brand-strong)]">Browse modes</p>
+            <h2 className="display-font mt-3 text-3xl text-white">Pick the lane you want first.</h2>
+            <div className="mt-5 flex flex-wrap gap-2">
+              {MOVIE_SORT_OPTIONS.map((option) => (
+                <Link
+                  key={option.key}
+                  href={buildBrowseHref({ genreId, sort: option.key })}
+                  className={cn(
+                    "theme-nav-link rounded-full px-4 py-2 text-sm",
+                    activeSort.key === option.key && "theme-nav-link-active",
+                  )}
+                >
+                  {option.label}
+                </Link>
+              ))}
+            </div>
+            <p className="mt-4 text-sm leading-6 text-[var(--color-text-muted)]">
+              {activeGenreLabel
+                ? `${activeGenreLabel} movies sorted by ${activeSort.label.toLowerCase()}.`
+                : `All movies sorted by ${activeSort.label.toLowerCase()}.`}
+            </p>
+          </section>
+
+          <section className="surface rounded-[30px] p-6">
+            <p className="text-[10px] uppercase tracking-[0.28em] text-[var(--color-brand-strong)]">Genres</p>
+            <h2 className="display-font mt-3 text-3xl text-white">Jump straight into a mood.</h2>
             <div className="mt-5 flex flex-wrap gap-2">
               <Link
-                href="/movies"
+                href={buildBrowseHref({ sort: activeSort.key })}
                 className={cn("theme-nav-link rounded-full px-4 py-2 text-sm", !genreId && "theme-nav-link-active")}
               >
                 All movies
               </Link>
-              {genreOptions.slice(0, 8).map((genre) => (
+              {genreOptions.map((genre) => (
                 <Link
                   key={genre.id}
-                  href={`/movies?genre=${genre.id}`}
+                  href={buildBrowseHref({ genreId: genre.id, sort: activeSort.key })}
                   className={cn("theme-nav-link rounded-full px-4 py-2 text-sm", genreId === genre.id && "theme-nav-link-active")}
                 >
                   {genre.label}
                 </Link>
               ))}
             </div>
-          </section>
-
-          <section className="surface rounded-[30px] p-6">
-            <p className="text-[10px] uppercase tracking-[0.28em] text-[var(--color-brand-strong)]">Catalog pulse</p>
-            <div className="mt-4 grid gap-3 sm:grid-cols-2">
-              <div className="rounded-[22px] border border-white/10 bg-black/20 px-4 py-4">
-                <p className="text-xs uppercase tracking-[0.2em] text-[var(--color-text-muted)]">Active filter</p>
-                <p className="mt-2 text-xl text-white">{activeGenreLabel ?? "Everything"}</p>
-              </div>
-              <div className="rounded-[22px] border border-white/10 bg-black/20 px-4 py-4">
-                <p className="text-xs uppercase tracking-[0.2em] text-[var(--color-text-muted)]">Curated rails</p>
-                <p className="mt-2 text-xl text-white">{rails.length}</p>
-              </div>
-            </div>
             <p className="mt-4 text-sm leading-6 text-[var(--color-text-muted)]">
-              Movies stays focused on discovery, while search and profile tools already live in the header where they are easier to reach.
+              The main page no longer doubles as a giant movie shelf, so this is where the fuller film discovery flow lives.
             </p>
           </section>
         </div>

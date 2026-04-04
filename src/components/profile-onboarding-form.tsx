@@ -1,5 +1,5 @@
+import { ProfileAvatarPicker } from "@/components/profile-avatar-picker";
 import { createInitialProfileAction } from "@/app/actions";
-
 const accentOptions = ["#d6b36d", "#7fb6ff", "#8ad5bf", "#f2997b", "#c9a8ff"];
 
 export function ProfileOnboardingForm() {
@@ -15,16 +15,6 @@ export function ProfileOnboardingForm() {
             required
             placeholder="Maya"
             className="surface min-h-12 w-full rounded-2xl px-4 text-white outline-none"
-          />
-        </label>
-        <label className="space-y-2">
-          <span className="text-sm text-[var(--color-text-muted)]">Avatar initials</span>
-          <input
-            name="avatar"
-            required
-            maxLength={2}
-            defaultValue="M"
-            className="surface min-h-12 w-full rounded-2xl px-4 uppercase text-white outline-none"
           />
         </label>
         <label className="space-y-2">
@@ -52,6 +42,10 @@ export function ProfileOnboardingForm() {
         </label>
       </div>
       <div className="mt-6">
+        <p className="mb-3 text-sm text-[var(--color-text-muted)]">Profile avatar</p>
+        <ProfileAvatarPicker />
+      </div>
+      <div className="mt-6">
         <p className="mb-3 text-sm text-[var(--color-text-muted)]">Accent color</p>
         <div className="flex flex-wrap gap-3">
           {accentOptions.map((accent, index) => (
@@ -68,7 +62,7 @@ export function ProfileOnboardingForm() {
           ))}
         </div>
       </div>
-      <button className="mt-8 rounded-full bg-[var(--color-brand)] px-6 py-3 text-sm font-semibold text-white">
+      <button className="theme-button-primary mt-8 rounded-full px-6 py-3 text-sm font-semibold">
         Create profile
       </button>
     </form>

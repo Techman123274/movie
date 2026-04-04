@@ -10,17 +10,25 @@ import {
   ensureAppUser,
   setProfileFeedback,
   toggleWatchlist,
+  updateProfileAvatar,
   updateProfileRegion,
 } from "@/lib/persistence";
+import { DEFAULT_PROFILE_AVATAR, isSupportedAvatarValue } from "@/lib/profile-assets";
 import { ACTIVE_PROFILE_COOKIE } from "@/lib/viewer";
 import type { FeedbackValue, MediaType } from "@/lib/types";
 
 const onboardingSchema = z.object({
   name: z.string().trim().min(2).max(32),
-  avatar: z.string().trim().min(1).max(2),
+  avatar: z.string().trim().min(1).max(500_000).refine(isSupportedAvatarValue),
   accent: z.string().trim().regex(/^#([0-9a-fA-F]{6})$/),
   maturityRating: z.string().trim().min(2).max(10),
   providerRegion: z.string().trim().length(2),
+});
+
+const avatarUpdateSchema = z.object({
+  profileId: z.string().trim().uuid(),
+  returnTo: z.string().trim().min(1),
+  avatar: z.string().trim().min(1).max(500_000).refine(isSupportedAvatarValue),
 });
 
 const feedbackValues = new Set<FeedbackValue>(["like", "dislike", "not_interested"]);
@@ -41,7 +49,7 @@ export async function createInitialProfileAction(formData: FormData) {
 
   const parsed = onboardingSchema.safeParse({
     name: formData.get("name"),
-    avatar: formData.get("avatar"),
+    avatar: formData.get("avatar") || DEFAULT_PROFILE_AVATAR,
     accent: formData.get("accent"),
     maturityRating: formData.get("maturityRating"),
     providerRegion: formData.get("providerRegion"),
@@ -56,7 +64,7 @@ export async function createInitialProfileAction(formData: FormData) {
     id: profileId,
     user_id: userId,
     name: parsed.data.name,
-    avatar: parsed.data.avatar.toUpperCase(),
+    avatar: parsed.data.avatar,
     accent: parsed.data.accent,
     maturity_rating: parsed.data.maturityRating,
     provider_region: parsed.data.providerRegion.toUpperCase(),
@@ -122,6 +130,34 @@ export async function updateRegionAction(formData: FormData) {
 
   revalidatePath(returnTo);
   redirect(returnTo);
+}
+
+export async function updateProfileAvatarAction(formData: FormData) {
+  const { userId } = await auth();
+
+  if (!userId) {
+    redirect("/");
+  }
+
+  const parsed = avatarUpdateSchema.safeParse({
+    profileId: formData.get("profileId"),
+    returnTo: formData.get("returnTo") || "/settings",
+    avatar: formData.get("avatar"),
+  });
+
+  if (!parsed.success) {
+    redirect("/settings?error=invalid-avatar");
+  }
+
+  const result = await updateProfileAvatar(parsed.data.profileId, userId, parsed.data.avatar);
+
+  if (!result.success) {
+    redirect(`${parsed.data.returnTo}?error=avatar-update-failed`);
+  }
+
+  revalidatePath("/", "layout");
+  revalidatePath(parsed.data.returnTo);
+  redirect(parsed.data.returnTo);
 }
 
 export async function toggleWatchlistAction(formData: FormData) {

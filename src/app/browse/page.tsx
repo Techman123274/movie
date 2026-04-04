@@ -19,6 +19,7 @@ export default async function BrowsePage() {
     ]),
   );
   const watchlistKeys = watchlist.map((record) => buildMediaKey(record.mediaType, record.mediaId));
+  const homeRails = data?.rails.filter((rail) => rail.id === "new-this-week" || rail.id === "trending") ?? [];
 
   if (!data) {
     return (
@@ -70,7 +71,7 @@ export default async function BrowsePage() {
         />
       ) : null}
       <div className="space-y-12">
-        {data.rails.map((rail) => (
+        {homeRails.map((rail) => (
           <MediaRail
             key={rail.id}
             rail={rail}

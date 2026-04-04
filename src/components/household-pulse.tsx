@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { MediaRail } from "@/components/media-rail";
+import { ProfileAvatar } from "@/components/profile-avatar";
 import type { HouseholdSocialState } from "@/lib/social";
 
 type HouseholdPulseProps = {
@@ -41,12 +42,14 @@ export function HouseholdPulse({ state, profileId = null, watchlistKeys = [] }: 
           {state.profileHighlights.map((profile) => (
             <article key={profile.id} className="surface rounded-[26px] p-5">
               <div className="flex items-start justify-between gap-3">
-                <div
-                  className="flex h-14 w-14 items-center justify-center rounded-2xl text-xl font-semibold text-white"
-                  style={{ backgroundColor: profile.accent }}
-                >
-                  {profile.avatar}
-                </div>
+                <ProfileAvatar
+                  avatar={profile.avatar}
+                  name={profile.name}
+                  accent={profile.accent}
+                  className="h-14 w-14 rounded-2xl"
+                  textClassName="text-xl"
+                  sizes="56px"
+                />
                 <span
                   className={`rounded-full px-3 py-1 text-[10px] uppercase tracking-[0.2em] ${
                     profile.isActive

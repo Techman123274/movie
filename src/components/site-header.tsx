@@ -1,7 +1,10 @@
+import Image from "next/image";
 import Link from "next/link";
 import { auth } from "@clerk/nextjs/server";
 import { ArrowRight, Menu, Search, Sparkles, UserCircle2 } from "lucide-react";
 import { LiveSearch } from "@/components/live-search";
+import { ProfileAvatar } from "@/components/profile-avatar";
+import { getViewerContext } from "@/lib/viewer";
 import { cn } from "@/lib/utils";
 
 const navItems = [
@@ -10,7 +13,6 @@ const navItems = [
   { href: "/shows", label: "Series" },
   { href: "/sports", label: "Sports" },
   { href: "/providers", label: "Where to Watch" },
-  { href: "/account", label: "My Profile" },
 ];
 
 type SiteHeaderProps = {
@@ -20,13 +22,15 @@ type SiteHeaderProps = {
 export async function SiteHeader({ activeHref }: SiteHeaderProps) {
   const { userId } = await auth();
   const isSignedIn = Boolean(userId);
+  const viewer = isSignedIn ? await getViewerContext() : null;
+  const activeProfile = viewer?.activeProfile ?? null;
 
   return (
     <header className="theme-header sticky top-0 z-[90] overflow-visible">
       <div className="mx-auto grid max-w-7xl grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-4 py-4 sm:px-8 md:flex md:items-center md:justify-between">
         <Link href="/browse" className="flex min-w-0 items-center gap-3 overflow-hidden md:flex-1">
-          <div className="theme-logo-mark flex h-10 w-10 items-center justify-center rounded-full text-sm font-semibold tracking-[0.32em]">
-            S
+          <div className="theme-logo-mark relative flex h-10 w-10 items-center justify-center overflow-hidden rounded-full">
+            <Image src="/brand/subflix-mark.svg" alt="Subflix logo" fill sizes="40px" className="object-cover" />
           </div>
           <div className="min-w-0">
             <p className="display-font truncate text-xl leading-none sm:text-2xl">Subflix</p>
@@ -78,6 +82,34 @@ export async function SiteHeader({ activeHref }: SiteHeaderProps) {
               </Link>
             </>
           ) : null}
+          {isSignedIn ? (
+            <Link
+              href="/account"
+              className={cn(
+                "theme-button-secondary hidden items-center gap-3 rounded-full px-2.5 py-2 text-white md:flex",
+                activeHref === "/account" && "theme-nav-link-active",
+              )}
+            >
+              {activeProfile ? (
+                <>
+                  <ProfileAvatar
+                    avatar={activeProfile.avatar}
+                    name={activeProfile.name}
+                    accent={activeProfile.accent}
+                    className="h-9 w-9 rounded-full"
+                    textClassName="text-sm"
+                    sizes="36px"
+                  />
+                  <span className="max-w-28 truncate text-sm">{activeProfile.name}</span>
+                </>
+              ) : (
+                <>
+                  <UserCircle2 size={18} />
+                  <span className="text-sm">My Profile</span>
+                </>
+              )}
+            </Link>
+          ) : null}
           <details className="group relative md:hidden">
             <summary
               className="theme-button-secondary relative z-20 flex h-10 w-10 shrink-0 list-none touch-manipulation items-center justify-center rounded-full text-[var(--color-text-muted)] [&::-webkit-details-marker]:hidden"
@@ -115,10 +147,29 @@ export async function SiteHeader({ activeHref }: SiteHeaderProps) {
                     </div>
                   ) : null}
                   {isSignedIn ? (
-                    <div className="theme-input-shell mt-4 rounded-2xl px-4 py-3">
-                      <p className="text-sm font-medium text-white">Signed in</p>
-                      <p className="text-xs uppercase tracking-[0.24em] text-[var(--color-text-muted)]">Account ready</p>
-                    </div>
+                    <Link href="/account" className="theme-input-shell mt-4 flex items-center gap-3 rounded-2xl px-4 py-3">
+                      {activeProfile ? (
+                        <>
+                          <ProfileAvatar
+                            avatar={activeProfile.avatar}
+                            name={activeProfile.name}
+                            accent={activeProfile.accent}
+                            className="h-11 w-11 rounded-full"
+                            textClassName="text-sm"
+                            sizes="44px"
+                          />
+                          <div>
+                            <p className="text-sm font-medium text-white">{activeProfile.name}</p>
+                            <p className="text-xs uppercase tracking-[0.24em] text-[var(--color-text-muted)]">Open My Profile</p>
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <p className="text-sm font-medium text-white">Signed in</p>
+                          <p className="text-xs uppercase tracking-[0.24em] text-[var(--color-text-muted)]">Account ready</p>
+                        </>
+                      )}
+                    </Link>
                   ) : null}
                 </div>
               </div>
@@ -145,9 +196,10 @@ export async function SiteHeader({ activeHref }: SiteHeaderProps) {
                   </div>
                 ) : null}
                 {isSignedIn ? (
-                  <div className="theme-input-shell rounded-2xl px-4 py-3 text-sm leading-6 text-[var(--color-text-muted)]">
-                    Profile switching stays in <span className="text-white">My Profile</span> so mobile navigation feels simpler and faster.
-                  </div>
+                  <Link href="/account" className="theme-nav-link flex items-center justify-between rounded-2xl px-4 py-3 text-sm">
+                    <span>My Profile</span>
+                    <ArrowRight size={16} className="text-[var(--color-brand-strong)]" />
+                  </Link>
                 ) : null}
               </nav>
             </div>

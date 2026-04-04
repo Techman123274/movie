@@ -2,6 +2,8 @@ import Link from "next/link";
 import { EmptyState } from "@/components/empty-state";
 import { PageFrame } from "@/components/page-frame";
 import { PageHero } from "@/components/page-hero";
+import { ProfileAvatar } from "@/components/profile-avatar";
+import { ProfileAvatarSettingsForm } from "@/components/profile-avatar-settings-form";
 import { RegionForm } from "@/components/region-form";
 import { RouteLinkRow } from "@/components/route-link-row";
 import { env } from "@/lib/env";
@@ -40,6 +42,10 @@ export default async function SettingsPage() {
         <section className="grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
           <div className="space-y-4">
             <RegionForm profile={viewer.activeProfile} returnTo="/settings" />
+            <ProfileAvatarSettingsForm
+              profileId={viewer.activeProfile.id}
+              currentAvatar={viewer.activeProfile.avatar}
+            />
 
             <section className="surface rounded-[28px] p-6">
               <p className="mb-2 text-xs uppercase tracking-[0.24em] text-[var(--color-brand-strong)]">
@@ -70,12 +76,14 @@ export default async function SettingsPage() {
             <section className="surface rounded-[28px] p-6">
               <p className="mb-2 text-xs uppercase tracking-[0.24em] text-[var(--color-brand-strong)]">Active profile</p>
               <div className="flex items-start gap-4">
-                <div
-                  className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl text-xl font-semibold text-white"
-                  style={{ backgroundColor: viewer.activeProfile.accent }}
-                >
-                  {viewer.activeProfile.avatar}
-                </div>
+                <ProfileAvatar
+                  avatar={viewer.activeProfile.avatar}
+                  name={viewer.activeProfile.name}
+                  accent={viewer.activeProfile.accent}
+                  className="h-14 w-14 shrink-0 rounded-2xl"
+                  textClassName="text-xl"
+                  sizes="56px"
+                />
                 <div>
                   <h2 className="text-2xl font-medium text-white">{viewer.activeProfile.name}</h2>
                   <p className="mt-2 text-sm uppercase tracking-[0.2em] text-[var(--color-text-muted)]">

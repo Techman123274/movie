@@ -187,6 +187,26 @@ export async function updateProfileRegion(profileId: string, userId: string, pro
   return { success: true as const };
 }
 
+export async function updateProfileAvatar(profileId: string, userId: string, avatar: string) {
+  const client = getSupabaseAdminClient();
+
+  if (!client) {
+    return { success: false as const, error: "Supabase service role key is not configured." };
+  }
+
+  const { error } = await client
+    .from("profiles")
+    .update({ avatar })
+    .eq("id", profileId)
+    .eq("user_id", userId);
+
+  if (error) {
+    return { success: false as const, error: error.message };
+  }
+
+  return { success: true as const };
+}
+
 export async function getContinueWatching(profileId: string): Promise<WatchProgressRecord[]> {
   const client = getSupabaseReadClient();
 

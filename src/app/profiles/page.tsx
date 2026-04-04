@@ -12,8 +12,8 @@ export default async function ProfilesPage() {
     <PageFrame activeHref="/profiles">
       <PageHero
         eyebrow="Profiles"
-        title="Multiple moods, separate rails, one account."
-        description="Each profile keeps its own watchlist, continue watching, and regional availability so every home screen feels more personal."
+        title="Who&apos;s watching?"
+        description="Keep each profile simple, separate, and ready to jump back into its own saved titles, continue watching, and region-based catalog."
       />
       {profiles.length ? (
         <ProfileGrid profiles={profiles} activeProfileId={viewer.activeProfile?.id ?? null} />

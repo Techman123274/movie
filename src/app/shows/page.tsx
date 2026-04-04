@@ -13,18 +13,31 @@ import { getViewerContext } from "@/lib/viewer";
 type ShowsPageProps = {
   searchParams: Promise<{
     genre?: string;
+    sort?: string;
   }>;
 };
+
+const SHOW_SORT_OPTIONS = [
+  { key: "popular", label: "Popular", sort: "popularity.desc" as const },
+  { key: "top-rated", label: "Top rated", sort: "vote_average.desc" as const },
+  { key: "new", label: "Newest", sort: "first_air_date.desc" as const },
+];
+
+function parseShowSort(sortParam?: string) {
+  return SHOW_SORT_OPTIONS.find((option) => option.key === sortParam) ?? SHOW_SORT_OPTIONS[0];
+}
 
 export default async function ShowsPage({ searchParams }: ShowsPageProps) {
   const viewer = await getViewerContext({ redirectToOnboarding: true });
   const params = await searchParams;
   const genreId = parsePositiveInt(params.genre);
+  const activeSort = parseShowSort(params.sort);
   const genreOptions = getGenreOptions("tv");
   const [rails, watchlist] = await withMinimumDelay(
     Promise.all([
       getShowCatalogRails({
         genreId,
+        sort: activeSort.sort,
       }),
       viewer.activeProfile ? getWatchlist(viewer.activeProfile.id) : Promise.resolve([]),
     ]),
@@ -33,6 +46,20 @@ export default async function ShowsPage({ searchParams }: ShowsPageProps) {
   const activeGenreLabel = genreOptions.find((genre) => genre.id === genreId)?.label ?? null;
   const featured = rails?.find((rail) => rail.items.length)?.items[0] ?? null;
   const featuredBackdrop = getImageUrl(featured?.backdropPath ?? null, "w1280");
+  const buildBrowseHref = (options: { genreId?: number; sort?: string }) => {
+    const hrefParams = new URLSearchParams();
+
+    if (options.genreId) {
+      hrefParams.set("genre", String(options.genreId));
+    }
+
+    if (options.sort && options.sort !== SHOW_SORT_OPTIONS[0].key) {
+      hrefParams.set("sort", options.sort);
+    }
+
+    const query = hrefParams.toString();
+    return query ? `/shows?${query}` : "/shows";
+  };
 
   if (!rails) {
     return (
@@ -49,8 +76,8 @@ export default async function ShowsPage({ searchParams }: ShowsPageProps) {
     <PageFrame activeHref="/shows">
       <PageHero
         eyebrow="Series"
-        title="Series designed for binge energy and better browsing."
-        description="Follow the strongest shows, move by genre without friction, and keep the page built around what deserves the next episode click."
+        title="Series built for stronger binge browsing."
+        description="Home stays cleaner now, so Series can carry the richer discovery flow with clearer lanes, better filters, and a more premium shelf feel."
         backdropPath={rails[0]?.items[0]?.backdropPath ?? null}
         actions={
           <>
@@ -129,41 +156,51 @@ export default async function ShowsPage({ searchParams }: ShowsPageProps) {
 
         <div className="grid gap-4">
           <section className="surface-strong rounded-[30px] p-6">
-            <p className="text-[10px] uppercase tracking-[0.3em] text-[var(--color-brand-strong)]">Browse filters</p>
-            <h2 className="display-font mt-3 text-3xl text-white">Jump into the right lane faster.</h2>
+            <p className="text-[10px] uppercase tracking-[0.3em] text-[var(--color-brand-strong)]">Browse modes</p>
+            <h2 className="display-font mt-3 text-3xl text-white">Choose the binge lane first.</h2>
+            <div className="mt-5 flex flex-wrap gap-2">
+              {SHOW_SORT_OPTIONS.map((option) => (
+                <Link
+                  key={option.key}
+                  href={buildBrowseHref({ genreId, sort: option.key })}
+                  className={cn(
+                    "theme-nav-link rounded-full px-4 py-2 text-sm",
+                    activeSort.key === option.key && "theme-nav-link-active",
+                  )}
+                >
+                  {option.label}
+                </Link>
+              ))}
+            </div>
+            <p className="mt-4 text-sm leading-6 text-[var(--color-text-muted)]">
+              {activeGenreLabel
+                ? `${activeGenreLabel} series sorted by ${activeSort.label.toLowerCase()}.`
+                : `All series sorted by ${activeSort.label.toLowerCase()}.`}
+            </p>
+          </section>
+
+          <section className="surface rounded-[30px] p-6">
+            <p className="text-[10px] uppercase tracking-[0.28em] text-[var(--color-brand-strong)]">Genres</p>
+            <h2 className="display-font mt-3 text-3xl text-white">Drop into the right tone fast.</h2>
             <div className="mt-5 flex flex-wrap gap-2">
               <Link
-                href="/shows"
+                href={buildBrowseHref({ sort: activeSort.key })}
                 className={cn("theme-nav-link rounded-full px-4 py-2 text-sm", !genreId && "theme-nav-link-active")}
               >
                 All series
               </Link>
-              {genreOptions.slice(0, 8).map((genre) => (
+              {genreOptions.map((genre) => (
                 <Link
                   key={genre.id}
-                  href={`/shows?genre=${genre.id}`}
+                  href={buildBrowseHref({ genreId: genre.id, sort: activeSort.key })}
                   className={cn("theme-nav-link rounded-full px-4 py-2 text-sm", genreId === genre.id && "theme-nav-link-active")}
                 >
                   {genre.label}
                 </Link>
               ))}
             </div>
-          </section>
-
-          <section className="surface rounded-[30px] p-6">
-            <p className="text-[10px] uppercase tracking-[0.28em] text-[var(--color-brand-strong)]">Catalog pulse</p>
-            <div className="mt-4 grid gap-3 sm:grid-cols-2">
-              <div className="rounded-[22px] border border-white/10 bg-black/20 px-4 py-4">
-                <p className="text-xs uppercase tracking-[0.2em] text-[var(--color-text-muted)]">Active filter</p>
-                <p className="mt-2 text-xl text-white">{activeGenreLabel ?? "Everything"}</p>
-              </div>
-              <div className="rounded-[22px] border border-white/10 bg-black/20 px-4 py-4">
-                <p className="text-xs uppercase tracking-[0.2em] text-[var(--color-text-muted)]">Curated rails</p>
-                <p className="mt-2 text-xl text-white">{rails.length}</p>
-              </div>
-            </div>
             <p className="mt-4 text-sm leading-6 text-[var(--color-text-muted)]">
-              Series can stay focused on binge-worthy discovery now that search and profile tools already live up in the header.
+              The main page no longer carries the full series catalog, so this is where the fuller binge discovery flow belongs.
             </p>
           </section>
         </div>

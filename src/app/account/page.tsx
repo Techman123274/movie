@@ -1,12 +1,10 @@
 import { AccountOverview } from "@/components/account-overview";
 import { EmptyState } from "@/components/empty-state";
-import { HouseholdPulse } from "@/components/household-pulse";
 import { MediaRail } from "@/components/media-rail";
 import { PageFrame } from "@/components/page-frame";
 import { RouteLinkRow } from "@/components/route-link-row";
 import { UnavailablePanel } from "@/components/unavailable-panel";
 import { getWatchlist } from "@/lib/persistence";
-import { getHouseholdSocialState } from "@/lib/social";
 import { getMediaSummariesByIds } from "@/lib/tmdb";
 import { buildMediaKey } from "@/lib/utils";
 import { getViewerContext } from "@/lib/viewer";
@@ -45,11 +43,10 @@ export default async function AccountPage() {
     watchlist.map((record) => ({ mediaType: record.mediaType, mediaId: record.mediaId })),
   );
   const watchlistKeys = watchlist.map((record) => buildMediaKey(record.mediaType, record.mediaId));
-  const householdPulse = await getHouseholdSocialState(viewer.profiles, viewer.activeProfile.id);
 
   const watchlistRail = {
     id: "watchlist",
-    title: "My Watchlist",
+    title: "My List",
     eyebrow: "Saved for later",
     items: watchlistItems,
   };
@@ -71,7 +68,6 @@ export default async function AccountPage() {
           watchlist: watchlistItems.length,
         }}
       />
-      <HouseholdPulse state={householdPulse} profileId={viewer.activeProfile.id} watchlistKeys={watchlistKeys} />
       <RouteLinkRow
         items={[
           { href: "/profiles", label: "Switch Profiles" },
@@ -103,7 +99,7 @@ export default async function AccountPage() {
       {!personalized.continueWatchingRail && !personalized.recentlyWatchedRail ? (
         <EmptyState
           title="No watch activity yet"
-          message="Start any movie or episode and this account view will begin surfacing resume picks and recent activity for the active profile."
+          message="Start any movie or episode and this page will begin surfacing resume picks and recent activity for the active profile."
         />
       ) : null}
       {watchlistItems.length ? (
