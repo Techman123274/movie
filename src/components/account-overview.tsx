@@ -21,7 +21,7 @@ export function AccountOverview({ activeProfile, stats }: AccountOverviewProps) 
         <p className="mb-3 text-xs uppercase tracking-[0.3em] text-[var(--color-brand-strong)]">My Space</p>
         <h1 className="display-font text-5xl text-white">Your profile, progress, and next picks in one place.</h1>
         <p className="mt-5 max-w-2xl text-base leading-7 text-[var(--color-text-muted)]">
-          Keep every profile separate, jump back into what you were watching, and keep your queue moving without hunting through the catalog again.
+          Keep every profile separate, jump back into what you were watching, and let the household pulse reveal where your queues and reactions are starting to overlap.
         </p>
         <div className="mt-8 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <div className="rounded-[24px] border border-white/10 bg-black/20 px-4 py-4">
@@ -70,7 +70,7 @@ export function AccountOverview({ activeProfile, stats }: AccountOverviewProps) 
               <span className="text-emerald-300">{stats.watchlist > 0 ? "Active" : "Needs picks"}</span>
             </div>
             <div className="rounded-2xl bg-white/4 px-4 py-4 text-[var(--color-text-muted)]">
-              Switch profiles in one tap, adjust playback region in Settings, and let this space surface the titles most likely to matter next.
+              Switch profiles in one tap, adjust playback region in Settings, and let this space surface the titles most likely to matter next for both you and the rest of the room.
             </div>
           </div>
         </div>

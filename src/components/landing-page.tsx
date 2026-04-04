@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Film, PlayCircle, Tv, Trophy } from "lucide-react";
 import { CinematicGallery } from "@/components/cinematic-gallery";
 import { MarketingHeader } from "@/components/marketing-header";
+import { SocialShowcase } from "@/components/social-showcase";
 import type { MediaSummary } from "@/lib/types";
 
 type LandingPageProps = {
@@ -20,10 +21,10 @@ export function LandingPage({ featuredItems }: LandingPageProps) {
                 Subflix
               </p>
               <h1 className="display-font text-5xl leading-none text-white sm:text-7xl lg:text-8xl">
-                One cinematic front door for tonight&apos;s watchlist.
+                One cinematic front door for tonight&apos;s watchlist and the people picking it.
               </h1>
               <p className="mt-5 max-w-2xl text-base leading-7 text-[var(--color-text-muted)] sm:mt-6 sm:text-lg sm:leading-8">
-                Subflix brings movies, series, and live sports into one polished streaming experience with faster discovery, richer details, and a cleaner way to press play.
+                Subflix brings movies, series, and live sports into one polished streaming experience with faster discovery, richer details, a more social household pulse, and a cleaner way to press play.
               </p>
               <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
                 <Link href="/browse" className="rounded-full bg-[var(--color-brand)] px-6 py-3 text-center text-sm font-semibold text-[#07111f]">
@@ -43,13 +44,15 @@ export function LandingPage({ featuredItems }: LandingPageProps) {
           </div>
         </section>
 
+        <SocialShowcase />
+
         <section className="mx-auto max-w-7xl px-4 py-2 sm:px-8 sm:py-4">
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             {[
               { icon: Film, title: "Movies", copy: "Hero sliders, rich detail pages, and premium discovery rails." },
               { icon: Tv, title: "Series", copy: "Follow season arcs, episode guides, and beautifully organized watch pages." },
               { icon: Trophy, title: "Sports", copy: "Dedicated league hubs and live-event discovery keep the action separate and easy to follow." },
-              { icon: PlayCircle, title: "Fast Playback", copy: "A cleaner watch flow with quick access to the titles you want to start right away." },
+              { icon: PlayCircle, title: "Social Discovery", copy: "Profiles, reactions, and shared queue energy help groups land on the right title faster." },
             ].map((item, index) => (
               <article
                 key={item.title}

@@ -31,7 +31,7 @@ export function ProfileGrid({ profiles, activeProfileId }: ProfileGridProps) {
               {profile.maturityRating} / {profile.providerRegion}
             </p>
             <p className="mt-4 text-sm leading-6 text-[var(--color-text-muted)]">
-              Watch history, saved titles, and home recommendations all stay tuned to the active profile.
+              Watch history, saved titles, and home recommendations stay tuned to the active profile while the household pulse keeps shared momentum visible.
             </p>
             <form action={switchActiveProfileAction} className="mt-6">
               <input type="hidden" name="profileId" value={profile.id} />
