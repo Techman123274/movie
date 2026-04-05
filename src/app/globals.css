@@ -75,6 +75,63 @@ body::-webkit-scrollbar {
   }
 }
 
+@keyframes logo-breathe {
+  0%,
+  100% {
+    transform: translateY(0) scale(1);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.14),
+      0 0 0 1px rgba(229, 9, 20, 0.3),
+      0 18px 34px rgba(229, 9, 20, 0.2);
+  }
+
+  50% {
+    transform: translateY(-1px) scale(1.035);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.18),
+      0 0 0 1px rgba(229, 9, 20, 0.38),
+      0 22px 44px rgba(229, 9, 20, 0.28);
+  }
+}
+
+@keyframes logo-spin-ring {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes logo-sheen {
+  from {
+    transform: translateX(-160%) rotate(16deg);
+    opacity: 0;
+  }
+
+  20% {
+    opacity: 0.55;
+  }
+
+  55%,
+  to {
+    transform: translateX(210%) rotate(16deg);
+    opacity: 0;
+  }
+}
+
+@keyframes logo-drift {
+  0%,
+  100% {
+    transform: scale(1) translate3d(0, 0, 0);
+  }
+
+  50% {
+    transform: scale(1.04) translate3d(0.5px, -0.5px, 0);
+  }
+}
+
 @keyframes shimmer {
   0% {
     transform: translateX(-100%);
@@ -295,10 +352,64 @@ button {
 .theme-logo-mark {
   background: linear-gradient(180deg, #ff5d53 0%, #e50914 56%, #7d040d 100%);
   color: white;
+  isolation: isolate;
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.14),
     0 0 0 1px rgba(229, 9, 20, 0.3),
     0 18px 34px rgba(229, 9, 20, 0.2);
+  animation: logo-breathe 4.8s ease-in-out infinite;
+  transition:
+    transform 220ms ease,
+    box-shadow 220ms ease,
+    filter 220ms ease;
+}
+
+.theme-logo-mark::before {
+  content: "";
+  position: absolute;
+  inset: -30% auto -30% -55%;
+  width: 48%;
+  background: linear-gradient(180deg, transparent, rgba(255, 255, 255, 0.55), transparent);
+  transform: rotate(16deg);
+  opacity: 0;
+  pointer-events: none;
+  animation: logo-sheen 5.6s ease-in-out infinite;
+}
+
+.theme-logo-mark::after {
+  content: "";
+  position: absolute;
+  inset: -22%;
+  border-radius: 999px;
+  border: 1.5px solid transparent;
+  border-top-color: rgba(255, 255, 255, 0.82);
+  border-right-color: rgba(229, 9, 20, 0.86);
+  filter: drop-shadow(0 0 10px rgba(229, 9, 20, 0.34));
+  opacity: 0.95;
+  pointer-events: none;
+  animation: logo-spin-ring 2.9s linear infinite;
+}
+
+.theme-logo-image {
+  animation: logo-drift 4.8s ease-in-out infinite;
+  transition:
+    transform 220ms ease,
+    filter 220ms ease;
+}
+
+.theme-logo-link:hover .theme-logo-mark,
+.theme-logo-link:focus-visible .theme-logo-mark {
+  transform: translateY(-2px) scale(1.06);
+  filter: saturate(1.08);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    0 0 0 1px rgba(229, 9, 20, 0.42),
+    0 24px 48px rgba(229, 9, 20, 0.32);
+}
+
+.theme-logo-link:hover .theme-logo-image,
+.theme-logo-link:focus-visible .theme-logo-image {
+  transform: scale(1.08);
 }
 
 .theme-nav-link {
@@ -892,6 +1003,10 @@ button {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .theme-logo-mark,
+  .theme-logo-mark::before,
+  .theme-logo-mark::after,
+  .theme-logo-image,
   .skeleton-block::after,
   .subflix-loader__ambient,
   .subflix-loader__grid,

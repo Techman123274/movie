@@ -7,8 +7,10 @@ import { UnavailablePanel } from "@/components/unavailable-panel";
 import { withMinimumDelay } from "@/lib/loading";
 import { getWatchlist } from "@/lib/persistence";
 import { getGenreOptions, getImageUrl, getShowCatalogRails } from "@/lib/tmdb";
+import type { MediaRail as MediaRailType } from "@/lib/types";
 import { buildMediaKey, cn, formatRating, formatYear, parsePositiveInt } from "@/lib/utils";
 import { getViewerContext } from "@/lib/viewer";
+import { getPersonalizedRails } from "@/lib/watch-state";
 
 type ShowsPageProps = {
   searchParams: Promise<{
@@ -27,25 +29,68 @@ function parseShowSort(sortParam?: string) {
   return SHOW_SORT_OPTIONS.find((option) => option.key === sortParam) ?? SHOW_SORT_OPTIONS[0];
 }
 
+function scopeRailToShows(rail: MediaRailType | null, title: string, description: string): MediaRailType | null {
+  if (!rail) {
+    return null;
+  }
+
+  const items = rail.items.filter((item) => item.mediaType === "tv");
+
+  if (!items.length) {
+    return null;
+  }
+
+  return {
+    ...rail,
+    title,
+    description,
+    items,
+  };
+}
+
 export default async function ShowsPage({ searchParams }: ShowsPageProps) {
   const viewer = await getViewerContext({ redirectToOnboarding: true });
   const params = await searchParams;
   const genreId = parsePositiveInt(params.genre);
   const activeSort = parseShowSort(params.sort);
   const genreOptions = getGenreOptions("tv");
-  const [rails, watchlist] = await withMinimumDelay(
+  const [rails, watchlist, personalized] = await withMinimumDelay(
     Promise.all([
       getShowCatalogRails({
         genreId,
         sort: activeSort.sort,
       }),
       viewer.activeProfile ? getWatchlist(viewer.activeProfile.id) : Promise.resolve([]),
+      viewer.activeProfile ? getPersonalizedRails(viewer.activeProfile.id) : Promise.resolve(null),
     ]),
   );
   const watchlistKeys = watchlist.map((record) => buildMediaKey(record.mediaType, record.mediaId));
   const activeGenreLabel = genreOptions.find((genre) => genre.id === genreId)?.label ?? null;
   const featured = rails?.find((rail) => rail.items.length)?.items[0] ?? null;
   const featuredBackdrop = getImageUrl(featured?.backdropPath ?? null, "w1280");
+  const activeProfileName = viewer.activeProfile?.name ?? "you";
+  const personalizedShowRails = [
+    scopeRailToShows(
+      personalized?.becauseYouWatchedRail ?? null,
+      `Built for ${activeProfileName}`,
+      "Series recommendations shaped by what this profile actually opens, likes, and sticks with.",
+    ),
+    scopeRailToShows(
+      personalized?.favoriteFormatRail ?? null,
+      "Your series lane",
+      "A stronger binge lane based on the fact this profile keeps leaning into series.",
+    ),
+    scopeRailToShows(
+      personalized?.genreAffinityRail ?? null,
+      "Genres you binge most",
+      "Series picked from the tones and genres this profile naturally comes back to.",
+    ),
+    scopeRailToShows(
+      personalized?.languageAffinityRail ?? null,
+      "Series matching your language pattern",
+      "More shows in the languages this profile keeps selecting.",
+    ),
+  ].filter((rail): rail is MediaRailType => Boolean(rail));
   const buildBrowseHref = (options: { genreId?: number; sort?: string }) => {
     const hrefParams = new URLSearchParams();
 
@@ -205,6 +250,14 @@ export default async function ShowsPage({ searchParams }: ShowsPageProps) {
           </section>
         </div>
       </section>
+      {personalizedShowRails.map((rail) => (
+        <MediaRail
+          key={rail.id}
+          rail={rail}
+          profileId={viewer.activeProfile?.id ?? null}
+          watchlistKeys={watchlistKeys}
+        />
+      ))}
       {rails.map((rail) => (
         <MediaRail
           key={rail.id}

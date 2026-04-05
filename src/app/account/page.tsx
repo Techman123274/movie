@@ -61,12 +61,6 @@ export default async function AccountPage() {
           maturityRating: viewer.activeProfile.maturityRating,
           providerRegion: viewer.activeProfile.providerRegion,
         }}
-        stats={{
-          profiles: viewer.profiles.length,
-          continueWatching: personalized.continueWatchingCount,
-          recentlyWatched: personalized.recentlyWatchedCount,
-          watchlist: watchlistItems.length,
-        }}
       />
       <RouteLinkRow
         items={[
@@ -86,6 +80,27 @@ export default async function AccountPage() {
       {personalized.becauseYouWatchedRail ? (
         <MediaRail
           rail={personalized.becauseYouWatchedRail}
+          profileId={viewer.activeProfile.id}
+          watchlistKeys={watchlistKeys}
+        />
+      ) : null}
+      {personalized.favoriteFormatRail ? (
+        <MediaRail
+          rail={personalized.favoriteFormatRail}
+          profileId={viewer.activeProfile.id}
+          watchlistKeys={watchlistKeys}
+        />
+      ) : null}
+      {personalized.genreAffinityRail ? (
+        <MediaRail
+          rail={personalized.genreAffinityRail}
+          profileId={viewer.activeProfile.id}
+          watchlistKeys={watchlistKeys}
+        />
+      ) : null}
+      {personalized.languageAffinityRail ? (
+        <MediaRail
+          rail={personalized.languageAffinityRail}
           profileId={viewer.activeProfile.id}
           watchlistKeys={watchlistKeys}
         />

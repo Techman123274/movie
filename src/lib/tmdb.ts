@@ -466,6 +466,49 @@ export async function discoverByGenres(options: {
   }
 }
 
+export async function discoverByPreferences(options: {
+  mediaType: MediaType;
+  genreIds?: number[];
+  language?: string;
+  exclude?: Array<{ mediaType: MediaType; mediaId: number }>;
+  limit?: number;
+  sort?: CatalogFilters["sort"];
+}): Promise<MediaSummary[]> {
+  if (!hasTmdbCredentials()) {
+    return [];
+  }
+
+  try {
+    const searchParams = new URLSearchParams();
+    searchParams.set("sort_by", options.sort ?? "popularity.desc");
+    searchParams.set("include_adult", "false");
+    searchParams.set("include_null_first_air_dates", "false");
+
+    if (options.genreIds?.length) {
+      searchParams.set("with_genres", options.genreIds.slice(0, 3).join(","));
+    }
+
+    if (options.language) {
+      searchParams.set("with_original_language", options.language);
+    }
+
+    const response = await fetchTmdb<{ results: Record<string, unknown>[] }>(
+      `/discover/${options.mediaType}?${searchParams.toString()}`,
+    );
+
+    const exclude = new Set(
+      (options.exclude ?? []).map((entry) => `${entry.mediaType}-${entry.mediaId}`),
+    );
+
+    return combineUniqueMedia(
+      response.results.map((item) => normalizeSummary(item, options.mediaType)),
+      exclude,
+    ).slice(0, options.limit ?? DEFAULT_DISCOVER_LIMIT);
+  } catch {
+    return [];
+  }
+}
+
 export async function getHomePageData(): Promise<HomePageData | null> {
   if (!hasTmdbCredentials()) {
     return null;

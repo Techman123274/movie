@@ -20,24 +20,6 @@ function formatProviderLabel(value: string) {
     .join(" ");
 }
 
-function formatDate(value: Date | number | string | null | undefined) {
-  if (!value) {
-    return "Unavailable";
-  }
-
-  const resolvedDate = value instanceof Date ? value : new Date(value);
-
-  if (Number.isNaN(resolvedDate.getTime())) {
-    return "Unavailable";
-  }
-
-  return new Intl.DateTimeFormat("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  }).format(resolvedDate);
-}
-
 export default async function SettingsPage() {
   const viewer = await getViewerContext();
   const user = await currentUser();
@@ -48,7 +30,6 @@ export default async function SettingsPage() {
 
   const enabledProviders = env.playback.enabledProviders.map(formatProviderLabel);
   const preferredProviders = env.playback.validatedProviders.map(formatProviderLabel);
-  const primaryEmail = user.primaryEmailAddress?.emailAddress ?? user.emailAddresses[0]?.emailAddress ?? "No email found";
 
   return (
     <PageFrame activeHref="/settings">
@@ -75,20 +56,6 @@ export default async function SettingsPage() {
             <p className="mt-3 max-w-2xl text-sm leading-6 text-[var(--color-text-muted)]">
               These controls are powered by the account system directly, so changes to your email address, password, and login security happen for real.
             </p>
-            <div className="mt-5 grid gap-3 md:grid-cols-3">
-              <div className="rounded-[22px] border border-white/10 bg-black/20 p-4">
-                <p className="text-xs uppercase tracking-[0.22em] text-[var(--color-text-muted)]">Primary email</p>
-                <p className="mt-2 break-all text-base text-white">{primaryEmail}</p>
-              </div>
-              <div className="rounded-[22px] border border-white/10 bg-black/20 p-4">
-                <p className="text-xs uppercase tracking-[0.22em] text-[var(--color-text-muted)]">Member since</p>
-                <p className="mt-2 text-base text-white">{formatDate(user.createdAt)}</p>
-              </div>
-              <div className="rounded-[22px] border border-white/10 bg-black/20 p-4">
-                <p className="text-xs uppercase tracking-[0.22em] text-[var(--color-text-muted)]">Last sign in</p>
-                <p className="mt-2 text-base text-white">{formatDate(user.lastSignInAt)}</p>
-              </div>
-            </div>
           </section>
 
           <AccountAccessSettings />

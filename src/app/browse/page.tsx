@@ -56,6 +56,20 @@ export default async function BrowsePage() {
           watchlistKeys={watchlistKeys}
         />
       ) : null}
+      {personalized?.favoriteFormatRail ? (
+        <MediaRail
+          rail={personalized.favoriteFormatRail}
+          profileId={viewer.activeProfile?.id ?? null}
+          watchlistKeys={watchlistKeys}
+        />
+      ) : null}
+      {personalized?.languageAffinityRail ? (
+        <MediaRail
+          rail={personalized.languageAffinityRail}
+          profileId={viewer.activeProfile?.id ?? null}
+          watchlistKeys={watchlistKeys}
+        />
+      ) : null}
       {personalized?.recentlyWatchedRail ? (
         <MediaRail
           rail={personalized.recentlyWatchedRail}
