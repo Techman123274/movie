@@ -36,6 +36,9 @@ export const env = {
   sports: {
     streamcenterBaseUrl: process.env.NEXT_PUBLIC_STREAMCENTER_URL || "https://streamcenter.live/",
   },
+  admin: {
+    emails: parseList(process.env.ADMIN_EMAILS),
+  },
 };
 
 export function hasTmdbCredentials() {

@@ -1,14 +1,31 @@
 import type { ReactNode } from "react";
 import { AppBottomNav } from "@/components/app-bottom-nav";
+import { SiteMaintenanceScreen } from "@/components/site-maintenance-screen";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
+import { getAdminContext, getSiteControlState } from "@/lib/site-control";
 
 type PageFrameProps = {
   children: ReactNode;
   activeHref?: string;
+  bypassSiteLock?: boolean;
 };
 
-export function PageFrame({ children, activeHref }: PageFrameProps) {
+export async function PageFrame({ children, activeHref, bypassSiteLock = false }: PageFrameProps) {
+  const siteControl = await getSiteControlState();
+
+  if (siteControl.maintenanceMode && !bypassSiteLock) {
+    const admin = await getAdminContext();
+
+    return (
+      <SiteMaintenanceScreen
+        message={siteControl.maintenanceMessage}
+        updatedAt={siteControl.updatedAt}
+        showAdminLink={admin.isAdmin}
+      />
+    );
+  }
+
   return (
     <div className="page-shell">
       <SiteHeader activeHref={activeHref} />

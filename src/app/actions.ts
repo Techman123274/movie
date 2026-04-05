@@ -14,6 +14,7 @@ import {
   updateProfileRegion,
 } from "@/lib/persistence";
 import { DEFAULT_PROFILE_AVATAR, isSupportedAvatarValue } from "@/lib/profile-assets";
+import { getAdminContext, updateSiteControlState } from "@/lib/site-control";
 import { ACTIVE_PROFILE_COOKIE } from "@/lib/viewer";
 import type { FeedbackValue, MediaType } from "@/lib/types";
 
@@ -29,6 +30,11 @@ const avatarUpdateSchema = z.object({
   profileId: z.string().trim().uuid(),
   returnTo: z.string().trim().min(1),
   avatar: z.string().trim().min(1).max(500_000).refine(isSupportedAvatarValue),
+});
+
+const siteControlSchema = z.object({
+  maintenanceMode: z.enum(["true", "false"]).transform((value) => value === "true"),
+  maintenanceMessage: z.string().trim().max(220),
 });
 
 const feedbackValues = new Set<FeedbackValue>(["like", "dislike", "not_interested"]);
@@ -158,6 +164,38 @@ export async function updateProfileAvatarAction(formData: FormData) {
   revalidatePath("/", "layout");
   revalidatePath(parsed.data.returnTo);
   redirect(parsed.data.returnTo);
+}
+
+export async function updateSiteControlAction(formData: FormData) {
+  const admin = await getAdminContext();
+
+  if (!admin.userId) {
+    redirect("/sign-in");
+  }
+
+  if (!admin.isAdmin) {
+    redirect("/browse");
+  }
+
+  const parsed = siteControlSchema.safeParse({
+    maintenanceMode: formData.get("maintenanceMode"),
+    maintenanceMessage: formData.get("maintenanceMessage") || "",
+  });
+
+  if (!parsed.success) {
+    redirect("/admin?error=invalid-site-control");
+  }
+
+  await updateSiteControlState({
+    maintenanceMode: parsed.data.maintenanceMode,
+    maintenanceMessage:
+      parsed.data.maintenanceMessage || "Subflix is getting a quick polish. We’ll be back shortly.",
+    updatedBy: admin.email ?? admin.userId,
+  });
+
+  revalidatePath("/", "layout");
+  revalidatePath("/admin");
+  redirect("/admin");
 }
 
 export async function toggleWatchlistAction(formData: FormData) {

@@ -1,4 +1,7 @@
+import { currentUser } from "@clerk/nextjs/server";
 import Link from "next/link";
+import { redirect } from "next/navigation";
+import { AccountAccessSettings } from "@/components/account-access-settings";
 import { EmptyState } from "@/components/empty-state";
 import { PageFrame } from "@/components/page-frame";
 import { PageHero } from "@/components/page-hero";
@@ -17,17 +20,42 @@ function formatProviderLabel(value: string) {
     .join(" ");
 }
 
+function formatDate(value: Date | number | string | null | undefined) {
+  if (!value) {
+    return "Unavailable";
+  }
+
+  const resolvedDate = value instanceof Date ? value : new Date(value);
+
+  if (Number.isNaN(resolvedDate.getTime())) {
+    return "Unavailable";
+  }
+
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  }).format(resolvedDate);
+}
+
 export default async function SettingsPage() {
-  const viewer = await getViewerContext({ redirectToOnboarding: true });
+  const viewer = await getViewerContext();
+  const user = await currentUser();
+
+  if (!viewer.isSignedIn || !user) {
+    redirect("/sign-in");
+  }
+
   const enabledProviders = env.playback.enabledProviders.map(formatProviderLabel);
   const preferredProviders = env.playback.validatedProviders.map(formatProviderLabel);
+  const primaryEmail = user.primaryEmailAddress?.emailAddress ?? user.emailAddresses[0]?.emailAddress ?? "No email found";
 
   return (
     <PageFrame activeHref="/settings">
       <PageHero
         eyebrow="Settings"
-        title="Control the way Subflix feels for this account."
-        description="Manage playback region, switch profiles, and review the watch experience without digging through the rest of the app."
+        title="Settings that feel closer to a real streaming account."
+        description="Update account access, email, password, sessions, and security in one place, then fine-tune the active Subflix profile underneath it."
       />
 
       <RouteLinkRow
@@ -35,12 +63,38 @@ export default async function SettingsPage() {
           { href: "/account", label: "Back to My Profile" },
           { href: "/profiles", label: "Profiles" },
           { href: "/providers", label: "Where to Watch" },
+          { href: "/admin", label: "Admin" },
         ]}
       />
 
-      {viewer.activeProfile ? (
-        <section className="grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
-          <div className="space-y-4">
+      <section className="grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
+        <div className="space-y-4">
+          <section className="surface rounded-[28px] p-6">
+            <p className="mb-2 text-xs uppercase tracking-[0.24em] text-[var(--color-brand-strong)]">Account access</p>
+            <h2 className="text-xl font-medium text-white">Email, password, sessions, and sign-in security</h2>
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-[var(--color-text-muted)]">
+              These controls are powered by the account system directly, so changes to your email address, password, and login security happen for real.
+            </p>
+            <div className="mt-5 grid gap-3 md:grid-cols-3">
+              <div className="rounded-[22px] border border-white/10 bg-black/20 p-4">
+                <p className="text-xs uppercase tracking-[0.22em] text-[var(--color-text-muted)]">Primary email</p>
+                <p className="mt-2 break-all text-base text-white">{primaryEmail}</p>
+              </div>
+              <div className="rounded-[22px] border border-white/10 bg-black/20 p-4">
+                <p className="text-xs uppercase tracking-[0.22em] text-[var(--color-text-muted)]">Member since</p>
+                <p className="mt-2 text-base text-white">{formatDate(user.createdAt)}</p>
+              </div>
+              <div className="rounded-[22px] border border-white/10 bg-black/20 p-4">
+                <p className="text-xs uppercase tracking-[0.22em] text-[var(--color-text-muted)]">Last sign in</p>
+                <p className="mt-2 text-base text-white">{formatDate(user.lastSignInAt)}</p>
+              </div>
+            </div>
+          </section>
+
+          <AccountAccessSettings />
+
+          {viewer.activeProfile ? (
+            <>
             <RegionForm profile={viewer.activeProfile} returnTo="/settings" />
             <ProfileAvatarSettingsForm
               profileId={viewer.activeProfile.id}
@@ -70,9 +124,34 @@ export default async function SettingsPage() {
                 </div>
               </div>
             </section>
-          </div>
+            </>
+          ) : (
+            <EmptyState
+              title="No active profile yet"
+              message="Your account security settings are ready above. Create a profile when you want Subflix-specific region, avatar, and playback preferences."
+            />
+          )}
+        </div>
 
-          <div className="space-y-4">
+        <div className="space-y-4">
+          <section className="surface rounded-[28px] p-6">
+            <p className="mb-2 text-xs uppercase tracking-[0.24em] text-[var(--color-brand-strong)]">Settings guide</p>
+            <h2 className="text-xl font-medium text-white">What lives where now</h2>
+            <div className="mt-4 space-y-3 text-sm leading-6 text-[var(--color-text-muted)]">
+              <div className="rounded-[22px] bg-black/20 px-4 py-4">
+                Email, password, active devices, and verification live in the account section.
+              </div>
+              <div className="rounded-[22px] bg-black/20 px-4 py-4">
+                Avatar, playback region, and personalized discovery stay tied to the active Subflix profile.
+              </div>
+              <div className="rounded-[22px] bg-black/20 px-4 py-4">
+                Playback provider switching still happens from the watch page so it stays close to the player.
+              </div>
+            </div>
+          </section>
+
+          {viewer.activeProfile ? (
+            <>
             <section className="surface rounded-[28px] p-6">
               <p className="mb-2 text-xs uppercase tracking-[0.24em] text-[var(--color-brand-strong)]">Active profile</p>
               <div className="flex items-start gap-4">
@@ -125,14 +204,10 @@ export default async function SettingsPage() {
                 </div>
               </div>
             </section>
-          </div>
-        </section>
-      ) : (
-        <EmptyState
-          title="No active profile"
-          message="Create or switch to a profile first so playback region and account preferences have a home."
-        />
-      )}
+            </>
+          ) : null}
+        </div>
+      </section>
     </PageFrame>
   );
 }

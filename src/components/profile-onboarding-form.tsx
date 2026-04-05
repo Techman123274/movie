@@ -22,7 +22,7 @@ export function ProfileOnboardingForm() {
           <select
             name="maturityRating"
             defaultValue="TV-14"
-            className="surface min-h-12 w-full rounded-2xl px-4 text-white outline-none"
+            className="theme-select surface min-h-12 w-full rounded-2xl px-4 text-white outline-none"
           >
             <option value="PG">PG</option>
             <option value="PG-13">PG-13</option>

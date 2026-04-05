@@ -73,6 +73,7 @@ export default async function AccountPage() {
           { href: "/profiles", label: "Switch Profiles" },
           { href: "/settings", label: "Settings" },
           { href: "/providers", label: "Where to Watch" },
+          { href: "/admin", label: "Admin" },
         ]}
       />
       {personalized.continueWatchingRail ? (

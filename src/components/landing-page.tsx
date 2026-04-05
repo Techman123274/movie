@@ -2,14 +2,30 @@ import Link from "next/link";
 import { Film, PlayCircle, Tv, Trophy } from "lucide-react";
 import { CinematicGallery } from "@/components/cinematic-gallery";
 import { MarketingHeader } from "@/components/marketing-header";
+import { SiteMaintenanceScreen } from "@/components/site-maintenance-screen";
 import { SocialShowcase } from "@/components/social-showcase";
+import { getAdminContext, getSiteControlState } from "@/lib/site-control";
 import type { MediaSummary } from "@/lib/types";
 
 type LandingPageProps = {
   featuredItems: MediaSummary[];
 };
 
-export function LandingPage({ featuredItems }: LandingPageProps) {
+export async function LandingPage({ featuredItems }: LandingPageProps) {
+  const siteControl = await getSiteControlState();
+
+  if (siteControl.maintenanceMode) {
+    const admin = await getAdminContext();
+
+    return (
+      <SiteMaintenanceScreen
+        message={siteControl.maintenanceMessage}
+        updatedAt={siteControl.updatedAt}
+        showAdminLink={admin.isAdmin}
+      />
+    );
+  }
+
   return (
     <div className="page-shell">
       <MarketingHeader />

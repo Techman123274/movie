@@ -33,7 +33,7 @@ export function SeasonPicker({ tvId, seasons, selectedSeasonNumber, routeMode }:
         value={selectedSeasonNumber}
         onChange={(event) => handleSeasonChange(Number(event.target.value))}
         disabled={isPending}
-        className="surface min-h-11 rounded-full px-4 text-sm text-white outline-none disabled:opacity-70"
+        className="theme-select surface min-h-11 rounded-full px-4 text-sm text-white outline-none disabled:opacity-70"
       >
         {seasons.map((season) => (
           <option key={season.id} value={season.seasonNumber}>
