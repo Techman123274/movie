@@ -1,6 +1,10 @@
 import { getSupabaseAdminClient, getSupabaseReadClient } from "@/lib/supabase";
 import { buildWatchHref } from "@/lib/utils";
 import type {
+  AdminSupportAccountSummary,
+  AdminSupportCounts,
+  AdminSupportProfileDetail,
+  AdminSupportProfileSummary,
   CatalogUnavailableReason,
   FeedbackValue,
   MediaType,
@@ -22,7 +26,34 @@ type ProfileInsert = {
   provider_region: string;
 };
 
+type AdminUserRow = {
+  id: string;
+  email: string | null;
+  created_at: string;
+};
+
+type AdminProfileRow = {
+  id: string;
+  user_id: string;
+  name: string;
+  avatar: string;
+  accent: string;
+  maturity_rating: string;
+  provider_region: string;
+  created_at: string;
+};
+
 const WATCH_HISTORY_DEDUPE_WINDOW_MS = 1000 * 60 * 30;
+
+const EMPTY_ADMIN_SUPPORT_COUNTS: AdminSupportCounts = {
+  watchlist: 0,
+  continueWatching: 0,
+  history: 0,
+  feedback: 0,
+  likes: 0,
+  dislikes: 0,
+  notInterested: 0,
+};
 
 function mapProfile(profile: Record<string, unknown>): ProfileRecord {
   return {
@@ -34,6 +65,171 @@ function mapProfile(profile: Record<string, unknown>): ProfileRecord {
     maturityRating: String(profile.maturity_rating),
     providerRegion: String(profile.provider_region || "US"),
   };
+}
+
+function createEmptyAdminSupportCounts(): AdminSupportCounts {
+  return { ...EMPTY_ADMIN_SUPPORT_COUNTS };
+}
+
+function toTimestampOrNull(value: string | null | undefined) {
+  if (!value) {
+    return null;
+  }
+
+  const timestamp = new Date(value).getTime();
+  return Number.isFinite(timestamp) ? timestamp : null;
+}
+
+function maxIsoTimestamp(current: string | null, next: string | null | undefined) {
+  if (!next) {
+    return current;
+  }
+
+  const currentTimestamp = toTimestampOrNull(current);
+  const nextTimestamp = toTimestampOrNull(next);
+
+  if (nextTimestamp === null) {
+    return current;
+  }
+
+  if (currentTimestamp === null || nextTimestamp > currentTimestamp) {
+    return next;
+  }
+
+  return current;
+}
+
+function createAdminProfileSummary(profile: AdminProfileRow): AdminSupportProfileSummary {
+  return {
+    id: profile.id,
+    userId: profile.user_id,
+    name: profile.name,
+    avatar: profile.avatar,
+    accent: profile.accent,
+    maturityRating: profile.maturity_rating,
+    providerRegion: profile.provider_region || "US",
+    createdAt: profile.created_at,
+    counts: createEmptyAdminSupportCounts(),
+    lastActivityAt: null,
+  };
+}
+
+function buildAdminSupportAccountSummaries(options: {
+  users: AdminUserRow[];
+  profiles: AdminProfileRow[];
+  watchlistRows?: Array<{ profile_id: string; added_at?: string | null }>;
+  progressRows?: Array<{ profile_id: string; updated_at?: string | null }>;
+  historyRows?: Array<{ profile_id: string; watched_at?: string | null }>;
+  feedbackRows?: Array<{ profile_id: string; value: FeedbackValue; updated_at?: string | null }>;
+}) {
+  const profilesById = new Map<string, AdminSupportProfileSummary>();
+
+  for (const profile of options.profiles) {
+    profilesById.set(profile.id, createAdminProfileSummary(profile));
+  }
+
+  for (const row of options.watchlistRows ?? []) {
+    const profile = profilesById.get(row.profile_id);
+
+    if (!profile) {
+      continue;
+    }
+
+    profile.counts.watchlist += 1;
+    profile.lastActivityAt = maxIsoTimestamp(profile.lastActivityAt, row.added_at ?? null);
+  }
+
+  for (const row of options.progressRows ?? []) {
+    const profile = profilesById.get(row.profile_id);
+
+    if (!profile) {
+      continue;
+    }
+
+    profile.counts.continueWatching += 1;
+    profile.lastActivityAt = maxIsoTimestamp(profile.lastActivityAt, row.updated_at ?? null);
+  }
+
+  for (const row of options.historyRows ?? []) {
+    const profile = profilesById.get(row.profile_id);
+
+    if (!profile) {
+      continue;
+    }
+
+    profile.counts.history += 1;
+    profile.lastActivityAt = maxIsoTimestamp(profile.lastActivityAt, row.watched_at ?? null);
+  }
+
+  for (const row of options.feedbackRows ?? []) {
+    const profile = profilesById.get(row.profile_id);
+
+    if (!profile) {
+      continue;
+    }
+
+    profile.counts.feedback += 1;
+
+    if (row.value === "like") {
+      profile.counts.likes += 1;
+    } else if (row.value === "dislike") {
+      profile.counts.dislikes += 1;
+    } else {
+      profile.counts.notInterested += 1;
+    }
+
+    profile.lastActivityAt = maxIsoTimestamp(profile.lastActivityAt, row.updated_at ?? null);
+  }
+
+  const profilesByUser = new Map<string, AdminSupportProfileSummary[]>();
+
+  for (const profile of profilesById.values()) {
+    const existing = profilesByUser.get(profile.userId) ?? [];
+    existing.push(profile);
+    profilesByUser.set(profile.userId, existing);
+  }
+
+  for (const profiles of profilesByUser.values()) {
+    profiles.sort((left, right) => {
+      const leftTimestamp = toTimestampOrNull(left.createdAt) ?? 0;
+      const rightTimestamp = toTimestampOrNull(right.createdAt) ?? 0;
+      return leftTimestamp - rightTimestamp;
+    });
+  }
+
+  return options.users.map<AdminSupportAccountSummary>((user) => {
+    const profiles = profilesByUser.get(user.id) ?? [];
+    const totals = profiles.reduce<AdminSupportAccountSummary["totals"]>(
+      (accumulator, profile) => ({
+        profiles: accumulator.profiles + 1,
+        watchlist: accumulator.watchlist + profile.counts.watchlist,
+        continueWatching: accumulator.continueWatching + profile.counts.continueWatching,
+        history: accumulator.history + profile.counts.history,
+        feedback: accumulator.feedback + profile.counts.feedback,
+        likes: accumulator.likes + profile.counts.likes,
+        dislikes: accumulator.dislikes + profile.counts.dislikes,
+        notInterested: accumulator.notInterested + profile.counts.notInterested,
+      }),
+      {
+        profiles: 0,
+        ...createEmptyAdminSupportCounts(),
+      },
+    );
+
+    const lastActivityAt = profiles.reduce<string | null>(
+      (latest, profile) => maxIsoTimestamp(latest, profile.lastActivityAt),
+      null,
+    );
+
+    return {
+      userId: user.id,
+      email: user.email,
+      createdAt: user.created_at,
+      profiles,
+      totals,
+      lastActivityAt,
+    };
+  });
 }
 
 function mapSupabaseReadiness(message: string): CatalogUnavailableReason | null {
@@ -499,6 +695,221 @@ export async function getProfileForUser(profileId: string, userId: string): Prom
   }
 
   return mapProfile(data);
+}
+
+export async function getAdminSupportAccounts(limit = 120): Promise<{
+  accounts: AdminSupportAccountSummary[];
+  error?: string;
+}> {
+  const client = getSupabaseAdminClient();
+
+  if (!client) {
+    return {
+      accounts: [],
+      error: "Supabase service role key is not configured.",
+    };
+  }
+
+  const [usersResult, profilesResult, watchlistsResult, progressResult, historyResult, feedbackResult] = await Promise.all([
+    client.from("users").select("id, email, created_at").order("created_at", { ascending: false }).limit(limit),
+    client
+      .from("profiles")
+      .select("id, user_id, name, avatar, accent, maturity_rating, provider_region, created_at")
+      .order("created_at", { ascending: true }),
+    client.from("watchlists").select("profile_id, added_at"),
+    client.from("watch_progress").select("profile_id, updated_at"),
+    client.from("watch_history").select("profile_id, watched_at"),
+    client.from("profile_feedback").select("profile_id, value, updated_at"),
+  ]);
+
+  const error =
+    usersResult.error ??
+    profilesResult.error ??
+    watchlistsResult.error ??
+    progressResult.error ??
+    historyResult.error ??
+    feedbackResult.error;
+
+  if (error) {
+    return {
+      accounts: [],
+      error: error.message,
+    };
+  }
+
+  return {
+    accounts: buildAdminSupportAccountSummaries({
+      users: (usersResult.data ?? []) as AdminUserRow[],
+      profiles: (profilesResult.data ?? []) as AdminProfileRow[],
+      watchlistRows: ((watchlistsResult.data ?? []) as Array<{ profile_id: string; added_at?: string | null }>),
+      progressRows: ((progressResult.data ?? []) as Array<{ profile_id: string; updated_at?: string | null }>),
+      historyRows: ((historyResult.data ?? []) as Array<{ profile_id: string; watched_at?: string | null }>),
+      feedbackRows: ((feedbackResult.data ?? []) as Array<{
+        profile_id: string;
+        value: FeedbackValue;
+        updated_at?: string | null;
+      }>),
+    }),
+  };
+}
+
+export async function getAdminSupportProfileDetail(
+  userId: string,
+  requestedProfileId?: string,
+): Promise<{
+  account: AdminSupportAccountSummary | null;
+  detail: AdminSupportProfileDetail | null;
+  error?: string;
+}> {
+  const client = getSupabaseAdminClient();
+
+  if (!client) {
+    return {
+      account: null,
+      detail: null,
+      error: "Supabase service role key is not configured.",
+    };
+  }
+
+  const userResult = await client.from("users").select("id, email, created_at").eq("id", userId).maybeSingle();
+
+  if (userResult.error) {
+    return {
+      account: null,
+      detail: null,
+      error: userResult.error.message,
+    };
+  }
+
+  if (!userResult.data) {
+    return {
+      account: null,
+      detail: null,
+    };
+  }
+
+  const profilesResult = await client
+    .from("profiles")
+    .select("id, user_id, name, avatar, accent, maturity_rating, provider_region, created_at")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: true });
+
+  if (profilesResult.error) {
+    return {
+      account: null,
+      detail: null,
+      error: profilesResult.error.message,
+    };
+  }
+
+  const profiles = (profilesResult.data ?? []) as AdminProfileRow[];
+  const profileIds = profiles.map((profile) => profile.id);
+
+  const [watchlistsResult, progressResult, historyResult, feedbackResult] = profileIds.length
+    ? await Promise.all([
+        client.from("watchlists").select("profile_id, added_at").in("profile_id", profileIds),
+        client.from("watch_progress").select("profile_id, updated_at").in("profile_id", profileIds),
+        client.from("watch_history").select("profile_id, watched_at").in("profile_id", profileIds),
+        client.from("profile_feedback").select("profile_id, value, updated_at").in("profile_id", profileIds),
+      ])
+    : [
+        { data: [], error: null },
+        { data: [], error: null },
+        { data: [], error: null },
+        { data: [], error: null },
+      ];
+
+  const summaryError =
+    watchlistsResult.error ?? progressResult.error ?? historyResult.error ?? feedbackResult.error;
+
+  if (summaryError) {
+    return {
+      account: null,
+      detail: null,
+      error: summaryError.message,
+    };
+  }
+
+  const account = buildAdminSupportAccountSummaries({
+    users: [userResult.data as AdminUserRow],
+    profiles,
+    watchlistRows: ((watchlistsResult.data ?? []) as Array<{ profile_id: string; added_at?: string | null }>),
+    progressRows: ((progressResult.data ?? []) as Array<{ profile_id: string; updated_at?: string | null }>),
+    historyRows: ((historyResult.data ?? []) as Array<{ profile_id: string; watched_at?: string | null }>),
+    feedbackRows: ((feedbackResult.data ?? []) as Array<{
+      profile_id: string;
+      value: FeedbackValue;
+      updated_at?: string | null;
+    }>),
+  })[0] ?? null;
+
+  if (!account || account.profiles.length === 0) {
+    return {
+      account,
+      detail: {
+        selectedProfileId: null,
+        continueWatching: [],
+        watchlist: [],
+        history: [],
+        feedback: [],
+      },
+    };
+  }
+
+  const selectedProfileId =
+    account.profiles.find((profile) => profile.id === requestedProfileId)?.id ??
+    account.profiles[0]?.id ??
+    null;
+
+  if (!selectedProfileId) {
+    return {
+      account,
+      detail: {
+        selectedProfileId: null,
+        continueWatching: [],
+        watchlist: [],
+        history: [],
+        feedback: [],
+      },
+    };
+  }
+
+  const [detailProgressResult, detailWatchlistResult, detailHistoryResult, detailFeedbackResult] = await Promise.all([
+    client.from("watch_progress").select("*").eq("profile_id", selectedProfileId).order("updated_at", { ascending: false }).limit(12),
+    client.from("watchlists").select("*").eq("profile_id", selectedProfileId).order("added_at", { ascending: false }).limit(12),
+    client.from("watch_history").select("*").eq("profile_id", selectedProfileId).order("watched_at", { ascending: false }).limit(12),
+    client.from("profile_feedback").select("*").eq("profile_id", selectedProfileId).order("updated_at", { ascending: false }).limit(12),
+  ]);
+
+  const detailError =
+    detailProgressResult.error ??
+    detailWatchlistResult.error ??
+    detailHistoryResult.error ??
+    detailFeedbackResult.error;
+
+  if (detailError) {
+    return {
+      account,
+      detail: null,
+      error: detailError.message,
+    };
+  }
+
+  return {
+    account,
+    detail: {
+      selectedProfileId,
+      continueWatching: (detailProgressResult.data ?? []).map((record) => mapWatchProgressRecord(record)),
+      watchlist: (detailWatchlistResult.data ?? []).map((record) => ({
+        profileId: String(record.profile_id),
+        mediaId: Number(record.media_id),
+        mediaType: record.media_type as MediaType,
+        addedAt: String(record.added_at),
+      })),
+      history: (detailHistoryResult.data ?? []).map((record) => mapWatchHistoryRecord(record)),
+      feedback: (detailFeedbackResult.data ?? []).map((record) => mapProfileFeedbackRecord(record)),
+    },
+  };
 }
 
 async function upsertWatchProgress(record: {

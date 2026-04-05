@@ -8,6 +8,7 @@ import { z } from "zod";
 import {
   createProfileForUser,
   ensureAppUser,
+  getProfileForUser,
   setProfileFeedback,
   toggleWatchlist,
   updateProfileAvatar,
@@ -38,6 +39,16 @@ const siteControlSchema = z.object({
 });
 
 const feedbackValues = new Set<FeedbackValue>(["like", "dislike", "not_interested"]);
+
+function appendQueryParam(path: string, key: string, value: string) {
+  const [pathWithoutHash, hash = ""] = path.split("#", 2);
+  const [pathname, existingSearch = ""] = pathWithoutHash.split("?", 2);
+  const searchParams = new URLSearchParams(existingSearch);
+  searchParams.set(key, value);
+  const query = searchParams.toString();
+  const nextPath = query ? `${pathname}?${query}` : pathname;
+  return hash ? `${nextPath}#${hash}` : nextPath;
+}
 
 export async function createInitialProfileAction(formData: FormData) {
   const { userId } = await auth();
@@ -94,11 +105,20 @@ export async function createInitialProfileAction(formData: FormData) {
 }
 
 export async function switchActiveProfileAction(formData: FormData) {
+  const { userId } = await auth();
   const profileId = String(formData.get("profileId") || "");
   const returnTo = String(formData.get("returnTo") || "/profiles");
 
+  if (!userId) {
+    redirect("/sign-in");
+  }
+
   if (!profileId) {
     redirect(returnTo);
+  }
+
+  if (!(await getProfileForUser(profileId, userId))) {
+    redirect(appendQueryParam(returnTo, "error", "profile-not-found"));
   }
 
   const cookieStore = await cookies();
@@ -213,6 +233,10 @@ export async function toggleWatchlistAction(formData: FormData) {
     redirect(returnTo);
   }
 
+  if (!(await getProfileForUser(profileId, userId))) {
+    redirect(appendQueryParam(returnTo, "error", "profile-not-found"));
+  }
+
   await toggleWatchlist(profileId, mediaId, mediaType);
   revalidatePath(returnTo);
   revalidatePath("/account");
@@ -235,6 +259,10 @@ export async function setTitleFeedbackAction(formData: FormData) {
 
   if (!profileId || !mediaId || (mediaType !== "movie" && mediaType !== "tv")) {
     redirect(returnTo);
+  }
+
+  if (!(await getProfileForUser(profileId, userId))) {
+    redirect(appendQueryParam(returnTo, "error", "profile-not-found"));
   }
 
   await setProfileFeedback({

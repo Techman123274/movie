@@ -165,6 +165,41 @@ export type ProfileRecord = {
   providerRegion: string;
 };
 
+export type AdminSupportCounts = {
+  watchlist: number;
+  continueWatching: number;
+  history: number;
+  feedback: number;
+  likes: number;
+  dislikes: number;
+  notInterested: number;
+};
+
+export type AdminSupportProfileSummary = ProfileRecord & {
+  createdAt: string;
+  counts: AdminSupportCounts;
+  lastActivityAt: string | null;
+};
+
+export type AdminSupportAccountSummary = {
+  userId: string;
+  email: string | null;
+  createdAt: string;
+  profiles: AdminSupportProfileSummary[];
+  totals: AdminSupportCounts & {
+    profiles: number;
+  };
+  lastActivityAt: string | null;
+};
+
+export type AdminSupportProfileDetail = {
+  selectedProfileId: string | null;
+  continueWatching: WatchProgressRecord[];
+  watchlist: WatchlistRecord[];
+  history: WatchHistoryRecord[];
+  feedback: ProfileFeedbackRecord[];
+};
+
 export type ProfileFeedbackRecord = {
   profileId: string;
   mediaId: number;

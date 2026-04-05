@@ -3,6 +3,11 @@
 import { useMemo, useState } from "react";
 import { AlertTriangle, CheckCircle2, RotateCcw } from "lucide-react";
 import { PlaybackFrame } from "@/components/playback-frame";
+import {
+  PREFERRED_PROVIDER_STORAGE_KEY,
+  readAutoplayNextPreference,
+  writeAutoplayNextPreference,
+} from "@/lib/playback-preferences";
 import type { MediaType, PlaybackProviderResult } from "@/lib/types";
 
 type ProviderGateProps = {
@@ -15,8 +20,6 @@ type ProviderGateProps = {
   episodeNumber?: number;
   nextEpisodeHref?: string | null;
 };
-
-const PREFERRED_PROVIDER_STORAGE_KEY = "subflix-preferred-playback-provider";
 
 export function ProviderGate({
   providers,
@@ -33,7 +36,10 @@ export function ProviderGate({
     [providers],
   );
   const watchKey = `${mediaType}-${mediaId}-${seasonNumber ?? 0}-${episodeNumber ?? 0}`;
-  const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [statusState, setStatusState] = useState<{ watchKey: string; message: string | null }>({
+    watchKey: "",
+    message: null,
+  });
   const [selectedState, setSelectedState] = useState<{ watchKey: string; providerName: string | null }>({
     watchKey: "",
     providerName: null,
@@ -42,8 +48,10 @@ export function ProviderGate({
     watchKey: "",
     providers: [],
   });
+  const [autoplayEnabled, setAutoplayEnabled] = useState(readAutoplayNextPreference);
 
   const selectedProviderName = selectedState.watchKey === watchKey ? selectedState.providerName : null;
+  const statusMessage = statusState.watchKey === watchKey ? statusState.message : null;
   const failedProviderNames = failedState.watchKey === watchKey ? failedState.providers : [];
   const storedProvider =
     typeof window !== "undefined" ? window.localStorage.getItem(PREFERRED_PROVIDER_STORAGE_KEY) : null;
@@ -51,6 +59,7 @@ export function ProviderGate({
     enabledProviders.find((provider) => provider.provider === selectedProviderName) ??
     enabledProviders.find((provider) => provider.provider === storedProvider) ??
     enabledProviders[0];
+  const autoplaySupported = selectedProvider?.provider === "vidlink" && mediaType === "tv" && Boolean(nextEpisodeHref);
 
   function switchProvider(nextProviderName: string, reason?: string) {
     setSelectedState({ watchKey, providerName: nextProviderName });
@@ -59,7 +68,7 @@ export function ProviderGate({
       window.localStorage.setItem(PREFERRED_PROVIDER_STORAGE_KEY, nextProviderName);
     }
     if (reason) {
-      setStatusMessage(reason);
+      setStatusState({ watchKey, message: reason });
     }
   }
 
@@ -82,7 +91,19 @@ export function ProviderGate({
       return;
     }
 
-    setStatusMessage("No automatic fallback is available right now. Try another server.");
+    setStatusState({ watchKey, message: "No automatic fallback is available right now. Try another server." });
+  }
+
+  function handleAutoplayToggle() {
+    const nextValue = !autoplayEnabled;
+    setAutoplayEnabled(nextValue);
+    writeAutoplayNextPreference(nextValue);
+    setStatusState({
+      watchKey,
+      message: nextValue
+        ? "Autoplay next is on. Supported episodes will roll forward automatically."
+        : "Autoplay next is off. Subflix will stay on the current episode when it ends.",
+    });
   }
 
   if (!enabledProviders.length) {
@@ -117,6 +138,32 @@ export function ProviderGate({
             <p className="mt-2 max-w-3xl text-sm leading-6 text-[var(--color-text-muted)]">
               Choose the playback path that works best for you, and if one stalls, Subflix will try the next available option.
             </p>
+            <div className="mt-4 flex flex-wrap items-center gap-2">
+              <span
+                className={`rounded-full px-3 py-1 text-[11px] uppercase tracking-[0.22em] ${
+                  autoplaySupported && autoplayEnabled
+                    ? "theme-chip"
+                    : "border border-white/10 bg-black/20 text-[var(--color-text-muted)]"
+                }`}
+              >
+                {autoplaySupported ? (autoplayEnabled ? "Autoplay next on" : "Autoplay next off") : "Autoplay unavailable"}
+              </span>
+              <button
+                type="button"
+                onClick={handleAutoplayToggle}
+                disabled={!autoplaySupported}
+                className={`inline-flex min-h-10 items-center rounded-full px-4 text-sm transition disabled:cursor-not-allowed disabled:opacity-60 ${
+                  autoplayEnabled ? "theme-button-primary font-semibold" : "theme-button-secondary text-white"
+                }`}
+              >
+                {autoplayEnabled ? "Turn autoplay off" : "Turn autoplay on"}
+              </button>
+              {!autoplaySupported ? (
+                <span className="text-sm text-[var(--color-text-muted)]">
+                  Use VidLink on a TV episode with a next episode available.
+                </span>
+              ) : null}
+            </div>
           </div>
           {statusMessage ? (
             <div className="inline-flex items-center gap-2 rounded-full bg-[rgba(214,179,109,0.12)] px-4 py-2 text-sm text-[var(--color-brand-strong)]">
@@ -148,6 +195,11 @@ export function ProviderGate({
                       {provider.recommended ? (
                         <span className="rounded-full bg-[rgba(214,179,109,0.18)] px-3 py-1 text-[10px] uppercase tracking-[0.22em] text-[var(--color-brand-strong)]">
                           Recommended
+                        </span>
+                      ) : null}
+                      {provider.provider === "vidlink" && mediaType === "tv" && nextEpisodeHref ? (
+                        <span className="rounded-full border border-white/10 px-3 py-1 text-[10px] uppercase tracking-[0.22em] text-[var(--color-text-muted)]">
+                          {autoplayEnabled ? "Autoplay active" : "Autoplay available"}
                         </span>
                       ) : null}
                     </div>
@@ -182,6 +234,7 @@ export function ProviderGate({
 
       {selectedProvider ? (
         <PlaybackFrame
+          key={`${watchKey}-${selectedProvider.provider}`}
           provider={selectedProvider}
           title={title}
           profileId={profileId}
@@ -190,6 +243,9 @@ export function ProviderGate({
           seasonNumber={seasonNumber}
           episodeNumber={episodeNumber}
           nextEpisodeHref={nextEpisodeHref}
+          autoplayEnabled={autoplayEnabled}
+          autoplaySupported={autoplaySupported}
+          onAutoplayToggle={handleAutoplayToggle}
           onProviderUnresponsive={handleProviderUnresponsive}
         />
       ) : null}

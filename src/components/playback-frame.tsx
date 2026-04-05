@@ -16,6 +16,9 @@ type PlaybackFrameProps = {
   seasonNumber?: number;
   episodeNumber?: number;
   nextEpisodeHref?: string | null;
+  autoplayEnabled: boolean;
+  autoplaySupported: boolean;
+  onAutoplayToggle: () => void;
   onProviderUnresponsive?: (providerName: string) => void;
 };
 
@@ -48,6 +51,9 @@ export function PlaybackFrame({
   seasonNumber,
   episodeNumber,
   nextEpisodeHref,
+  autoplayEnabled,
+  autoplaySupported,
+  onAutoplayToggle,
   onProviderUnresponsive,
 }: PlaybackFrameProps) {
   const router = useRouter();
@@ -60,15 +66,15 @@ export function PlaybackFrame({
   const handledCompletionRef = useRef(false);
   const controlsHideTimeoutRef = useRef<number | null>(null);
   const playerShellRef = useRef<HTMLDivElement>(null);
-  const canAutoAdvance = provider.provider === "vidlink" && mediaType === "tv" && Boolean(nextEpisodeHref);
+  const canAutoAdvance = autoplaySupported && autoplayEnabled;
   const providerKey = `${provider.provider}-${provider.embedUrl}`;
   const frameLoaded = loadedProviderKey === providerKey;
 
   useEffect(() => {
-    if (nextEpisodeHref) {
+    if (canAutoAdvance && nextEpisodeHref) {
       void router.prefetch(nextEpisodeHref);
     }
-  }, [router, nextEpisodeHref]);
+  }, [router, canAutoAdvance, nextEpisodeHref]);
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
@@ -119,7 +125,7 @@ export function PlaybackFrame({
       }
 
       handledCompletionRef.current = true;
-      setAutoAdvanceState(nextEpisodeHref ? "advancing" : "complete");
+      setAutoAdvanceState(canAutoAdvance ? "advancing" : "complete");
 
       if (profileId) {
         void postWatchState({
@@ -130,14 +136,14 @@ export function PlaybackFrame({
           episodeNumber,
           event: "complete",
         }).catch(() => {
-          if (!nextEpisodeHref) {
+          if (!canAutoAdvance) {
             setAutoAdvanceState("error");
             handledCompletionRef.current = false;
           }
         });
       }
 
-      if (nextEpisodeHref) {
+      if (canAutoAdvance && nextEpisodeHref) {
         startTransition(() => {
           router.push(nextEpisodeHref, { scroll: false });
         });
@@ -148,7 +154,17 @@ export function PlaybackFrame({
     return () => {
       window.removeEventListener("message", handleMessage);
     };
-  }, [router, provider.provider, profileId, mediaId, mediaType, seasonNumber, episodeNumber, nextEpisodeHref]);
+  }, [
+    router,
+    provider.provider,
+    profileId,
+    mediaId,
+    mediaType,
+    seasonNumber,
+    episodeNumber,
+    nextEpisodeHref,
+    canAutoAdvance,
+  ]);
 
   useEffect(() => {
     type FullscreenDocument = Document & {
@@ -313,8 +329,10 @@ export function PlaybackFrame({
         <div>
           <p className="mb-1 text-xs uppercase tracking-[0.28em] text-[var(--color-brand-strong)]">Playback mode</p>
           <p className="text-sm leading-6 text-[var(--color-text-muted)]">
-            {canAutoAdvance
+            {autoplaySupported
+              ? canAutoAdvance
               ? "Next episode is ready to roll automatically when this one ends."
+              : "Autoplay is available here, but it is currently turned off."
               : "Playback continues in a dedicated viewer designed to keep the watch experience simple and steady."}
           </p>
           <div className="mt-3 flex flex-wrap gap-2">
@@ -326,24 +344,50 @@ export function PlaybackFrame({
                 {capability}
               </span>
             ))}
+            {autoplaySupported ? (
+              <span className={`rounded-full px-3 py-1 text-[11px] uppercase tracking-[0.2em] ${
+                canAutoAdvance ? "theme-chip" : "border border-white/10 text-[var(--color-text-muted)]"
+              }`}>
+                {canAutoAdvance ? "Autoplay active" : "Autoplay off"}
+              </span>
+            ) : null}
           </div>
         </div>
-        {canAutoAdvance || !frameLoaded ? (
-          <div className="flex min-h-11 items-center gap-2 rounded-full bg-[rgba(214,179,109,0.14)] px-4 text-sm text-[var(--color-brand-strong)]">
-            {autoAdvanceState === "advancing" || isPending ? (
-              <LoaderCircle size={16} className="animate-spin" />
-            ) : !frameLoaded ? (
-              <ShieldCheck size={16} />
-            ) : (
-              <SkipForward size={16} />
-            )}
-            {autoAdvanceState === "advancing" || isPending
-              ? "Loading next episode"
-              : !frameLoaded
-                ? "Checking server responsiveness"
-                : "Next episode armed"}
-          </div>
-        ) : null}
+        <div className="flex flex-wrap items-center gap-3">
+          {autoplaySupported ? (
+            <button
+              type="button"
+              onClick={onAutoplayToggle}
+              className={`inline-flex min-h-11 items-center rounded-full px-4 text-sm transition ${
+                canAutoAdvance ? "theme-button-primary font-semibold" : "theme-button-secondary text-white"
+              }`}
+            >
+              {canAutoAdvance ? "Turn autoplay off" : "Turn autoplay on"}
+            </button>
+          ) : null}
+          {canAutoAdvance || !frameLoaded || autoAdvanceState !== "idle" ? (
+            <div className="flex min-h-11 items-center gap-2 rounded-full bg-[rgba(214,179,109,0.14)] px-4 text-sm text-[var(--color-brand-strong)]">
+              {autoAdvanceState === "advancing" || isPending ? (
+                <LoaderCircle size={16} className="animate-spin" />
+              ) : !frameLoaded ? (
+                <ShieldCheck size={16} />
+              ) : autoAdvanceState === "complete" ? (
+                <ShieldCheck size={16} />
+              ) : (
+                <SkipForward size={16} />
+              )}
+              {autoAdvanceState === "advancing" || isPending
+                ? "Loading next episode"
+                : !frameLoaded
+                  ? "Checking server responsiveness"
+                  : autoAdvanceState === "complete"
+                    ? "Episode finished"
+                    : canAutoAdvance
+                      ? "Next episode armed"
+                      : "Autoplay standing by"}
+            </div>
+          ) : null}
+        </div>
       </div>
 
       <PlaybackActions embedUrl={provider.embedUrl} title={title} />
