@@ -1,0 +1,12 @@
+{
+  "totalVisits": 18,
+  "signedInVisits": 18,
+  "guestVisits": 0,
+  "lastVisitAt": "2026-04-05T17:59:42.780Z",
+  "routeViews": {
+    "/browse": 18
+  },
+  "dailyViews": {
+    "2026-04-05": 18
+  }
+}

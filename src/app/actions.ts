@@ -1,8 +1,8 @@
 "use server";
 
 import { auth, currentUser } from "@clerk/nextjs/server";
-import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import {
@@ -15,8 +15,8 @@ import {
 } from "@/lib/persistence";
 import { DEFAULT_PROFILE_AVATAR, isSupportedAvatarValue } from "@/lib/profile-assets";
 import { getAdminContext, updateSiteControlState } from "@/lib/site-control";
-import { ACTIVE_PROFILE_COOKIE } from "@/lib/viewer";
 import type { FeedbackValue, MediaType } from "@/lib/types";
+import { ACTIVE_PROFILE_COOKIE } from "@/lib/viewer";
 
 const onboardingSchema = z.object({
   name: z.string().trim().min(2).max(32),
@@ -188,8 +188,7 @@ export async function updateSiteControlAction(formData: FormData) {
 
   await updateSiteControlState({
     maintenanceMode: parsed.data.maintenanceMode,
-    maintenanceMessage:
-      parsed.data.maintenanceMessage || "Subflix is getting a quick polish. We’ll be back shortly.",
+    maintenanceMessage: parsed.data.maintenanceMessage || "Subflix is getting a quick polish. We'll be back shortly.",
     updatedBy: admin.email ?? admin.userId,
   });
 

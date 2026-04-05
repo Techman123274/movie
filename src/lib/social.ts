@@ -150,7 +150,7 @@ export async function getHouseholdSocialState(
       sharedQueueCount > 0
         ? `${sharedQueueCount} title${sharedQueueCount === 1 ? "" : "s"} are already crossing profiles.`
         : profiles.length > 1
-          ? "This household is building a taste profile of its own."
+          ? "This household already has a taste profile of its own."
           : "This profile is ready to become the center of movie night.",
     description:
       sharedQueueCount > 0

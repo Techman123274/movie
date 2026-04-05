@@ -1,8 +1,12 @@
 import { SignIn } from "@clerk/nextjs";
+import { auth } from "@clerk/nextjs/server";
 import { CinematicGallery } from "@/components/cinematic-gallery";
+import { recordSiteVisit } from "@/lib/site-analytics";
 import { getHomePageData } from "@/lib/tmdb";
 
 export default async function SignInPage() {
+  const { userId } = await auth();
+  await recordSiteVisit({ path: "/sign-in", signedIn: Boolean(userId) });
   const data = await getHomePageData();
 
   return (
@@ -11,7 +15,7 @@ export default async function SignInPage() {
         items={data?.featuredSlides ?? []}
         eyebrow="Member access"
         title="Your next watch should already look worth opening."
-        description="Rich artwork on the way in, profiles and progress on the way back out. The whole sign-in flow should still feel like part of the product."
+        description="Rich artwork on the way in, profiles and progress on the way back out. Even sign-in should feel like part of the streaming experience."
       />
       <section className="surface-strong w-full rounded-[32px] p-6 sm:p-8">
         <p className="text-[10px] uppercase tracking-[0.32em] text-[var(--color-brand-strong)]">Welcome Back</p>

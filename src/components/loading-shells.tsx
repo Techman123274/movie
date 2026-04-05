@@ -417,7 +417,7 @@ export function LandingLoadingShell() {
 export function BrowseLoadingShell() {
   return (
     <LoadingScreenFrame variant="browse">
-      <PageFrame activeHref="/browse">
+      <PageFrame activeHref="/browse" trackVisit={false}>
         <SkeletonLine className="min-h-[470px] rounded-[42px] border border-white/8 sm:min-h-[520px]" />
         <SkeletonRail titleWidth="w-72" />
         <SkeletonRail titleWidth="w-64" />
@@ -430,7 +430,7 @@ export function BrowseLoadingShell() {
 export function CatalogLoadingShell({ activeHref }: { activeHref: "/movies" | "/shows" }) {
   return (
     <LoadingScreenFrame variant={activeHref === "/movies" ? "movies" : "shows"}>
-      <PageFrame activeHref={activeHref}>
+      <PageFrame activeHref={activeHref} trackVisit={false}>
         <SkeletonHero showPills />
         <section className="surface rounded-[24px] p-4">
           <SkeletonPillRow count={7} />
@@ -446,7 +446,7 @@ export function CatalogLoadingShell({ activeHref }: { activeHref: "/movies" | "/
 export function SearchLoadingShell() {
   return (
     <LoadingScreenFrame variant="search">
-      <PageFrame activeHref="/search">
+      <PageFrame activeHref="/search" trackVisit={false}>
         <SkeletonHero />
         <section className="surface rounded-[30px] p-6 sm:p-8">
           <SkeletonLine className="h-14 w-full rounded-[24px]" />
@@ -464,7 +464,7 @@ export function SearchLoadingShell() {
 export function AccountLoadingShell() {
   return (
     <LoadingScreenFrame variant="account">
-      <PageFrame activeHref="/account">
+      <PageFrame activeHref="/account" trackVisit={false}>
         <div className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
           <section className="surface-strong rounded-[30px] p-8">
             <SkeletonLine className="h-3 w-28 rounded-full" />
@@ -506,7 +506,7 @@ export function AccountLoadingShell() {
 export function ProfilesLoadingShell() {
   return (
     <LoadingScreenFrame variant="profiles">
-      <PageFrame activeHref="/profiles">
+      <PageFrame activeHref="/profiles" trackVisit={false}>
         <SkeletonHero />
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {Array.from({ length: 3 }).map((_, index) => (
@@ -531,7 +531,7 @@ export function ProfilesLoadingShell() {
 export function ProvidersLoadingShell() {
   return (
     <LoadingScreenFrame variant="providers">
-      <PageFrame activeHref="/providers">
+      <PageFrame activeHref="/providers" trackVisit={false}>
         <SkeletonHero />
         <section className="surface rounded-[28px] p-6">
           <SkeletonLine className="h-3 w-28 rounded-full" />
@@ -561,7 +561,7 @@ export function ProvidersLoadingShell() {
 export function ProviderCatalogLoadingShell() {
   return (
     <LoadingScreenFrame variant="provider">
-      <PageFrame activeHref="/providers">
+      <PageFrame activeHref="/providers" trackVisit={false}>
         <section className="surface rounded-[28px] p-6">
           <SkeletonLine className="h-3 w-28 rounded-full" />
           <SkeletonLine className="mt-4 h-14 w-full rounded-[22px]" />
@@ -610,7 +610,7 @@ export function ProviderCatalogLoadingShell() {
 export function SettingsLoadingShell() {
   return (
     <LoadingScreenFrame variant="settings">
-      <PageFrame activeHref="/settings">
+      <PageFrame activeHref="/settings" trackVisit={false}>
         <SkeletonHero />
         <section className="surface rounded-[24px] p-4">
           <SkeletonPillRow count={3} />
@@ -660,7 +660,7 @@ export function SettingsLoadingShell() {
 export function OnboardingLoadingShell() {
   return (
     <LoadingScreenFrame variant="onboarding">
-      <PageFrame>
+      <PageFrame analyticsPath="/onboarding" trackVisit={false}>
         <SkeletonHero />
         <section className="surface rounded-[32px] p-6 sm:p-8">
           <div className="grid gap-6 lg:grid-cols-2">
@@ -681,7 +681,7 @@ export function OnboardingLoadingShell() {
 export function DetailLoadingShell({ activeHref }: { activeHref?: "/movies" | "/shows" }) {
   return (
     <LoadingScreenFrame variant="detail">
-      <PageFrame activeHref={activeHref}>
+      <PageFrame activeHref={activeHref} trackVisit={false}>
         <SkeletonHero className="rounded-[36px] px-6 py-14 sm:px-10" showPills />
         <div className="grid gap-4 lg:grid-cols-2">
           <SkeletonLine className="h-56 rounded-[28px]" />
@@ -698,7 +698,7 @@ export function DetailLoadingShell({ activeHref }: { activeHref?: "/movies" | "/
 export function WatchLoadingShell() {
   return (
     <LoadingScreenFrame variant="watch">
-      <PageFrame>
+      <PageFrame analyticsPath="/watch" trackVisit={false}>
         <SkeletonHero className="rounded-[34px] px-8 py-8" showPills />
         <section className="surface rounded-[24px] p-4">
           <SkeletonPillRow count={3} />
@@ -717,7 +717,7 @@ export function WatchLoadingShell() {
 export function SportsHomeLoadingShell() {
   return (
     <LoadingScreenFrame variant="sports">
-      <PageFrame activeHref="/sports">
+      <PageFrame activeHref="/sports" trackVisit={false}>
         <SkeletonHero />
         <div className="grid gap-6">
           {Array.from({ length: 2 }).map((_, groupIndex) => (
@@ -746,7 +746,7 @@ export function SportsHomeLoadingShell() {
 export function SportsLeagueLoadingShell() {
   return (
     <LoadingScreenFrame variant="sportsLeague">
-      <PageFrame activeHref="/sports">
+      <PageFrame activeHref="/sports" trackVisit={false}>
         <SkeletonHero />
         <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
           {Array.from({ length: 6 }).map((_, index) => (
@@ -761,7 +761,7 @@ export function SportsLeagueLoadingShell() {
 export function SportsEventLoadingShell() {
   return (
     <LoadingScreenFrame variant="sportsEvent">
-      <PageFrame activeHref="/sports">
+      <PageFrame activeHref="/sports" trackVisit={false}>
         <SkeletonHero />
         <section className="surface rounded-[24px] p-4">
           <SkeletonPillRow count={2} />

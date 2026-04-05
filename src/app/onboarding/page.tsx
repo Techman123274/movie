@@ -23,7 +23,7 @@ export default async function OnboardingPage({ searchParams }: OnboardingPagePro
 
   if (!hasSupabaseCredentials() || !hasSupabaseAdminCredentials()) {
     return (
-      <PageFrame>
+      <PageFrame analyticsPath="/onboarding">
         <UnavailablePanel
           title="Profile onboarding is unavailable."
           message="Profile setup is temporarily unavailable. Please try again shortly."
@@ -41,7 +41,7 @@ export default async function OnboardingPage({ searchParams }: OnboardingPagePro
 
   if (profileLookup.readinessIssue === "missing-profiles-table" || params.error === "missing-profiles-table") {
     return (
-      <PageFrame>
+      <PageFrame analyticsPath="/onboarding">
         <UnavailablePanel
           title="Profile setup is unavailable."
           message="We could not finish account setup right now. Please try again shortly."
@@ -51,7 +51,7 @@ export default async function OnboardingPage({ searchParams }: OnboardingPagePro
   }
 
   return (
-    <PageFrame>
+    <PageFrame analyticsPath="/onboarding">
       <PageHero
         eyebrow="Onboarding"
         title="Create the profile that sets the tone for your watch experience."

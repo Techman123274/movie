@@ -22,7 +22,7 @@ const SITE_CONTROL_PATH = path.join(process.cwd(), "data", "site-control.json");
 
 const DEFAULT_SITE_CONTROL_STATE: SiteControlState = {
   maintenanceMode: false,
-  maintenanceMessage: "Subflix is getting a quick polish. We’ll be back shortly.",
+  maintenanceMessage: "Subflix is getting a quick polish. We'll be back shortly.",
   updatedAt: new Date(0).toISOString(),
   updatedBy: null,
 };

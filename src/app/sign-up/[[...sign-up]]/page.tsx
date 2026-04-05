@@ -1,8 +1,12 @@
 import { SignUp } from "@clerk/nextjs";
+import { auth } from "@clerk/nextjs/server";
 import { CinematicGallery } from "@/components/cinematic-gallery";
+import { recordSiteVisit } from "@/lib/site-analytics";
 import { getHomePageData } from "@/lib/tmdb";
 
 export default async function SignUpPage() {
+  const { userId } = await auth();
+  await recordSiteVisit({ path: "/sign-up", signedIn: Boolean(userId) });
   const data = await getHomePageData();
 
   return (
@@ -10,8 +14,8 @@ export default async function SignUpPage() {
       <CinematicGallery
         items={data?.featuredSlides ?? []}
         eyebrow="Create account"
-        title="A stronger first impression starts before the browse page."
-        description="Subflix should feel image-led from the first visit through account creation, not just after someone reaches the catalog."
+        title="A strong first impression starts before the browse page."
+        description="Subflix stays image-led from the first visit through account creation, so the service already feels premium before the catalog opens."
       />
       <section className="surface-strong w-full rounded-[32px] p-6 sm:p-8">
         <p className="text-[10px] uppercase tracking-[0.32em] text-[var(--color-brand-strong)]">Start Watching</p>

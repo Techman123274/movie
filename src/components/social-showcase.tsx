@@ -6,7 +6,7 @@ const socialCards = [
     icon: Users,
     eyebrow: "Household lanes",
     title: "Profiles that still feel connected.",
-    copy: "Separate tastes stay personal, while the app still highlights the titles crossing over between your crew.",
+    copy: "Separate tastes stay personal, while Subflix still highlights the movies and shows crossing over between your crew.",
   },
   {
     icon: HeartHandshake,
@@ -18,7 +18,7 @@ const socialCards = [
     icon: MessageCircleMore,
     eyebrow: "Reaction-ready",
     title: "Taste signals shape the room.",
-    copy: "Quick reactions and recent activity help the product surface better picks for the people actually using it.",
+    copy: "Quick reactions and recent activity help the home screen surface better picks for the people actually watching.",
   },
 ];
 
@@ -32,7 +32,7 @@ export function SocialShowcase() {
             Premium streaming, but with a pulse from the people watching.
           </h2>
           <p className="mt-4 max-w-3xl text-base leading-7 text-[var(--color-text-muted)]">
-            Subflix now leans into the social side of the living room: shared queues, profile energy, and a more communal way to find tonight&apos;s pick without losing the elegance of a premium product.
+            Subflix leans into the social side of the living room with shared queues, profile energy, and a more communal way to land on tonight&apos;s pick without losing that premium streaming feel.
           </p>
           <div className="mt-8 grid gap-3 sm:grid-cols-3">
             {[
@@ -71,7 +71,7 @@ export function SocialShowcase() {
           <article className="surface rounded-[26px] p-5 sm:col-span-2">
             <p className="text-xs uppercase tracking-[0.24em] text-[var(--color-brand-strong)]">Why it matters</p>
             <p className="mt-3 max-w-3xl text-sm leading-7 text-[var(--color-text-muted)]">
-              The product still feels curated and cinematic, but the discovery layer now acknowledges that choosing what to watch is often a group decision. That balance is where the premium feel really lands.
+              The catalog still feels curated and cinematic, but the discovery layer now acknowledges that choosing what to watch is often a group decision. That balance is where the premium feel really lands.
             </p>
           </article>
         </div>

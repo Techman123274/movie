@@ -638,7 +638,7 @@ export async function getCatalogRail(
         id: `${mediaType}-spotlight`,
         title: `${currentGenre} Spotlight`,
         eyebrow: "Browse with intent",
-        description: "A denser browse lane built for faster picks instead of endless scrolling.",
+        description: "A denser browse lane tuned for faster picks instead of endless scrolling.",
         items: heroDiscover.results.map((item) => normalizeSummary(item, mediaType)).slice(0, 14),
       },
       {

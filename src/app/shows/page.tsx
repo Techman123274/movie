@@ -121,7 +121,7 @@ export default async function ShowsPage({ searchParams }: ShowsPageProps) {
     <PageFrame activeHref="/shows">
       <PageHero
         eyebrow="Series"
-        title="Series built for stronger binge browsing."
+        title="Series lined up for a better binge."
         description="Home stays cleaner now, so Series can carry the richer discovery flow with clearer lanes, better filters, and a more premium shelf feel."
         backdropPath={rails[0]?.items[0]?.backdropPath ?? null}
         actions={

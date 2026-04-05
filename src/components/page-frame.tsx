@@ -1,18 +1,34 @@
 import type { ReactNode } from "react";
+import { auth } from "@clerk/nextjs/server";
 import { AppBottomNav } from "@/components/app-bottom-nav";
 import { SiteMaintenanceScreen } from "@/components/site-maintenance-screen";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
+import { recordSiteVisit } from "@/lib/site-analytics";
 import { getAdminContext, getSiteControlState } from "@/lib/site-control";
 
 type PageFrameProps = {
   children: ReactNode;
   activeHref?: string;
+  analyticsPath?: string;
   bypassSiteLock?: boolean;
+  trackVisit?: boolean;
 };
 
-export async function PageFrame({ children, activeHref, bypassSiteLock = false }: PageFrameProps) {
+export async function PageFrame({
+  children,
+  activeHref,
+  analyticsPath,
+  bypassSiteLock = false,
+  trackVisit = true,
+}: PageFrameProps) {
   const siteControl = await getSiteControlState();
+  const visitPath = analyticsPath ?? activeHref ?? (bypassSiteLock ? "/admin" : "/app");
+
+  if (trackVisit) {
+    const { userId } = await auth();
+    await recordSiteVisit({ path: visitPath, signedIn: Boolean(userId) });
+  }
 
   if (siteControl.maintenanceMode && !bypassSiteLock) {
     const admin = await getAdminContext();

@@ -121,8 +121,8 @@ export default async function MoviesPage({ searchParams }: MoviesPageProps) {
     <PageFrame activeHref="/movies">
       <PageHero
         eyebrow="Movies"
-        title="Movies built for cleaner browsing and stronger picks."
-        description="Home stays light, so Movies can do the deeper work with sharper filters, a stronger spotlight, and rails that feel worth scanning."
+        title="Movie night, with a sharper catalog wall."
+        description="Home stays light, so Movies can carry the deeper browse flow with stronger filters, a bigger spotlight, and shelves that feel worth scanning."
         backdropPath={rails[0]?.items[0]?.backdropPath ?? null}
         actions={
           <>

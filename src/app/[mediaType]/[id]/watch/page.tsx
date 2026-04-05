@@ -37,7 +37,7 @@ export default async function WatchPage({ params, searchParams }: WatchPageProps
 
   if (!detail) {
     return (
-      <PageFrame>
+      <PageFrame analyticsPath="/watch">
         <UnavailablePanel
           title="Watch data is unavailable."
           message="This watch page could not be loaded right now. Please try again in a moment."
@@ -118,7 +118,7 @@ export default async function WatchPage({ params, searchParams }: WatchPageProps
       : null;
 
   return (
-    <PageFrame>
+    <PageFrame analyticsPath="/watch">
       <section
         className="relative overflow-hidden rounded-[34px] border border-white/10 px-8 py-8 shadow-[0_24px_80px_rgba(0,0,0,0.45)]"
         style={{
