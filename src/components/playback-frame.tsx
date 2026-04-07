@@ -19,6 +19,7 @@ type PlaybackFrameProps = {
   autoplayEnabled: boolean;
   autoplaySupported: boolean;
   onAutoplayToggle: () => void;
+  onAdvanceToNextEpisode?: () => void;
   onProviderUnresponsive?: (providerName: string) => void;
 };
 
@@ -28,6 +29,21 @@ type ProviderPlayerEvent = {
   season?: number | string;
   episode?: number | string;
 };
+
+type FullscreenDocument = Document & {
+  webkitExitFullscreen?: () => Promise<void> | void;
+  webkitFullscreenElement?: Element;
+};
+
+function getActiveFullscreenElement() {
+  const fullscreenDocument = document as FullscreenDocument;
+  return document.fullscreenElement ?? fullscreenDocument.webkitFullscreenElement ?? null;
+}
+
+function isPlayerShellFullscreen(playerShell: HTMLDivElement | null) {
+  const fullscreenElement = getActiveFullscreenElement();
+  return Boolean(playerShell && fullscreenElement && playerShell.contains(fullscreenElement));
+}
 
 function parseProviderNumber(value: number | string | undefined) {
   if (typeof value === "number" && Number.isFinite(value)) {
@@ -54,6 +70,7 @@ export function PlaybackFrame({
   autoplayEnabled,
   autoplaySupported,
   onAutoplayToggle,
+  onAdvanceToNextEpisode,
   onProviderUnresponsive,
 }: PlaybackFrameProps) {
   const router = useRouter();
@@ -65,10 +82,35 @@ export function PlaybackFrame({
   const [isPending, startTransition] = useTransition();
   const handledCompletionRef = useRef(false);
   const controlsHideTimeoutRef = useRef<number | null>(null);
+  const restoreFullscreenOnLoadRef = useRef(false);
   const playerShellRef = useRef<HTMLDivElement>(null);
   const canAutoAdvance = autoplaySupported && autoplayEnabled;
   const providerKey = `${provider.provider}-${provider.embedUrl}`;
   const frameLoaded = loadedProviderKey === providerKey;
+
+  async function requestPlayerFullscreen() {
+    type FullscreenElement = HTMLDivElement & {
+      webkitRequestFullscreen?: () => Promise<void> | void;
+    };
+
+    const playerShell = playerShellRef.current as FullscreenElement | null;
+
+    if (!playerShell) {
+      return false;
+    }
+
+    if (playerShell.requestFullscreen) {
+      await playerShell.requestFullscreen();
+      return true;
+    }
+
+    if (playerShell.webkitRequestFullscreen) {
+      await playerShell.webkitRequestFullscreen();
+      return true;
+    }
+
+    return false;
+  }
 
   useEffect(() => {
     if (canAutoAdvance && nextEpisodeHref) {
@@ -126,6 +168,9 @@ export function PlaybackFrame({
 
       handledCompletionRef.current = true;
       setAutoAdvanceState(canAutoAdvance ? "advancing" : "complete");
+      restoreFullscreenOnLoadRef.current = Boolean(
+        canAutoAdvance && nextEpisodeHref && isPlayerShellFullscreen(playerShellRef.current),
+      );
 
       if (profileId) {
         void postWatchState({
@@ -145,6 +190,11 @@ export function PlaybackFrame({
 
       if (canAutoAdvance && nextEpisodeHref) {
         startTransition(() => {
+          if (onAdvanceToNextEpisode) {
+            onAdvanceToNextEpisode();
+            return;
+          }
+
           router.push(nextEpisodeHref, { scroll: false });
         });
       }
@@ -164,16 +214,12 @@ export function PlaybackFrame({
     episodeNumber,
     nextEpisodeHref,
     canAutoAdvance,
+    onAdvanceToNextEpisode,
   ]);
 
   useEffect(() => {
-    type FullscreenDocument = Document & {
-      webkitFullscreenElement?: Element;
-    };
-
-    const fullscreenDocument = document as FullscreenDocument;
     const syncFullscreenState = () => {
-      setIsFullscreen(Boolean(document.fullscreenElement || fullscreenDocument.webkitFullscreenElement));
+      setIsFullscreen(isPlayerShellFullscreen(playerShellRef.current));
     };
 
     syncFullscreenState();
@@ -248,25 +294,33 @@ export function PlaybackFrame({
   function handleFrameLoad() {
     setLoadedProviderKey(providerKey);
     setShowPlayerControls(true);
+    handledCompletionRef.current = false;
+    setAutoAdvanceState("idle");
+
+    if (restoreFullscreenOnLoadRef.current) {
+      restoreFullscreenOnLoadRef.current = false;
+
+      if (!isPlayerShellFullscreen(playerShellRef.current)) {
+        void requestAnimationFrame(async () => {
+          try {
+            const restored = await requestPlayerFullscreen();
+
+            if (!restored) {
+              setFullscreenMessage("Fullscreen needs one more tap after this episode change.");
+            }
+          } catch {
+            setFullscreenMessage("Fullscreen needs one more tap after this episode change.");
+          }
+        });
+      }
+    }
   }
 
   async function handleToggleFullscreen() {
-    type FullscreenElement = HTMLDivElement & {
-      webkitRequestFullscreen?: () => Promise<void> | void;
-    };
-    type FullscreenDocument = Document & {
-      webkitExitFullscreen?: () => Promise<void> | void;
-      webkitFullscreenElement?: Element;
-    };
-
-    const playerShell = playerShellRef.current as FullscreenElement | null;
     const fullscreenDocument = document as FullscreenDocument;
 
-    if (!playerShell) {
-      return;
-    }
-
     setFullscreenMessage(null);
+    restoreFullscreenOnLoadRef.current = false;
 
     try {
       if (document.fullscreenElement || fullscreenDocument.webkitFullscreenElement) {
@@ -281,13 +335,7 @@ export function PlaybackFrame({
         }
       }
 
-      if (playerShell.requestFullscreen) {
-        await playerShell.requestFullscreen();
-        return;
-      }
-
-      if (playerShell.webkitRequestFullscreen) {
-        await playerShell.webkitRequestFullscreen();
+      if (await requestPlayerFullscreen()) {
         return;
       }
 

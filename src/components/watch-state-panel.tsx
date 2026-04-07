@@ -147,32 +147,30 @@ export function WatchStatePanel({
 
   if (!profileId) {
     return (
-      <section className="surface rounded-[28px] p-5">
+      <section className="space-y-4">
         <p className="mb-2 text-xs uppercase tracking-[0.3em] text-[var(--color-brand-strong)]">Watch state</p>
-        <h3 className="text-lg font-medium text-white">Sign in to save resume state and recent activity</h3>
-        <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--color-text-muted)]">
-          Keep your place, save recent activity, and jump back in from home, details, or My Profile.
+        <h3 className="text-lg font-medium text-white">Sign in to save your place</h3>
+        <p className="max-w-2xl text-sm leading-6 text-[var(--color-text-muted)]">
+          Resume tracking and recent activity only sync for signed-in profiles.
         </p>
-        <div className="mt-4">
-          <Link
-            href="/sign-in"
-            className="theme-button-primary inline-flex min-h-11 items-center rounded-full px-5 text-sm font-semibold"
-          >
-            Sign in to sync
-          </Link>
-        </div>
+        <Link
+          href="/sign-in"
+          className="theme-button-primary inline-flex min-h-11 items-center rounded-full px-5 text-sm font-semibold"
+        >
+          Sign in to sync
+        </Link>
       </section>
     );
   }
 
   return (
-    <section className="surface rounded-[28px] p-5">
+    <section className="space-y-4">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
           <p className="mb-2 text-xs uppercase tracking-[0.3em] text-[var(--color-brand-strong)]">Watch state</p>
-          <h3 className="text-lg font-medium text-white">Resume tracking is active for this profile</h3>
+          <h3 className="text-lg font-medium text-white">Progress sync is on</h3>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--color-text-muted)]">
-            Your progress is saved as you watch so Continue Watching stays helpful and easy to trust.
+            Subflix keeps this watch session tied to your profile in the background.
           </p>
         </div>
         <button
@@ -185,7 +183,7 @@ export function WatchStatePanel({
           Mark watched
         </button>
       </div>
-      <div className="mt-4 flex flex-wrap items-center gap-3 text-xs uppercase tracking-[0.22em] text-[var(--color-text-muted)]">
+      <div className="flex flex-wrap items-center gap-3 text-xs uppercase tracking-[0.22em] text-[var(--color-text-muted)]">
         <span className="flex items-center gap-2">
           {syncState === "error" ? (
             <RotateCcw size={14} className="text-[var(--color-danger)]" />
@@ -195,8 +193,8 @@ export function WatchStatePanel({
           {syncState === "error"
             ? "Sync needs another try"
             : syncState === "idle"
-              ? "Resume state saving in background"
-              : "Resume state synced"}
+              ? "Sync running"
+              : "Sync ready"}
         </span>
         <span className="flex items-center gap-2">
           <Clock3 size={14} className="text-[var(--color-brand-strong)]" />
