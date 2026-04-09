@@ -1,77 +1,57 @@
 # Subflix
 
-Subflix is a premium streaming-style movie, TV, and sports web app built with Next.js App Router. It uses TMDB as the primary metadata source for film and series, Supabase for profile-scoped data, Clerk for auth, a guarded playback layer for VidLink and MoviesAPI, and a separate sports watch flow linked into StreamCenter.
+Subflix is a Vite + React movie streaming UI powered by TMDB for metadata, Clerk for authentication, and Supabase for user data.
 
-## Features
+## Stack
 
-- Public marketing landing page at `/` and streaming app browse home at `/browse`
-- Live TMDB catalog for browse, search, movies, shows, detail pages, and provider discovery
-- Real Clerk + Supabase user flow with profile onboarding and profile-scoped region preferences
-- Provider sections for Netflix, Hulu, Max, Prime Video, and any other TMDB watch providers in the active region
-- Detail-page provider badges separate from the playback providers used on watch pages
-- Real watchlist and continue-watching rails resolved from stored TMDB IDs instead of filler content
-- Separate sports section with live league/event discovery and StreamCenter handoff pages
-- Strict ad-free playback gate for VidLink and MoviesAPI embeds
+- `TMDB` for movies, shows, posters, and search
+- `Clerk` for sign-in/sign-up
+- `Supabase` for profiles, watchlist, and watch history
+- `localStorage` fallback when Supabase is not fully configured yet
 
-## Environment
+## Local Setup
 
-Copy `.env.example` to `.env.local` and configure:
+1. Install dependencies:
 
-- `TMDB_API_KEY` or `TMDB_READ_ACCESS_TOKEN`
-- `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`
-- `CLERK_SECRET_KEY`
-- `NEXT_PUBLIC_SUPABASE_URL`
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-- `SUPABASE_SERVICE_ROLE_KEY`
-- `NEXT_PUBLIC_DEFAULT_PROVIDER_REGION` for signed-out browsing defaults
-- `NEXT_PUBLIC_STREAMCENTER_URL` if you want to override the default StreamCenter destination
+```bash
+npm install
+```
 
-This version is **real-data only**. Missing TMDB or Supabase configuration now produces explicit unavailable states instead of mock fallback content.
+2. Create your local env file:
 
-## Development
+```bash
+cp .env.example .env.local
+```
+
+3. Start the app:
 
 ```bash
 npm run dev
-npm run lint
-npm run build
 ```
 
-## Test On Phone
+## Environment Variables
 
-`npm run dev` now binds to `0.0.0.0`, so you can open the app from your phone while both devices are on the same Wi-Fi or LAN.
+The app reads public browser-safe variables from `.env.local`.
 
-1. Run `npm run dev`
-2. Open `http://YOUR_LOCAL_IP:3000` on your phone
-3. If it does not load, allow Node.js through Windows Firewall
+```env
+TMDB_API_KEY=your_tmdb_api_key
+TMDB_READ_ACCESS_TOKEN=your_tmdb_read_access_token
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=your_clerk_publishable_key
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+NEXT_PUBLIC_CLERK_SUPABASE_JWT_TEMPLATE=supabase
+```
 
-Current local IPv4 in this environment: `10.0.0.98`
+Do not expose `CLERK_SECRET_KEY` or `SUPABASE_SERVICE_ROLE_KEY` in this frontend app.
 
-## Database
+## Supabase Setup
 
-Apply `supabase/schema.sql` so the app can persist:
+Run the SQL in [supabase/schema.sql](C:/Users/user/Desktop/cinematique/supabase/schema.sql) inside the Supabase SQL editor.
 
-- `users`
-- `profiles`
-- `watchlists`
-- `watch_progress`
-- `watch_history`
+For Clerk-authenticated Supabase requests, create a Clerk JWT template named `supabase` and point it at your Supabase JWT secret. If that is not configured yet, the app will still work locally by falling back to browser storage for user lists/history/profiles.
 
-`profiles.provider_region` stores the active region for TMDB watch-provider rails and detail badges.
+## Notes
 
-## Auth and Onboarding
-
-After adding Clerk keys and restarting the dev server:
-
-1. Use the `Sign up` button in the top-right nav.
-2. Create your first test user.
-3. Complete profile onboarding.
-4. You should be redirected into `/browse` after the first profile is created.
-5. Switch profiles from the Profiles page and update provider region from Account, Settings, or Providers.
-
-## Playback Safety
-
-Watch pages only embed VidLink or MoviesAPI when a provider is included in `NEXT_PUBLIC_VALIDATED_PLAYBACK_PROVIDERS`. TMDB watch-provider badges like Netflix or Hulu are informational discovery data and are intentionally separate from playback embeds.
-
-## Database Note
-
-If onboarding reports that `public.profiles` is missing, apply `supabase/schema.sql` to your live Supabase project before trying again.
+- `NEXT_PUBLIC_*` variables are supported directly in Vite through config.
+- `TMDB_*` variables are also supported so you can keep your existing TMDB names.
+- The app no longer depends on Base44 runtime services.

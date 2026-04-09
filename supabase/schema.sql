@@ -1,75 +1,336 @@
-create table if not exists public.users (
-  id text primary key,
-  email text unique,
-  created_at timestamptz not null default now()
-);
+create extension if not exists pgcrypto;
+
+create or replace function public.requesting_user_id()
+returns text
+language sql
+stable
+as $$
+  select nullif(auth.jwt() ->> 'sub', '');
+$$;
+
+create or replace function public.requesting_user_email()
+returns text
+language sql
+stable
+as $$
+  select lower(nullif(auth.jwt() ->> 'email', ''));
+$$;
+
+create or replace function public.is_subflix_admin()
+returns boolean
+language sql
+stable
+as $$
+  -- Replace the placeholder email list below so it mirrors VITE_ADMIN_EMAILS / NEXT_PUBLIC_ADMIN_EMAILS.
+  select coalesce(public.requesting_user_email(), '') = any (
+    array[
+      'admin@example.com',
+      'backwood.tayz@gmail.com'
+    ]
+  );
+$$;
 
 create table if not exists public.profiles (
-  id text primary key,
-  user_id text not null references public.users(id) on delete cascade,
+  id uuid primary key default gen_random_uuid(),
+  user_id text not null default public.requesting_user_id(),
+  created_by text,
   name text not null,
-  avatar text not null,
-  accent text not null,
-  maturity_rating text not null default 'TV-14',
-  provider_region text not null default 'US',
-  created_at timestamptz not null default now()
+  avatar_color text,
+  avatar_index integer default 0,
+  created_at timestamptz not null default timezone('utc', now()),
+  updated_at timestamptz not null default timezone('utc', now())
 );
 
-create table if not exists public.watchlists (
-  id bigint generated always as identity primary key,
-  profile_id text not null references public.profiles(id) on delete cascade,
-  media_id bigint not null,
-  media_type text not null check (media_type in ('movie', 'tv')),
-  added_at timestamptz not null default now()
-);
-
-create table if not exists public.watch_progress (
-  id bigint generated always as identity primary key,
-  profile_id text not null references public.profiles(id) on delete cascade,
-  media_id bigint not null,
-  media_type text not null check (media_type in ('movie', 'tv')),
-  season_number integer,
-  episode_number integer,
-  progress_seconds integer not null default 0,
-  updated_at timestamptz not null default now()
+create table if not exists public.watchlist (
+  id uuid primary key default gen_random_uuid(),
+  user_id text not null default public.requesting_user_id(),
+  created_by text,
+  tmdb_id integer not null,
+  media_type text not null,
+  title text not null,
+  poster_path text,
+  backdrop_path text,
+  vote_average numeric,
+  overview text,
+  release_date text,
+  genre_ids jsonb default '[]'::jsonb,
+  created_at timestamptz not null default timezone('utc', now()),
+  updated_at timestamptz not null default timezone('utc', now())
 );
 
 create table if not exists public.watch_history (
-  id bigint generated always as identity primary key,
-  profile_id text not null references public.profiles(id) on delete cascade,
-  media_id bigint not null,
-  media_type text not null check (media_type in ('movie', 'tv')),
+  id uuid primary key default gen_random_uuid(),
+  user_id text not null default public.requesting_user_id(),
+  created_by text,
+  tmdb_id integer not null,
+  media_type text not null,
+  title text not null,
+  poster_path text,
+  backdrop_path text,
+  vote_average numeric,
+  release_date text,
   season_number integer,
   episode_number integer,
-  watched_at timestamptz not null default now()
+  progress_percent integer default 0,
+  created_at timestamptz not null default timezone('utc', now()),
+  updated_at timestamptz not null default timezone('utc', now())
 );
 
-create table if not exists public.profile_feedback (
-  id bigint generated always as identity primary key,
-  profile_id text not null references public.profiles(id) on delete cascade,
-  media_id bigint not null,
-  media_type text not null check (media_type in ('movie', 'tv')),
-  value text not null check (value in ('like', 'dislike', 'not_interested')),
-  updated_at timestamptz not null default now()
+alter table public.profiles
+  add column if not exists is_kids boolean not null default false,
+  add column if not exists maturity_rating text not null default 'all';
+
+alter table public.watch_history
+  add column if not exists genre_ids jsonb default '[]'::jsonb;
+
+create table if not exists public.admin_notifications (
+  id uuid primary key default gen_random_uuid(),
+  created_by text,
+  title text not null,
+  body text not null,
+  notification_type text not null default 'update',
+  audience text not null default 'global',
+  publish_at timestamptz not null default timezone('utc', now()),
+  ends_at timestamptz,
+  media_type text,
+  tmdb_id integer,
+  is_active boolean not null default true,
+  created_at timestamptz not null default timezone('utc', now()),
+  updated_at timestamptz not null default timezone('utc', now())
 );
 
-create unique index if not exists watchlists_profile_media_unique
-on public.watchlists (profile_id, media_type, media_id);
+create table if not exists public.admin_featured_entries (
+  id uuid primary key default gen_random_uuid(),
+  created_by text,
+  title text not null,
+  tmdb_id integer not null,
+  media_type text not null,
+  poster_path text,
+  backdrop_path text,
+  overview text,
+  release_date text,
+  vote_average numeric,
+  genre_ids jsonb default '[]'::jsonb,
+  entry_type text not null default 'hero',
+  group_name text,
+  badge_text text,
+  audience text not null default 'global',
+  sort_order integer not null default 0,
+  starts_at timestamptz,
+  ends_at timestamptz,
+  is_active boolean not null default true,
+  created_at timestamptz not null default timezone('utc', now()),
+  updated_at timestamptz not null default timezone('utc', now())
+);
 
-create unique index if not exists watch_progress_profile_media_unique
-on public.watch_progress (profile_id, media_type, media_id);
+create table if not exists public.admin_site_settings (
+  id uuid primary key default gen_random_uuid(),
+  created_by text,
+  setting_key text not null unique,
+  setting_value text,
+  label text,
+  is_public boolean not null default true,
+  created_at timestamptz not null default timezone('utc', now()),
+  updated_at timestamptz not null default timezone('utc', now())
+);
 
-create index if not exists watch_progress_profile_updated_idx
-on public.watch_progress (profile_id, updated_at desc);
+alter table public.profiles enable row level security;
+alter table public.watchlist enable row level security;
+alter table public.watch_history enable row level security;
+alter table public.admin_notifications enable row level security;
+alter table public.admin_featured_entries enable row level security;
+alter table public.admin_site_settings enable row level security;
 
-create index if not exists watch_history_profile_watched_idx
-on public.watch_history (profile_id, watched_at desc);
+drop policy if exists "profiles_select_own" on public.profiles;
+create policy "profiles_select_own"
+on public.profiles
+for select
+using (user_id = public.requesting_user_id());
 
-create index if not exists watch_history_profile_media_episode_idx
-on public.watch_history (profile_id, media_type, media_id, season_number, episode_number, watched_at desc);
+drop policy if exists "profiles_select_admin" on public.profiles;
+create policy "profiles_select_admin"
+on public.profiles
+for select
+using (public.is_subflix_admin());
 
-create unique index if not exists profile_feedback_profile_media_unique
-on public.profile_feedback (profile_id, media_type, media_id);
+drop policy if exists "profiles_insert_own" on public.profiles;
+create policy "profiles_insert_own"
+on public.profiles
+for insert
+with check (user_id = public.requesting_user_id());
 
-create index if not exists profile_feedback_profile_updated_idx
-on public.profile_feedback (profile_id, updated_at desc);
+drop policy if exists "profiles_update_own" on public.profiles;
+create policy "profiles_update_own"
+on public.profiles
+for update
+using (user_id = public.requesting_user_id())
+with check (user_id = public.requesting_user_id());
+
+drop policy if exists "profiles_delete_own" on public.profiles;
+create policy "profiles_delete_own"
+on public.profiles
+for delete
+using (user_id = public.requesting_user_id());
+
+drop policy if exists "watchlist_select_own" on public.watchlist;
+create policy "watchlist_select_own"
+on public.watchlist
+for select
+using (user_id = public.requesting_user_id());
+
+drop policy if exists "watchlist_select_admin" on public.watchlist;
+create policy "watchlist_select_admin"
+on public.watchlist
+for select
+using (public.is_subflix_admin());
+
+drop policy if exists "watchlist_insert_own" on public.watchlist;
+create policy "watchlist_insert_own"
+on public.watchlist
+for insert
+with check (user_id = public.requesting_user_id());
+
+drop policy if exists "watchlist_update_own" on public.watchlist;
+create policy "watchlist_update_own"
+on public.watchlist
+for update
+using (user_id = public.requesting_user_id())
+with check (user_id = public.requesting_user_id());
+
+drop policy if exists "watchlist_delete_own" on public.watchlist;
+create policy "watchlist_delete_own"
+on public.watchlist
+for delete
+using (user_id = public.requesting_user_id());
+
+drop policy if exists "watch_history_select_own" on public.watch_history;
+create policy "watch_history_select_own"
+on public.watch_history
+for select
+using (user_id = public.requesting_user_id());
+
+drop policy if exists "watch_history_select_admin" on public.watch_history;
+create policy "watch_history_select_admin"
+on public.watch_history
+for select
+using (public.is_subflix_admin());
+
+drop policy if exists "watch_history_insert_own" on public.watch_history;
+create policy "watch_history_insert_own"
+on public.watch_history
+for insert
+with check (user_id = public.requesting_user_id());
+
+drop policy if exists "watch_history_update_own" on public.watch_history;
+create policy "watch_history_update_own"
+on public.watch_history
+for update
+using (user_id = public.requesting_user_id())
+with check (user_id = public.requesting_user_id());
+
+drop policy if exists "watch_history_delete_own" on public.watch_history;
+create policy "watch_history_delete_own"
+on public.watch_history
+for delete
+using (user_id = public.requesting_user_id());
+
+drop policy if exists "admin_notifications_select_public" on public.admin_notifications;
+create policy "admin_notifications_select_public"
+on public.admin_notifications
+for select
+using (
+  is_active = true
+  and publish_at <= timezone('utc', now())
+  and (ends_at is null or ends_at >= timezone('utc', now()))
+);
+
+drop policy if exists "admin_notifications_select_admin" on public.admin_notifications;
+create policy "admin_notifications_select_admin"
+on public.admin_notifications
+for select
+using (public.is_subflix_admin());
+
+drop policy if exists "admin_notifications_insert_admin" on public.admin_notifications;
+create policy "admin_notifications_insert_admin"
+on public.admin_notifications
+for insert
+with check (public.is_subflix_admin());
+
+drop policy if exists "admin_notifications_update_admin" on public.admin_notifications;
+create policy "admin_notifications_update_admin"
+on public.admin_notifications
+for update
+using (public.is_subflix_admin())
+with check (public.is_subflix_admin());
+
+drop policy if exists "admin_notifications_delete_admin" on public.admin_notifications;
+create policy "admin_notifications_delete_admin"
+on public.admin_notifications
+for delete
+using (public.is_subflix_admin());
+
+drop policy if exists "admin_featured_entries_select_public" on public.admin_featured_entries;
+create policy "admin_featured_entries_select_public"
+on public.admin_featured_entries
+for select
+using (
+  is_active = true
+  and (starts_at is null or starts_at <= timezone('utc', now()))
+  and (ends_at is null or ends_at >= timezone('utc', now()))
+);
+
+drop policy if exists "admin_featured_entries_select_admin" on public.admin_featured_entries;
+create policy "admin_featured_entries_select_admin"
+on public.admin_featured_entries
+for select
+using (public.is_subflix_admin());
+
+drop policy if exists "admin_featured_entries_insert_admin" on public.admin_featured_entries;
+create policy "admin_featured_entries_insert_admin"
+on public.admin_featured_entries
+for insert
+with check (public.is_subflix_admin());
+
+drop policy if exists "admin_featured_entries_update_admin" on public.admin_featured_entries;
+create policy "admin_featured_entries_update_admin"
+on public.admin_featured_entries
+for update
+using (public.is_subflix_admin())
+with check (public.is_subflix_admin());
+
+drop policy if exists "admin_featured_entries_delete_admin" on public.admin_featured_entries;
+create policy "admin_featured_entries_delete_admin"
+on public.admin_featured_entries
+for delete
+using (public.is_subflix_admin());
+
+drop policy if exists "admin_site_settings_select_public" on public.admin_site_settings;
+create policy "admin_site_settings_select_public"
+on public.admin_site_settings
+for select
+using (is_public = true);
+
+drop policy if exists "admin_site_settings_select_admin" on public.admin_site_settings;
+create policy "admin_site_settings_select_admin"
+on public.admin_site_settings
+for select
+using (public.is_subflix_admin());
+
+drop policy if exists "admin_site_settings_insert_admin" on public.admin_site_settings;
+create policy "admin_site_settings_insert_admin"
+on public.admin_site_settings
+for insert
+with check (public.is_subflix_admin());
+
+drop policy if exists "admin_site_settings_update_admin" on public.admin_site_settings;
+create policy "admin_site_settings_update_admin"
+on public.admin_site_settings
+for update
+using (public.is_subflix_admin())
+with check (public.is_subflix_admin());
+
+drop policy if exists "admin_site_settings_delete_admin" on public.admin_site_settings;
+create policy "admin_site_settings_delete_admin"
+on public.admin_site_settings
+for delete
+using (public.is_subflix_admin());

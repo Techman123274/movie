@@ -1,0 +1,167 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 5%;
+    --foreground: 0 0% 98%;
+    --card: 0 0% 8%;
+    --card-foreground: 0 0% 98%;
+    --popover: 0 0% 8%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 0 75% 45%;
+    --primary-foreground: 0 0% 98%;
+    --secondary: 0 0% 12%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 0 0% 15%;
+    --muted-foreground: 0 0% 60%;
+    --accent: 0 75% 45%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 0 0% 15%;
+    --input: 0 0% 15%;
+    --ring: 0 75% 45%;
+    --radius: 0.25rem;
+
+    --netflix-red: #E50914;
+    --netflix-dark: #0a0a0a;
+    --netflix-card: #141414;
+    --netflix-hover: #1a1a1a;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  body {
+    @apply bg-background text-foreground font-inter;
+    background-color: #0a0a0a;
+    overflow-x: hidden;
+  }
+
+  ::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: #0a0a0a;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: #333;
+    border-radius: 2px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: #555;
+  }
+}
+
+@layer utilities {
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  .line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .line-clamp-3 {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .gradient-overlay {
+    background: linear-gradient(
+      to right,
+      rgba(10,10,10,0.95) 30%,
+      rgba(10,10,10,0.7) 60%,
+      transparent 100%
+    );
+  }
+
+  .gradient-bottom {
+    background: linear-gradient(
+      to top,
+      rgba(10,10,10,1) 0%,
+      rgba(10,10,10,0.5) 50%,
+      transparent 100%
+    );
+  }
+
+  .card-hover-scale {
+    transition: transform 0.3s ease, z-index 0s;
+  }
+
+  .card-hover-scale:hover {
+    transform: scale(1.05);
+    z-index: 10;
+  }
+
+  .landing-hero-bg {
+    background:
+      radial-gradient(circle at 18% 18%, rgba(229, 9, 20, 0.38), transparent 28%),
+      radial-gradient(circle at 78% 22%, rgba(120, 18, 28, 0.28), transparent 24%),
+      radial-gradient(circle at 50% 62%, rgba(255, 255, 255, 0.05), transparent 30%),
+      linear-gradient(180deg, #1a070b 0%, #0e0507 25%, #050505 62%, #000000 100%);
+  }
+
+  .landing-vignette {
+    background:
+      linear-gradient(90deg, rgba(0, 0, 0, 0.9) 8%, rgba(0, 0, 0, 0.52) 42%, rgba(0, 0, 0, 0.24) 72%, rgba(0, 0, 0, 0.78) 100%),
+      linear-gradient(180deg, rgba(0, 0, 0, 0.3) 0%, rgba(0, 0, 0, 0.14) 32%, rgba(0, 0, 0, 0.74) 72%, rgba(0, 0, 0, 0.96) 100%);
+  }
+
+  .landing-spotlight {
+    background:
+      radial-gradient(circle at center, rgba(255, 255, 255, 0.16) 0%, rgba(255, 255, 255, 0.04) 28%, transparent 62%);
+    filter: blur(10px);
+  }
+
+  .landing-panel-shine {
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.18) 0%, rgba(255, 255, 255, 0.04) 18%, rgba(255, 255, 255, 0) 48%),
+      linear-gradient(180deg, rgba(30, 30, 30, 0.2) 0%, rgba(10, 10, 10, 0.88) 100%);
+  }
+
+  .landing-section-divider {
+    background: linear-gradient(90deg, transparent 0%, rgba(229, 9, 20, 0.3) 18%, rgba(255, 255, 255, 0.08) 50%, rgba(229, 9, 20, 0.3) 82%, transparent 100%);
+  }
+
+  .landing-grid-fade {
+    background-image:
+      linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+    background-size: 42px 42px;
+    mask-image: radial-gradient(circle at center, black 35%, transparent 82%);
+  }
+
+  .admin-input {
+    @apply w-full rounded-xl border border-white/10 bg-black/25 px-4 py-3 text-sm text-white outline-none transition-colors focus:border-[#E50914];
+  }
+
+  .admin-input option {
+    color: #ffffff;
+    background: #0f0f10;
+  }
+
+  .admin-action {
+    @apply inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-sm font-medium text-white/75 transition-colors hover:bg-white/[0.08] hover:text-white;
+  }
+}
