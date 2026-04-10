@@ -3,6 +3,7 @@ import { useOutletContext, useSearchParams } from "react-router-dom";
 import ContentRow from "@/components/ui/ContentRow";
 import { getPopularMovies, getTopRatedMovies, getPopularTV, getTopRatedTV, getByGenre, getAiringTodayTV } from "@/lib/tmdb";
 import { filterItemsForProfile } from "@/lib/preferences";
+import { useAppTheme } from "@/lib/theme";
 
 const MOVIE_GENRE_ROWS = [
   { id: 28, name: "Action" }, { id: 35, name: "Comedy" }, { id: 18, name: "Drama" },
@@ -30,6 +31,8 @@ const buildShelf = (...groups) => dedupeItems(groups.flat().filter(Boolean));
 
 export default function Browse() {
   const { activeProfile } = useOutletContext() || {};
+  const { themeDefinition } = useAppTheme();
+  const isHulu = themeDefinition.shellVariant === "hulu";
   const [searchParams] = useSearchParams();
   const type = searchParams.get("type") || "movie";
   const [rows, setRows] = useState([]);
@@ -240,23 +243,35 @@ export default function Browse() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] pt-20">
-      {/* Header */}
-      <div className="px-4 py-6 md:px-12 md:py-8">
-        <h1 className="text-2xl font-bold text-white md:text-4xl">
+    <div className="min-h-screen bg-[var(--app-bg)] pt-20">
+      <div className={`px-4 py-6 md:px-12 ${isHulu ? "md:py-6" : "md:py-8"}`}>
+        {isHulu && (
+          <p className="mb-2 text-xs font-semibold uppercase tracking-[0.28em] text-[var(--brand)]">
+            Browse
+          </p>
+        )}
+        <h1 className={`font-bold text-white ${isHulu ? "text-3xl md:text-5xl" : "text-2xl md:text-4xl"}`}>
           {type === "movie" ? "Movies" : "TV Shows"}
         </h1>
+        {isHulu && (
+          <p className="mt-3 max-w-2xl text-sm leading-relaxed text-white/62">
+            Jump between curated rails, trending picks, and genre stacks in the Hulu view.
+          </p>
+        )}
       </div>
 
       {loading ? (
         <div className="space-y-8 px-4 md:px-12">
           {Array(4).fill(0).map((_, i) => (
             <div key={i}>
-              <div className="h-5 w-40 bg-[#1a1a1a] rounded animate-pulse mb-3" />
+              <div className={`mb-3 animate-pulse rounded ${isHulu ? "h-4 w-52 bg-white/10" : "h-5 w-40 bg-[#1a1a1a]"}`} />
               <div className="flex gap-2 overflow-hidden">
                 {Array(7).fill(0).map((_, j) => (
-                  <div key={j} className="w-[132px] flex-shrink-0 animate-pulse rounded bg-[#1a1a1a] sm:w-[150px] md:w-[clamp(140px,15vw,200px)]"
-                    style={{ aspectRatio: "2/3" }} />
+                  <div
+                    key={j}
+                    className={`flex-shrink-0 animate-pulse rounded-2xl ${isHulu ? "w-[240px] bg-white/10" : "w-[132px] bg-[#1a1a1a] sm:w-[150px] md:w-[clamp(140px,15vw,200px)]"}`}
+                    style={{ aspectRatio: isHulu ? "16/9" : "2/3" }}
+                  />
                 ))}
               </div>
             </div>

@@ -23,10 +23,13 @@ import {
   getTitleFriendSignals,
   saveRating,
 } from "@/lib/social";
+import { useAppTheme } from "@/lib/theme";
 
 export default function MovieDetail() {
   const { id } = useParams();
   const { activeProfile } = useOutletContext() || {};
+  const { themeDefinition } = useAppTheme();
+  const isHulu = themeDefinition.detailVariant === "hulu";
   const navigate = useNavigate();
   const [movie, setMovie] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -187,6 +190,222 @@ export default function MovieDetail() {
         description="Its maturity level is outside the limit for the current profile. Switch profiles to watch it."
         onAction={() => navigate(-1)}
       />
+    );
+  }
+
+  if (isHulu) {
+    return (
+      <div className="min-h-screen bg-[var(--app-bg)] pt-20">
+        <div className="mx-auto max-w-7xl px-4 pb-12 md:px-12">
+          <section className="relative overflow-hidden rounded-[28px] border border-white/8 bg-[var(--panel-bg)] shadow-[0_30px_80px_rgba(0,0,0,0.28)]">
+            <div className="absolute inset-0">
+              {movie.backdrop_path ? (
+                <img
+                  src={tmdbOriginal(movie.backdrop_path)}
+                  alt={movie.title}
+                  className="h-full w-full object-cover object-top"
+                />
+              ) : null}
+              <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(6,10,8,0.96)_0%,rgba(8,14,11,0.78)_44%,rgba(8,14,11,0.3)_100%)]" />
+              <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(5,8,6,0.08)_0%,rgba(5,8,6,0.78)_100%)]" />
+            </div>
+
+            <div className="relative grid gap-8 p-6 md:p-10 lg:grid-cols-[minmax(0,1fr)_280px]">
+              <div className="max-w-3xl">
+                <div className="mb-3 flex flex-wrap items-center gap-2">
+                  <span className="rounded-full border border-[rgba(29,231,144,0.24)] bg-[rgba(29,231,144,0.12)] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.28em] text-[var(--brand)]">
+                    Movie
+                  </span>
+                  {year && (
+                    <span className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-white/65">
+                      {year}
+                    </span>
+                  )}
+                </div>
+
+                <h1 className="text-4xl font-black tracking-tight text-white md:text-6xl">
+                  {movie.title}
+                </h1>
+
+                <div className="mt-4 flex flex-wrap items-center gap-3 text-sm text-white/65">
+                  {rating && (
+                    <div className="flex items-center gap-1 text-[var(--brand)]">
+                      <Star className="h-4 w-4 fill-[var(--brand)]" />
+                      <span className="font-semibold">{rating}</span>
+                    </div>
+                  )}
+                  {runtime && <span>{runtime}</span>}
+                  <span>Movie</span>
+                  <span className="rounded-full border border-white/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-white/60">
+                    HD
+                  </span>
+                </div>
+
+                {movie.genres?.length > 0 && (
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    {movie.genres.slice(0, 4).map((genre) => (
+                      <span key={genre.id} className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-[11px] uppercase tracking-[0.18em] text-white/68">
+                        {genre.name}
+                      </span>
+                    ))}
+                  </div>
+                )}
+
+                <p className="mt-5 max-w-2xl text-sm leading-relaxed text-white/74 md:text-base">
+                  {movie.overview}
+                </p>
+
+                <div className="mt-6 flex flex-wrap gap-3">
+                  <button
+                    onClick={() => navigate(playPath)}
+                    className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-[var(--brand)] px-8 py-3 text-sm font-bold text-[var(--brand-contrast)] transition-colors hover:bg-[var(--brand-strong)]"
+                  >
+                    <Play className="h-4 w-4 fill-[var(--brand-contrast)]" /> {playLabel}
+                  </button>
+                  <button
+                    onClick={handleWatchlist}
+                    className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-white/12 bg-white/[0.04] px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-white/[0.08]"
+                  >
+                    {inList ? <Check className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+                    {inList ? "Saved" : "My Stuff"}
+                  </button>
+                  <button
+                    onClick={handleLike}
+                    className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-full border px-6 py-3 text-sm font-semibold transition-colors ${
+                      liked
+                        ? "border-[var(--brand)] bg-[rgba(29,231,144,0.12)] text-[var(--brand)] hover:bg-[rgba(29,231,144,0.18)]"
+                        : "border-white/12 bg-white/[0.04] text-white hover:bg-white/[0.08]"
+                    }`}
+                  >
+                    <ThumbsUp className={`h-4 w-4 ${liked ? "fill-[var(--brand)]" : ""}`} />
+                    {liked ? "Liked" : "Rate Up"}
+                  </button>
+                  {trailerUrl && (
+                    <button
+                      onClick={() => setShowTrailer(true)}
+                      className="inline-flex min-h-11 items-center justify-center rounded-full border border-white/12 bg-white/[0.04] px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-white/[0.08]"
+                    >
+                      Trailer
+                    </button>
+                  )}
+                </div>
+
+                {canResume && (
+                  <p className="mt-3 text-sm text-white/56">
+                    Pick up where you left off without losing your spot.
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-4">
+                <div className="overflow-hidden rounded-[22px] border border-white/10 bg-black/20">
+                  {movie.poster_path ? (
+                    <img src={tmdbW500(movie.poster_path)} alt={movie.title} className="w-full object-cover" />
+                  ) : (
+                    <div className="aspect-[2/3] w-full bg-[#1a1a1a]" />
+                  )}
+                </div>
+                <div className="rounded-[22px] border border-white/10 bg-black/20 p-4">
+                  <p className="text-xs uppercase tracking-[0.24em] text-white/45">Your Rating</p>
+                  <div className="mt-3">
+                    <RatingStars value={userRating} onChange={handleRate} disabled={savingRating} />
+                  </div>
+                  <div className="mt-4 flex flex-wrap items-center gap-3">
+                    {userRating > 0 && (
+                      <button
+                        type="button"
+                        onClick={handleClearRating}
+                        className="rounded-full border border-white/10 px-4 py-2 text-sm font-medium text-white/75 hover:border-white/25 hover:text-white"
+                      >
+                        Clear
+                      </button>
+                    )}
+                    {friendsSummary && (
+                      <p className="text-sm text-[#86efac]">{friendsSummary}</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <div className="mt-8 grid gap-8 lg:grid-cols-[minmax(0,1fr)_320px]">
+            <div>
+              <div className="mb-8 grid grid-cols-1 gap-3 rounded-[24px] border border-white/8 bg-[rgba(255,255,255,0.03)] p-5 text-sm sm:grid-cols-2">
+                {movie.spoken_languages?.length > 0 && (
+                  <div>
+                    <span className="text-white/45">Languages: </span>
+                    <span className="text-white/75">{movie.spoken_languages.map((language) => language.english_name).join(", ")}</span>
+                  </div>
+                )}
+                {movie.production_companies?.slice(0, 2).length > 0 && (
+                  <div>
+                    <span className="text-white/45">Studio: </span>
+                    <span className="text-white/75">{movie.production_companies.slice(0, 2).map((company) => company.name).join(", ")}</span>
+                  </div>
+                )}
+              </div>
+
+              {cast.length > 0 && (
+                <div className="mb-8">
+                  <h2 className="mb-4 text-2xl font-bold text-white">Cast</h2>
+                  <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                    {cast.map((person) => (
+                      <div key={person.id} className="flex items-center gap-3 rounded-[20px] border border-white/8 bg-[rgba(255,255,255,0.03)] p-3">
+                        <div className="h-16 w-16 shrink-0 overflow-hidden rounded-2xl bg-[#1a1a1a]">
+                          {person.profile_path ? (
+                            <img src={tmdbW185(person.profile_path)} alt={person.name} className="h-full w-full object-cover" />
+                          ) : (
+                            <div className="flex h-full w-full items-center justify-center text-xl font-bold text-gray-600">
+                              {person.name?.[0]}
+                            </div>
+                          )}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="line-clamp-1 text-sm font-semibold text-white">{person.name}</p>
+                          <p className="line-clamp-1 text-xs text-white/55">{person.character}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {similar.length > 0 && (
+                <div className="mt-8">
+                  <ContentRow
+                    title="More Like This"
+                    items={similar.map((entry) => ({ ...entry, media_type: "movie" }))}
+                  />
+                </div>
+              )}
+            </div>
+
+            <div>
+              <TitleSocialPanel item={movie} mediaType="movie" activeProfile={activeProfile} />
+            </div>
+          </div>
+        </div>
+
+        {showTrailer && trailerUrl && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4">
+            <div className="relative aspect-video w-full max-w-4xl">
+              <button
+                onClick={() => setShowTrailer(false)}
+                className="absolute -top-10 right-0 text-white hover:text-gray-300"
+              >
+                <X className="w-6 h-6" />
+              </button>
+              <iframe
+                src={trailerUrl}
+                className="h-full w-full rounded-lg"
+                allow="autoplay; encrypted-media"
+                allowFullScreen
+              />
+            </div>
+          </div>
+        )}
+      </div>
     );
   }
 

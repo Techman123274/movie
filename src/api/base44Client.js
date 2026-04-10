@@ -2,6 +2,7 @@ import { createClient } from "@supabase/supabase-js";
 import { getAuthAdapter, waitForAuthLoaded } from "@/lib/auth-adapter";
 import {
   isSupabaseConfigured,
+  profileAvatarStorageBucket,
   supabaseAnonKey,
   supabaseJwtTemplate,
   supabaseUrl,
@@ -27,6 +28,9 @@ const SORT_FIELD_MAP = {
   created_date: "created_at",
   updated_date: "updated_at",
 };
+
+const USER_PREFERENCES_TABLE = "user_preferences";
+const PROFILE_AVATAR_ASSETS_TABLE = "profile_avatar_assets";
 
 const ENTITY_UNIQUE_FIELDS = {
   Profile: ["name", "avatar_color", "avatar_index"],
@@ -95,6 +99,7 @@ const normalizeEmail = (value) => String(value || "").trim().toLowerCase();
 const getStorageKey = (entityName, userId) => `cinestream:${entityName}:${userId}`;
 const getAdminStorageKey = (entityName) => `cinestream:admin:${entityName}`;
 const getSharedStorageKey = (entityName) => `cinestream:shared:${entityName}`;
+const getAccountStorageKey = (namespace, userId) => `cinestream:account:${namespace}:${userId}`;
 
 const readLocalRows = (entityName, userId) => {
   if (!isBrowser) {
@@ -174,6 +179,31 @@ const writeSharedRows = (entityName, rows) => {
   window.localStorage.setItem(getSharedStorageKey(entityName), JSON.stringify(rows));
 };
 
+const readLocalAccountValue = (namespace, userId, fallback) => {
+  if (!isBrowser) {
+    return fallback;
+  }
+
+  const raw = window.localStorage.getItem(getAccountStorageKey(namespace, userId));
+  if (!raw) {
+    return fallback;
+  }
+
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return fallback;
+  }
+};
+
+const writeLocalAccountValue = (namespace, userId, value) => {
+  if (!isBrowser) {
+    return;
+  }
+
+  window.localStorage.setItem(getAccountStorageKey(namespace, userId), JSON.stringify(value));
+};
+
 const isSharedMirrorEntity = (entityName) =>
   entityName === "SocialActivity" || entityName === "Rating" || entityName === "Comment";
 
@@ -184,6 +214,26 @@ const createLocalId = () => {
 
   return `local_${Date.now()}_${Math.random().toString(16).slice(2)}`;
 };
+
+const sanitizeFileName = (value) =>
+  String(value || "avatar")
+    .toLowerCase()
+    .replace(/[^a-z0-9._-]+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "") || "avatar";
+
+const readFileAsDataUrl = (file) =>
+  new Promise((resolve, reject) => {
+    if (!isBrowser || typeof FileReader === "undefined") {
+      reject(new Error("File uploads are not supported in this environment."));
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ""));
+    reader.onerror = () => reject(reader.error || new Error("Could not read file."));
+    reader.readAsDataURL(file);
+  });
 
 const normalizeSort = (sort) => {
   const sortKey = typeof sort === "string" ? sort : "-created_date";
@@ -315,6 +365,104 @@ const createSupabaseClient = () => {
     },
   });
 };
+
+const readLocalTheme = (userId) => {
+  const stored = readLocalAccountValue("preferences", userId, {});
+  return stored?.app_theme === "hulu" ? "hulu" : "netflix";
+};
+
+const writeLocalTheme = (userId, appTheme) => {
+  const existing = readLocalAccountValue("preferences", userId, {});
+  writeLocalAccountValue("preferences", userId, {
+    ...existing,
+    app_theme: appTheme === "hulu" ? "hulu" : "netflix",
+    updated_at: new Date().toISOString(),
+  });
+};
+
+const readLocalAvatarAssets = (userId) =>
+  readLocalAccountValue("avatar-assets", userId, []);
+
+const writeLocalAvatarAssets = (userId, rows) => {
+  writeLocalAccountValue("avatar-assets", userId, rows);
+};
+
+const mergeAvatarAssetRows = (remoteRows = [], localRows = []) => {
+  const merged = new Map();
+
+  [...localRows, ...remoteRows].forEach((row) => {
+    if (!row?.id) {
+      return;
+    }
+
+    merged.set(row.id, {
+      ...merged.get(row.id),
+      ...row,
+      asset_kind: row.asset_kind || "upload",
+      is_active: row.is_active !== false,
+    });
+  });
+
+  return [...merged.values()];
+};
+
+const createRemoteProfileAvatarRow = async ({ user, file, label }) => {
+  const client = createSupabaseClient();
+  const extension = (file?.name?.split(".").pop() || "jpg").toLowerCase();
+  const safeName = sanitizeFileName(file?.name || "avatar");
+  const storagePath = `users/${user.id}/${Date.now()}-${safeName}.${extension}`;
+
+  const { error: uploadError } = await client
+    .storage
+    .from(profileAvatarStorageBucket)
+    .upload(storagePath, file, {
+      cacheControl: "3600",
+      contentType: file?.type || undefined,
+      upsert: false,
+    });
+
+  if (uploadError) {
+    throw uploadError;
+  }
+
+  const { data: publicData } = client
+    .storage
+    .from(profileAvatarStorageBucket)
+    .getPublicUrl(storagePath);
+
+  const record = {
+    user_id: user.id,
+    asset_kind: "upload",
+    storage_path: storagePath,
+    public_url: publicData?.publicUrl || null,
+    label: label || file?.name || "Uploaded avatar",
+    is_active: true,
+  };
+
+  const { data, error } = await client
+    .from(PROFILE_AVATAR_ASSETS_TABLE)
+    .insert(record)
+    .select("*")
+    .single();
+
+  if (error) {
+    throw error;
+  }
+
+  return data;
+};
+
+const createLocalProfileAvatarRow = async ({ user, file, label }) => ({
+  id: createLocalId(),
+  user_id: user.id,
+  asset_kind: "upload",
+  storage_path: `local/users/${user.id}/${Date.now()}-${sanitizeFileName(file?.name || "avatar")}`,
+  public_url: await readFileAsDataUrl(file),
+  label: label || file?.name || "Uploaded avatar",
+  is_active: true,
+  created_at: new Date().toISOString(),
+  updated_at: new Date().toISOString(),
+});
 
 const canUseRemoteTable = (table) =>
   Boolean(table && isSupabaseConfigured && !unavailableRemoteTables.has(table));
@@ -1063,6 +1211,158 @@ export const base44 = {
         limit,
         sort: "-updated_date",
       });
+    },
+  },
+  preferences: {
+    async getAppTheme() {
+      const user = await getCurrentUser();
+      const localTheme = readLocalTheme(user.id);
+
+      if (!canUseRemoteTable(USER_PREFERENCES_TABLE)) {
+        return localTheme;
+      }
+
+      try {
+        const client = createSupabaseClient();
+        const { data, error } = await client
+          .from(USER_PREFERENCES_TABLE)
+          .select("*")
+          .eq("user_id", user.id)
+          .maybeSingle();
+
+        if (error) {
+          throw error;
+        }
+
+        const nextTheme = data?.app_theme === "hulu" ? "hulu" : "netflix";
+        writeLocalTheme(user.id, nextTheme);
+        return nextTheme;
+      } catch (error) {
+        markTableUnavailableIfMissing(USER_PREFERENCES_TABLE, error);
+        console.warn("[Preferences] Falling back to local storage", error);
+        return localTheme;
+      }
+    },
+    async setAppTheme(appTheme) {
+      const user = await getCurrentUser();
+      const nextTheme = appTheme === "hulu" ? "hulu" : "netflix";
+      writeLocalTheme(user.id, nextTheme);
+
+      if (!canUseRemoteTable(USER_PREFERENCES_TABLE)) {
+        return nextTheme;
+      }
+
+      try {
+        const client = createSupabaseClient();
+        const { error } = await client
+          .from(USER_PREFERENCES_TABLE)
+          .upsert({
+            user_id: user.id,
+            app_theme: nextTheme,
+            updated_at: new Date().toISOString(),
+          });
+
+        if (error) {
+          throw error;
+        }
+      } catch (error) {
+        markTableUnavailableIfMissing(USER_PREFERENCES_TABLE, error);
+        console.warn("[Preferences] Falling back to local storage", error);
+      }
+
+      return nextTheme;
+    },
+  },
+  avatars: {
+    async list() {
+      const user = await getCurrentUser();
+      const localRows = readLocalAvatarAssets(user.id);
+
+      if (!canUseRemoteTable(PROFILE_AVATAR_ASSETS_TABLE)) {
+        return localRows.filter((asset) => asset.is_active !== false);
+      }
+
+      try {
+        const client = createSupabaseClient();
+        const { data, error } = await client
+          .from(PROFILE_AVATAR_ASSETS_TABLE)
+          .select("*")
+          .or(`user_id.is.null,user_id.eq.${user.id}`)
+          .eq("is_active", true)
+          .order("asset_kind", { ascending: true })
+          .order("label", { ascending: true });
+
+        if (error) {
+          throw error;
+        }
+
+        const mergedRows = mergeAvatarAssetRows(data || [], localRows);
+        writeLocalAvatarAssets(user.id, mergedRows);
+        return mergedRows.filter((asset) => asset.is_active !== false);
+      } catch (error) {
+        markTableUnavailableIfMissing(PROFILE_AVATAR_ASSETS_TABLE, error);
+        console.warn("[ProfileAvatarAssets] Falling back to local storage", error);
+        return localRows.filter((asset) => asset.is_active !== false);
+      }
+    },
+    async upload(file, label = "") {
+      const user = await getCurrentUser();
+      const localRows = readLocalAvatarAssets(user.id);
+
+      try {
+        if (!canUseRemoteTable(PROFILE_AVATAR_ASSETS_TABLE) || !isSupabaseConfigured) {
+          throw new Error("Remote avatar storage unavailable.");
+        }
+
+        const remoteRow = await createRemoteProfileAvatarRow({ user, file, label });
+        writeLocalAvatarAssets(user.id, mergeAvatarAssetRows([remoteRow], localRows));
+        return remoteRow;
+      } catch (error) {
+        if (isMissingRemoteTableError(error)) {
+          markTableUnavailableIfMissing(PROFILE_AVATAR_ASSETS_TABLE, error);
+        }
+        console.warn("[ProfileAvatarAssets] Falling back to local upload storage", error);
+        const localRow = await createLocalProfileAvatarRow({ user, file, label });
+        writeLocalAvatarAssets(user.id, mergeAvatarAssetRows([localRow], localRows));
+        return localRow;
+      }
+    },
+    async delete(id) {
+      const user = await getCurrentUser();
+      const localRows = readLocalAvatarAssets(user.id);
+      const existingRow = localRows.find((row) => row.id === id) || null;
+      const nextRows = localRows.filter((row) => row.id !== id);
+      writeLocalAvatarAssets(user.id, nextRows);
+
+      if (!existingRow || !canUseRemoteTable(PROFILE_AVATAR_ASSETS_TABLE) || String(id).startsWith("local_")) {
+        return true;
+      }
+
+      try {
+        const client = createSupabaseClient();
+        const { error } = await client
+          .from(PROFILE_AVATAR_ASSETS_TABLE)
+          .delete()
+          .eq("id", id)
+          .eq("user_id", user.id);
+
+        if (error) {
+          throw error;
+        }
+
+        if (existingRow.storage_path?.startsWith(`users/${user.id}/`)) {
+          await client.storage
+            .from(profileAvatarStorageBucket)
+            .remove([existingRow.storage_path])
+            .catch(() => null);
+        }
+
+        return true;
+      } catch (error) {
+        markTableUnavailableIfMissing(PROFILE_AVATAR_ASSETS_TABLE, error);
+        console.warn("[ProfileAvatarAssets] Falling back to local delete", error);
+        return true;
+      }
     },
   },
   admin: {

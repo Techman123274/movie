@@ -13,6 +13,8 @@ import {
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { base44 } from "@/api/base44Client";
 import { fetchPublicSiteSettings, getDefaultSiteSettings } from "@/lib/admin-config";
+import BrandWordmark from "@/components/layout/BrandWordmark";
+import { useAppTheme } from "@/lib/theme";
 import {
   getByGenre,
   getPopularMovies,
@@ -137,6 +139,8 @@ const mapPromoItem = (item, slot) => ({
 });
 
 export default function SignIn() {
+  const { themeDefinition } = useAppTheme();
+  const isHulu = themeDefinition.shellVariant === "hulu";
   const [email, setEmail] = useState("");
   const [siteSettings, setSiteSettings] = useState(getDefaultSiteSettings());
   const [featuredPromos, setFeaturedPromos] = useState(FALLBACK_PROMOS);
@@ -236,8 +240,8 @@ export default function SignIn() {
   };
 
   return (
-    <div className="min-h-screen bg-black text-white">
-      <section className="relative isolate overflow-hidden border-b border-white/10 landing-hero-bg">
+    <div className="min-h-screen bg-[var(--app-bg)] text-white">
+      <section className={`relative isolate overflow-hidden ${isHulu ? "mx-4 mt-20 rounded-[28px] border border-white/10 shadow-[0_30px_80px_rgba(0,0,0,0.28)] md:mx-8 lg:mx-12" : "border-b border-white/10"} landing-hero-bg`}>
         {heroBackdrop && (
           <div className="absolute inset-0">
             <img
@@ -250,10 +254,10 @@ export default function SignIn() {
         <div className="absolute inset-0 landing-grid-fade opacity-30" />
         <div className="absolute inset-0 landing-vignette" />
         <div className="absolute left-1/2 top-28 h-72 w-72 -translate-x-1/2 rounded-full landing-spotlight opacity-90 md:h-[28rem] md:w-[28rem]" />
-        <div className="absolute -left-24 top-24 h-64 w-64 rounded-full bg-[#7d0f19]/30 blur-3xl" />
-        <div className="absolute right-0 top-16 h-72 w-72 rounded-full bg-[#32070d]/50 blur-3xl" />
+        {!isHulu && <div className="absolute -left-24 top-24 h-64 w-64 rounded-full bg-[#7d0f19]/30 blur-3xl" />}
+        {!isHulu && <div className="absolute right-0 top-16 h-72 w-72 rounded-full bg-[#32070d]/50 blur-3xl" />}
 
-        <div className="absolute top-24 hidden md:block md:left-[34%] md:right-[-4%] md:px-4 lg:left-[42%] lg:right-[-2%] lg:px-0 xl:left-[40%]">
+        <div className={`absolute hidden md:block ${isHulu ? "right-6 top-24 left-[54%]" : "top-24 md:left-[34%] md:right-[-4%] md:px-4 lg:left-[42%] lg:right-[-2%] lg:px-0 xl:left-[40%]"}`}>
           <div className="grid grid-cols-4 gap-4 opacity-95">
             {featuredPromos.map((poster, index) => (
               <motion.div
@@ -290,27 +294,25 @@ export default function SignIn() {
           </div>
         </div>
 
-        <nav className="relative z-10 mx-auto flex w-full max-w-7xl items-center justify-between px-6 py-6 md:px-12 lg:px-16">
-          <span className="select-none text-3xl font-black tracking-tight text-[#E50914] md:text-4xl">
-            SUBFLIX
-          </span>
+        <nav className={`relative z-10 mx-auto flex w-full max-w-7xl items-center justify-between px-6 md:px-12 lg:px-16 ${isHulu ? "py-5" : "py-6"}`}>
+          <BrandWordmark className="text-3xl md:text-4xl" showMode />
           <button
             onClick={() => base44.auth.redirectToLogin(window.location.href)}
-            className="rounded bg-[#E50914] px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#c40812] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-offset-2 focus-visible:ring-offset-black"
+            className={`bg-[var(--brand)] text-sm font-semibold text-[var(--brand-contrast)] transition-colors hover:bg-[var(--brand-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-offset-2 focus-visible:ring-offset-black ${isHulu ? "rounded-full px-5 py-2.5" : "rounded px-5 py-2"}`}
           >
             Sign In
           </button>
         </nav>
 
-        <div className="relative z-10 mx-auto flex min-h-[calc(100vh-5rem)] w-full max-w-7xl items-end px-6 pb-14 pt-24 md:px-12 md:pb-20 md:pt-32 lg:px-16 lg:pb-24">
+        <div className={`relative z-10 mx-auto flex w-full max-w-7xl px-6 md:px-12 lg:px-16 ${isHulu ? "min-h-[min(82vh,760px)] items-center pb-14 pt-14 md:pt-16" : "min-h-[calc(100vh-5rem)] items-end pb-14 pt-24 md:pb-20 md:pt-32 lg:pb-24"}`}>
           <motion.div
             initial={shouldReduceMotion ? false : { opacity: 0, y: 24 }}
             animate={shouldReduceMotion ? undefined : { opacity: 1, y: 0 }}
             transition={{ duration: 0.65, ease: "easeOut" }}
-            className="max-w-3xl md:max-w-[29rem] lg:max-w-[33rem] xl:max-w-[36rem]"
+            className={`max-w-3xl ${isHulu ? "rounded-[26px] border border-white/10 bg-[rgba(8,14,11,0.72)] p-6 shadow-[0_20px_60px_rgba(0,0,0,0.28)] backdrop-blur-sm md:max-w-[34rem] md:p-8" : "md:max-w-[29rem] lg:max-w-[33rem] xl:max-w-[36rem]"}`}
           >
             <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-white/[0.15] bg-white/[0.08] px-4 py-2 text-xs font-semibold uppercase tracking-[0.28em] text-white/80 backdrop-blur-sm">
-              <Sparkles className="h-4 w-4 text-[#E50914]" />
+              <Sparkles className="h-4 w-4 text-[var(--brand)]" />
               Stream your next obsession
             </div>
 
@@ -334,11 +336,11 @@ export default function SignIn() {
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
                 placeholder="Email address"
-                className="min-h-14 flex-1 rounded border border-white/20 bg-black/[0.55] px-5 text-base text-white placeholder:text-white/45 backdrop-blur-md transition-colors focus:border-white focus:outline-none focus:ring-2 focus:ring-white/[0.35]"
+                className={`min-h-14 flex-1 border border-white/20 bg-black/[0.55] px-5 text-base text-white placeholder:text-white/45 backdrop-blur-md transition-colors focus:border-white focus:outline-none focus:ring-2 focus:ring-white/[0.35] ${isHulu ? "rounded-full" : "rounded"}`}
               />
               <button
                 type="submit"
-                className="inline-flex min-h-14 items-center justify-center gap-2 rounded bg-[#E50914] px-8 text-lg font-bold text-white transition-colors hover:bg-[#c40812] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-offset-2 focus-visible:ring-offset-black"
+                className={`inline-flex min-h-14 items-center justify-center gap-2 bg-[var(--brand)] px-8 text-lg font-bold text-[var(--brand-contrast)] transition-colors hover:bg-[var(--brand-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-offset-2 focus-visible:ring-offset-black ${isHulu ? "rounded-full" : "rounded"}`}
               >
                 Get Started
                 <ChevronRight className="h-5 w-5" />
@@ -353,7 +355,7 @@ export default function SignIn() {
                     key={point.label}
                     className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.06] px-4 py-2 backdrop-blur-sm"
                   >
-                    <Icon className="h-4 w-4 text-[#E50914]" />
+                    <Icon className="h-4 w-4 text-[var(--brand)]" />
                     {point.label}
                   </span>
                 );
@@ -363,7 +365,7 @@ export default function SignIn() {
         </div>
       </section>
 
-      <section className="border-b border-white/10 bg-[#080808] px-6 py-8 md:px-10 md:py-10">
+      <section className={`border-b border-white/10 px-6 py-8 md:px-10 md:py-10 ${isHulu ? "bg-[#07100d]" : "bg-[#080808]"}`}>
         <div className="mx-auto grid max-w-7xl gap-4 md:grid-cols-3 xl:grid-cols-6">
           {[
             ["New releases weekly", "Fresh picks on your home screen"],
@@ -387,7 +389,7 @@ export default function SignIn() {
       <section className="bg-black px-6 py-16 md:px-12 md:py-20 lg:px-16">
         <div className="mx-auto max-w-7xl">
           <div className="mb-12 text-center md:mb-16">
-            <p className="text-sm font-semibold uppercase tracking-[0.3em] text-[#E50914]">Why Subflix</p>
+            <p className="text-sm font-semibold uppercase tracking-[0.3em] text-[var(--brand)]">Why Subflix</p>
             <h2 className="mt-4 text-[clamp(2rem,4.8vw,3.6rem)] font-black tracking-tight">
               More than a login screen. It should feel like movie night already started.
             </h2>
@@ -401,7 +403,7 @@ export default function SignIn() {
                   className={`grid items-center gap-10 ${feature.reverse ? "md:grid-cols-[1.1fr_0.9fr]" : "md:grid-cols-[0.9fr_1.1fr]"}`}
                 >
                   <div className={feature.reverse ? "md:order-2" : ""}>
-                    <p className="text-sm font-semibold uppercase tracking-[0.28em] text-[#E50914]">
+                    <p className="text-sm font-semibold uppercase tracking-[0.28em] text-[var(--brand)]">
                       {feature.eyebrow}
                     </p>
                     <h3 className="mt-4 text-[clamp(2rem,4.5vw,3.2rem)] font-black leading-tight tracking-tight">
@@ -432,7 +434,7 @@ export default function SignIn() {
                     >
                       <div className="rounded-[1.5rem] border border-white/10 bg-black/80 p-4 md:p-5">
                         <div className="flex items-center gap-2 text-[0.7rem] uppercase tracking-[0.28em] text-white/45">
-                          <span className="h-2 w-2 rounded-full bg-[#E50914]" />
+                          <span className="h-2 w-2 rounded-full bg-[var(--brand)]" />
                           <span>Subflix preview</span>
                         </div>
 
@@ -474,7 +476,7 @@ export default function SignIn() {
       <section className="border-y border-white/10 bg-[radial-gradient(circle_at_top,#171717_0%,#090909_62%,#050505_100%)] px-6 py-16 md:px-12 lg:px-16">
         <div className="mx-auto max-w-4xl">
           <div className="text-center">
-            <p className="text-sm font-semibold uppercase tracking-[0.3em] text-[#E50914]">Frequently Asked Questions</p>
+            <p className="text-sm font-semibold uppercase tracking-[0.3em] text-[var(--brand)]">Frequently Asked Questions</p>
             <h2 className="mt-4 text-[clamp(2rem,4.5vw,3.5rem)] font-black tracking-tight">
               Questions? We’ve got answers.
             </h2>
@@ -513,7 +515,7 @@ export default function SignIn() {
               />
               <button
                 type="submit"
-                className="inline-flex min-h-14 items-center justify-center gap-2 rounded bg-[#E50914] px-8 text-lg font-bold text-white transition-colors hover:bg-[#c40812] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-offset-2 focus-visible:ring-offset-black"
+                className="inline-flex min-h-14 items-center justify-center gap-2 rounded bg-[var(--brand)] px-8 text-lg font-bold text-[var(--brand-contrast)] transition-colors hover:bg-[var(--brand-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-offset-2 focus-visible:ring-offset-black"
               >
                 Get Started
                 <ChevronRight className="h-5 w-5" />
@@ -540,7 +542,7 @@ export default function SignIn() {
 
           <div className="landing-section-divider mt-10 h-px opacity-60" />
           <div className="mt-6 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-            <p className="text-xs uppercase tracking-[0.28em] text-[#E50914]">SUBFLIX</p>
+            <p className="text-xs uppercase tracking-[0.28em] text-[var(--brand)]">SUBFLIX</p>
             <p className="text-xs text-white/40">Copyright © {new Date().getFullYear()} Subflix. All rights reserved.</p>
           </div>
         </div>

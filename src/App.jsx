@@ -4,6 +4,7 @@ import { queryClientInstance } from '@/lib/query-client'
 import { BrowserRouter as Router, Route, Routes, useLocation } from 'react-router-dom';
 import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
+import { AppThemeProvider } from '@/lib/theme';
 
 // Layout
 import AppLayout from '@/components/layout/AppLayout';
@@ -170,22 +171,24 @@ const AuthenticatedApp = () => {
 function App() {
   return (
     <AuthProvider>
-      <QueryClientProvider client={queryClientInstance}>
-        <Router>
-          <AuthenticatedApp />
-        </Router>
-        <Toaster />
-      </QueryClientProvider>
+      <AppThemeProvider>
+        <QueryClientProvider client={queryClientInstance}>
+          <Router>
+            <AuthenticatedApp />
+          </Router>
+          <Toaster />
+        </QueryClientProvider>
+      </AppThemeProvider>
     </AuthProvider>
   )
 }
 
 function UpdateModeScreen({ title, message }) {
   return (
-    <div className="min-h-screen bg-[#050505] text-white">
+    <div className="min-h-screen bg-[var(--app-bg)] text-white">
       <div className="flex min-h-screen items-center justify-center px-6">
-        <div className="w-full max-w-3xl rounded-[2rem] border border-white/10 bg-[radial-gradient(circle_at_top,#220a0f_0%,#111111_40%,#050505_100%)] p-8 text-center shadow-[0_25px_80px_rgba(0,0,0,0.45)] md:p-12">
-          <p className="text-sm font-semibold uppercase tracking-[0.32em] text-[#E50914]">Subflix Update Mode</p>
+        <div className="w-full max-w-3xl rounded-[2rem] border border-white/10 bg-[var(--card-bg)] p-8 text-center shadow-[0_25px_80px_rgba(0,0,0,0.45)] md:p-12">
+          <p className="text-sm font-semibold uppercase tracking-[0.32em] text-[var(--brand)]">Subflix Update Mode</p>
           <h1 className="mt-5 text-4xl font-black tracking-tight md:text-5xl">
             {title || "Subflix is updating"}
           </h1>

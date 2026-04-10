@@ -23,10 +23,13 @@ import {
   getTitleFriendSignals,
   saveRating,
 } from "@/lib/social";
+import { useAppTheme } from "@/lib/theme";
 
 export default function TVDetail() {
   const { id } = useParams();
   const { activeProfile } = useOutletContext() || {};
+  const { themeDefinition } = useAppTheme();
+  const isHulu = themeDefinition.detailVariant === "hulu";
   const navigate = useNavigate();
   const [show, setShow] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -203,6 +206,266 @@ export default function TVDetail() {
         description="Its maturity level is above the current profile limit. Switch profiles to browse episodes."
         onAction={() => navigate(-1)}
       />
+    );
+  }
+
+  if (isHulu) {
+    return (
+      <div className="min-h-screen bg-[var(--app-bg)] pt-20">
+        <div className="mx-auto max-w-7xl px-4 pb-12 md:px-12">
+          <section className="relative overflow-hidden rounded-[28px] border border-white/8 bg-[var(--panel-bg)] shadow-[0_30px_80px_rgba(0,0,0,0.28)]">
+            <div className="absolute inset-0">
+              {show.backdrop_path ? (
+                <img src={tmdbOriginal(show.backdrop_path)} alt={show.name} className="h-full w-full object-cover object-top" />
+              ) : null}
+              <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(6,10,8,0.96)_0%,rgba(8,14,11,0.78)_44%,rgba(8,14,11,0.3)_100%)]" />
+              <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(5,8,6,0.08)_0%,rgba(5,8,6,0.78)_100%)]" />
+            </div>
+
+            <div className="relative grid gap-8 p-6 md:p-10 lg:grid-cols-[minmax(0,1fr)_280px]">
+              <div className="max-w-3xl">
+                <div className="mb-3 flex flex-wrap items-center gap-2">
+                  <span className="rounded-full border border-[rgba(29,231,144,0.24)] bg-[rgba(29,231,144,0.12)] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.28em] text-[var(--brand)]">
+                    Series
+                  </span>
+                  {show.status === "Returning Series" && (
+                    <span className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-white/65">
+                      Returning
+                    </span>
+                  )}
+                </div>
+
+                <h1 className="text-4xl font-black tracking-tight text-white md:text-6xl">
+                  {show.name}
+                </h1>
+
+                <div className="mt-4 flex flex-wrap items-center gap-3 text-sm text-white/65">
+                  {rating && (
+                    <div className="flex items-center gap-1 text-[var(--brand)]">
+                      <Star className="h-4 w-4 fill-[var(--brand)]" />
+                      <span className="font-semibold">{rating}</span>
+                    </div>
+                  )}
+                  {year && <span>{year}</span>}
+                  {show.number_of_seasons && <span>{show.number_of_seasons} Seasons</span>}
+                  {show.number_of_episodes && <span>{show.number_of_episodes} Episodes</span>}
+                </div>
+
+                {show.genres?.length > 0 && (
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    {show.genres.slice(0, 4).map((genre) => (
+                      <span key={genre.id} className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-[11px] uppercase tracking-[0.18em] text-white/68">
+                        {genre.name}
+                      </span>
+                    ))}
+                  </div>
+                )}
+
+                <p className="mt-5 max-w-2xl text-sm leading-relaxed text-white/74 md:text-base">
+                  {show.overview}
+                </p>
+
+                <div className="mt-6 flex flex-wrap gap-3">
+                  <button
+                    onClick={() => navigate(playPath)}
+                    className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-[var(--brand)] px-8 py-3 text-sm font-bold text-[var(--brand-contrast)] transition-colors hover:bg-[var(--brand-strong)]"
+                  >
+                    <Play className="h-4 w-4 fill-[var(--brand-contrast)]" /> {playLabel}
+                  </button>
+                  <button
+                    onClick={handleWatchlist}
+                    className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-white/12 bg-white/[0.04] px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-white/[0.08]"
+                  >
+                    {inList ? <Check className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+                    {inList ? "Saved" : "My Stuff"}
+                  </button>
+                  <button
+                    onClick={handleLike}
+                    className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-full border px-6 py-3 text-sm font-semibold transition-colors ${
+                      liked
+                        ? "border-[var(--brand)] bg-[rgba(29,231,144,0.12)] text-[var(--brand)] hover:bg-[rgba(29,231,144,0.18)]"
+                        : "border-white/12 bg-white/[0.04] text-white hover:bg-white/[0.08]"
+                    }`}
+                  >
+                    <ThumbsUp className={`h-4 w-4 ${liked ? "fill-[var(--brand)]" : ""}`} />
+                    {liked ? "Liked" : "Rate Up"}
+                  </button>
+                  {trailerUrl && (
+                    <button
+                      onClick={() => setShowTrailer(true)}
+                      className="inline-flex min-h-11 items-center justify-center rounded-full border border-white/12 bg-white/[0.04] px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-white/[0.08]"
+                    >
+                      Trailer
+                    </button>
+                  )}
+                </div>
+
+                {canResume && (
+                  <p className="mt-3 text-sm text-white/56">
+                    Resume from your latest in-progress episode.
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-4">
+                <div className="overflow-hidden rounded-[22px] border border-white/10 bg-black/20">
+                  {show.poster_path ? (
+                    <img src={tmdbW500(show.poster_path)} alt={show.name} className="w-full object-cover" />
+                  ) : (
+                    <div className="aspect-[2/3] w-full bg-[#1a1a1a]" />
+                  )}
+                </div>
+                <div className="rounded-[22px] border border-white/10 bg-black/20 p-4">
+                  <p className="text-xs uppercase tracking-[0.24em] text-white/45">Your Rating</p>
+                  <div className="mt-3">
+                    <RatingStars value={userRating} onChange={handleRate} disabled={savingRating} />
+                  </div>
+                  <div className="mt-4 flex flex-wrap items-center gap-3">
+                    {userRating > 0 && (
+                      <button
+                        type="button"
+                        onClick={handleClearRating}
+                        className="rounded-full border border-white/10 px-4 py-2 text-sm font-medium text-white/75 hover:border-white/25 hover:text-white"
+                      >
+                        Clear
+                      </button>
+                    )}
+                    {friendsSummary && (
+                      <p className="text-sm text-[#86efac]">{friendsSummary}</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <div className="mt-8 grid gap-8 lg:grid-cols-[minmax(0,1fr)_320px]">
+            <div>
+              {show.seasons && show.seasons.length > 0 && (
+                <section className="mb-8 rounded-[24px] border border-white/8 bg-[rgba(255,255,255,0.03)] p-5">
+                  <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <p className="text-xs uppercase tracking-[0.24em] text-[var(--brand)]">Episodes</p>
+                      <h2 className="mt-2 text-2xl font-bold text-white">Season Browser</h2>
+                    </div>
+                    <div className="relative">
+                      <select
+                        value={selectedSeason}
+                        onChange={(event) => setSelectedSeason(Number(event.target.value))}
+                        className="min-h-11 appearance-none rounded-full border border-white/10 bg-[#101713] px-4 py-2 pr-10 text-sm text-white outline-none"
+                      >
+                        {show.seasons
+                          .filter((season) => season.season_number > 0)
+                          .map((season) => (
+                            <option key={season.id} value={season.season_number}>
+                              Season {season.season_number}
+                            </option>
+                          ))}
+                      </select>
+                      <ChevronDown className="pointer-events-none absolute right-4 top-3.5 h-4 w-4 text-white/55" />
+                    </div>
+                  </div>
+
+                  {seasonData?.episodes ? (
+                    <div className="space-y-3">
+                      {seasonData.episodes.map((episode) => (
+                        <button
+                          key={episode.id}
+                          type="button"
+                          onClick={() => navigate(`/watch/tv/${id}?season=${selectedSeason}&episode=${episode.episode_number}`)}
+                          className="flex w-full gap-4 rounded-[22px] border border-white/8 bg-black/20 p-3 text-left transition-colors hover:bg-white/[0.05]"
+                        >
+                          <div className="flex w-12 shrink-0 items-start justify-center pt-2 text-sm font-semibold text-[var(--brand)]">
+                            {String(episode.episode_number).padStart(2, "0")}
+                          </div>
+                          <div className="relative aspect-video w-36 shrink-0 overflow-hidden rounded-2xl bg-[#111814]">
+                            {episode.still_path ? (
+                              <img src={tmdbW300(episode.still_path)} alt={episode.name} className="h-full w-full object-cover" />
+                            ) : null}
+                            <div className="absolute inset-0 flex items-center justify-center bg-black/25">
+                              <Play className="h-8 w-8 text-white/90" />
+                            </div>
+                          </div>
+                          <div className="min-w-0 flex-1 py-1">
+                            <div className="flex items-start justify-between gap-3">
+                              <div>
+                                <p className="line-clamp-1 text-base font-semibold text-white">{episode.name}</p>
+                                {episode.air_date && (
+                                  <p className="mt-1 text-xs uppercase tracking-[0.18em] text-white/42">{episode.air_date}</p>
+                                )}
+                              </div>
+                              {episode.runtime && (
+                                <span className="rounded-full border border-white/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-white/60">
+                                  {episode.runtime}m
+                                </span>
+                              )}
+                            </div>
+                            <p className="mt-3 line-clamp-2 text-sm leading-relaxed text-white/64">
+                              {episode.overview || "Open this episode to start watching from the Hulu-style player."}
+                            </p>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {Array.from({ length: 5 }).map((_, index) => (
+                        <div key={index} className="h-28 animate-pulse rounded-[22px] bg-white/[0.05]" />
+                      ))}
+                    </div>
+                  )}
+                </section>
+              )}
+
+              {cast.length > 0 && (
+                <div className="mb-8">
+                  <h2 className="mb-4 text-2xl font-bold text-white">Cast</h2>
+                  <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                    {cast.map((person) => (
+                      <div key={person.id} className="flex items-center gap-3 rounded-[20px] border border-white/8 bg-[rgba(255,255,255,0.03)] p-3">
+                        <div className="h-16 w-16 shrink-0 overflow-hidden rounded-2xl bg-[#1a1a1a]">
+                          {person.profile_path ? (
+                            <img src={tmdbW185(person.profile_path)} alt={person.name} className="h-full w-full object-cover" />
+                          ) : (
+                            <div className="flex h-full w-full items-center justify-center text-xl font-bold text-gray-600">
+                              {person.name?.[0]}
+                            </div>
+                          )}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="line-clamp-1 text-sm font-semibold text-white">{person.name}</p>
+                          <p className="line-clamp-1 text-xs text-white/55">{person.character || person.roles?.[0]?.character}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {similar.length > 0 && (
+                <div className="mt-8">
+                  <ContentRow title="More Like This" items={similar.map((entry) => ({ ...entry, media_type: "tv" }))} />
+                </div>
+              )}
+            </div>
+
+            <div>
+              <TitleSocialPanel item={show} mediaType="tv" activeProfile={activeProfile} />
+            </div>
+          </div>
+        </div>
+
+        {showTrailer && trailerUrl && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4">
+            <div className="relative aspect-video w-full max-w-4xl">
+              <button onClick={() => setShowTrailer(false)} className="absolute -top-10 right-0 text-white hover:text-gray-300">
+                <X className="w-6 h-6" />
+              </button>
+              <iframe src={trailerUrl} className="h-full w-full rounded-lg" allow="autoplay; encrypted-media" allowFullScreen />
+            </div>
+          </div>
+        )}
+      </div>
     );
   }
 

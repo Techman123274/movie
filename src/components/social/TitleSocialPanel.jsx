@@ -111,7 +111,7 @@ export default function TitleSocialPanel({ item, mediaType, activeProfile }) {
     <section className="mt-8 rounded-2xl border border-white/10 bg-[#111111] p-4 md:p-6">
       <div className="mb-5 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <div>
-          <p className="mb-2 text-xs uppercase tracking-[0.25em] text-[#E50914]">Social</p>
+          <p className="mb-2 text-xs uppercase tracking-[0.25em] text-[var(--brand)]">Social</p>
           <h2 className="text-2xl font-bold text-white">What everyone thinks</h2>
           <p className="mt-2 text-sm leading-relaxed text-gray-400">
             Ratings and comments are saved to the database for everyone on Subflix.
@@ -142,13 +142,13 @@ export default function TitleSocialPanel({ item, mediaType, activeProfile }) {
           onChange={(event) => setCommentText(event.target.value)}
           placeholder="Share a quick thought..."
           rows={3}
-          className="w-full resize-none rounded-lg border border-white/10 bg-[#181818] px-4 py-3 text-sm text-white outline-none transition-colors placeholder:text-gray-600 focus:border-[#E50914]"
+          className="w-full resize-none rounded-lg border border-white/10 bg-[#181818] px-4 py-3 text-sm text-white outline-none transition-colors placeholder:text-gray-600 focus:border-[var(--brand)]"
         />
         <div className="mt-3 flex justify-end">
           <button
             type="submit"
             disabled={saving || !commentText.trim()}
-            className="min-h-11 w-full rounded-lg bg-[#E50914] px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#c40812] disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+            className="min-h-11 w-full rounded-lg bg-[var(--brand)] px-5 py-2.5 text-sm font-semibold text-[var(--brand-contrast)] transition-colors hover:bg-[var(--brand-strong)] disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
           >
             Post Comment
           </button>
@@ -165,7 +165,7 @@ export default function TitleSocialPanel({ item, mediaType, activeProfile }) {
         <div className="grid gap-5 lg:grid-cols-[1.25fr_0.75fr]">
           <div>
             <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-white">
-              <MessageCircle className="h-4 w-4 text-[#E50914]" />
+              <MessageCircle className="h-4 w-4 text-[var(--brand)]" />
               Comments
             </div>
             <div className="space-y-3">
@@ -185,7 +185,7 @@ export default function TitleSocialPanel({ item, mediaType, activeProfile }) {
                             className="h-9 w-9 shrink-0 rounded-lg object-cover"
                           />
                         ) : (
-                          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#E50914] text-sm font-black text-white">
+                          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[var(--brand)] text-sm font-black text-[var(--brand-contrast)]">
                             {getInitial(comment.actor_name || comment.created_by)}
                           </div>
                         )}
@@ -216,7 +216,7 @@ export default function TitleSocialPanel({ item, mediaType, activeProfile }) {
 
           <div>
             <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-white">
-              <Users className="h-4 w-4 text-[#E50914]" />
+              <Users className="h-4 w-4 text-[var(--brand)]" />
               Shared Ratings
             </div>
             <div className="space-y-3">

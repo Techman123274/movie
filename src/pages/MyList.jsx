@@ -7,9 +7,12 @@ import { filterItemsForProfile } from "@/lib/preferences";
 import { LIBRARY_CHANGED_EVENT } from "@/lib/library";
 import { attachPlaybackProgress, buildWatchPath } from "@/lib/playback";
 import PlaybackProgressBar from "@/components/ui/PlaybackProgressBar";
+import { useAppTheme } from "@/lib/theme";
 
 export default function MyList() {
   const { activeProfile } = useOutletContext() || {};
+  const { themeDefinition } = useAppTheme();
+  const isHulu = themeDefinition.shellVariant === "hulu";
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
@@ -50,11 +53,11 @@ export default function MyList() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#0a0a0a] pt-24 px-4 md:px-12">
-        <div className="h-8 w-32 bg-[#1a1a1a] rounded animate-pulse mb-8" />
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
+      <div className="min-h-screen bg-[var(--app-bg)] px-4 pt-24 md:px-12">
+        <div className={`mb-8 animate-pulse rounded ${isHulu ? "h-10 w-56 bg-white/10" : "h-8 w-32 bg-[#1a1a1a]"}`} />
+        <div className={`grid gap-3 ${isHulu ? "grid-cols-1 md:grid-cols-2 xl:grid-cols-3" : "grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6"}`}>
           {Array(12).fill(0).map((_, i) => (
-            <div key={i} className="rounded bg-[#1a1a1a] animate-pulse" style={{ aspectRatio: "2/3" }} />
+            <div key={i} className={`rounded-2xl animate-pulse ${isHulu ? "bg-white/10" : "bg-[#1a1a1a]"}`} style={{ aspectRatio: isHulu ? "16/9" : "2/3" }} />
           ))}
         </div>
       </div>
@@ -62,9 +65,9 @@ export default function MyList() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] px-4 pb-28 pt-24 md:px-12 md:pb-12">
+    <div className="min-h-screen bg-[var(--app-bg)] px-4 pb-28 pt-24 md:px-12 md:pb-12">
       <div className="mb-8 flex flex-wrap items-center gap-3">
-        <Bookmark className="h-7 w-7 text-[#E50914]" />
+        <Bookmark className="h-7 w-7 text-[var(--brand)]" />
         <h1 className="text-2xl font-bold text-white md:text-3xl">My List</h1>
         {visibleItems.length > 0 && (
           <span className="text-base text-gray-500 md:text-lg">
@@ -86,19 +89,22 @@ export default function MyList() {
           </p>
           <button
             onClick={() => navigate("/")}
-            className="min-h-11 rounded bg-[#E50914] px-8 py-3 font-semibold text-white transition-colors hover:bg-[#c40812]"
+            className="min-h-11 rounded bg-[var(--brand)] px-8 py-3 font-semibold text-[var(--brand-contrast)] transition-colors hover:bg-[var(--brand-strong)]"
           >
             Browse Content
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
+        <div className={`grid gap-3 ${isHulu ? "grid-cols-1 md:grid-cols-2 xl:grid-cols-3" : "grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6"}`}>
           {visibleItems.map((item) => (
-            <div key={item.id} className="relative group rounded overflow-hidden bg-[#141414] cursor-pointer"
-              style={{ aspectRatio: "2/3" }}>
+            <div
+              key={item.id}
+              className={`group relative cursor-pointer overflow-hidden rounded-2xl ${isHulu ? "border border-white/8 bg-[rgba(255,255,255,0.03)]" : "bg-[#141414]"}`}
+              style={{ aspectRatio: isHulu ? "16/9" : "2/3" }}
+            >
               {item.poster_path ? (
                 <img
-                  src={tmdbW300(item.poster_path)}
+                  src={tmdbW300(item.backdrop_path || item.poster_path)}
                   alt={item.title}
                   className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                   onClick={() => navigate(`/${item.media_type}/${item.tmdb_id}`)}
@@ -114,8 +120,15 @@ export default function MyList() {
                 <PlaybackProgressBar progress={item.progress_percent} />
               </div>
 
-              {/* Overlay on hover */}
-              <div className="absolute inset-0 flex items-end justify-center gap-2 bg-gradient-to-t from-black/85 via-black/25 to-transparent p-3 opacity-100 transition-opacity md:items-center md:bg-black/60 md:p-0 md:opacity-0 md:group-hover:opacity-100">
+              <div className={`absolute inset-0 flex gap-2 transition-opacity ${isHulu ? "items-end justify-between bg-[linear-gradient(180deg,rgba(0,0,0,0.08)_0%,rgba(0,0,0,0.86)_100%)] p-4 opacity-100" : "items-end justify-center bg-gradient-to-t from-black/85 via-black/25 to-transparent p-3 opacity-100 md:items-center md:bg-black/60 md:p-0 md:opacity-0 md:group-hover:opacity-100"}`}>
+                {isHulu && (
+                  <div className="min-w-0">
+                    <p className="line-clamp-1 text-sm font-semibold text-white">{item.title}</p>
+                    <p className="mt-1 text-xs uppercase tracking-[0.18em] text-white/60">
+                      {item.media_type === "tv" ? "Series" : "Movie"}
+                    </p>
+                  </div>
+                )}
                 <button
                   onClick={() => navigate(item.resume_path || buildWatchPath({
                     mediaType: item.media_type,
@@ -137,7 +150,7 @@ export default function MyList() {
 
               {/* Media type badge */}
               {item.media_type === "tv" && (
-                <div className="absolute top-2 left-2 bg-[#E50914] text-white text-xs font-bold px-1.5 py-0.5 rounded">
+                <div className="absolute top-2 left-2 rounded bg-[var(--brand)] px-1.5 py-0.5 text-xs font-bold text-[var(--brand-contrast)]">
                   TV
                 </div>
               )}

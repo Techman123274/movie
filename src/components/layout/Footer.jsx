@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import BrandWordmark from "@/components/layout/BrandWordmark";
 import { SUPPORT_PAGES } from "@/lib/support-pages";
 
 const FOOTER_COLUMNS = [
@@ -12,18 +13,18 @@ export default function Footer() {
   const year = new Date().getFullYear();
 
   return (
-    <footer className="bg-[radial-gradient(circle_at_top,#151515_0%,#0a0a0a_65%)] border-t border-white/5 mt-16 px-4 md:px-12 py-12">
+    <footer className="mt-16 border-t border-white/5 bg-[var(--footer-bg)] px-4 py-12 md:px-12">
       <div className="max-w-6xl mx-auto">
         <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between mb-10">
           <div>
-            <p className="text-[#E50914] font-black text-3xl tracking-tight">SUBFLIX</p>
-            <p className="text-gray-400 text-sm mt-3 max-w-lg">
+            <BrandWordmark className="text-3xl" showMode />
+            <p className="mt-3 max-w-lg text-sm text-[var(--text-secondary)]">
               Support, privacy, legal, and device help pages for the full Subflix experience.
             </p>
           </div>
           <Link
             to="/help-center"
-            className="self-start md:self-auto rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-gray-300 hover:text-white hover:border-white/30 transition-colors"
+            className="self-start rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-sm text-gray-300 transition-colors hover:border-white/30 hover:text-white md:self-auto"
           >
             Open Help Center
           </Link>
@@ -36,7 +37,7 @@ export default function Footer() {
                 <Link
                   key={label}
                   to={SUPPORT_PAGES.find((page) => page.label === label)?.path || "/"}
-                  className="text-gray-500 text-sm hover:text-gray-300 transition-colors"
+                  className="text-sm text-gray-500 transition-colors hover:text-gray-300"
                 >
                   {label}
                 </Link>

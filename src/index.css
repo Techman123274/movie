@@ -31,6 +31,42 @@
     --netflix-dark: #0a0a0a;
     --netflix-card: #141414;
     --netflix-hover: #1a1a1a;
+
+    --brand-rgb: 229 9 20;
+    --brand: rgb(var(--brand-rgb));
+    --brand-strong: #c40812;
+    --brand-contrast: #ffffff;
+    --app-bg: #080808;
+    --panel-bg: #111111;
+    --card-bg: linear-gradient(180deg, #151515 0%, #0f0f0f 100%);
+    --nav-bg: #090909;
+    --footer-bg: radial-gradient(circle at top, #151515 0%, #0a0a0a 65%);
+    --text-primary: #ffffff;
+    --text-secondary: #a3a3a3;
+    --landing-bg:
+      radial-gradient(circle at 18% 18%, rgba(229, 9, 20, 0.38), transparent 28%),
+      radial-gradient(circle at 78% 22%, rgba(120, 18, 28, 0.28), transparent 24%),
+      radial-gradient(circle at 50% 62%, rgba(255, 255, 255, 0.05), transparent 30%),
+      linear-gradient(180deg, #1a070b 0%, #0e0507 25%, #050505 62%, #000000 100%);
+    --landing-divider: linear-gradient(90deg, transparent 0%, rgba(229, 9, 20, 0.3) 18%, rgba(255, 255, 255, 0.08) 50%, rgba(229, 9, 20, 0.3) 82%, transparent 100%);
+  }
+
+  :root[data-app-theme="hulu"] {
+    --brand-rgb: 29 231 144;
+    --brand: rgb(var(--brand-rgb));
+    --brand-strong: #18c778;
+    --brand-contrast: #03150d;
+    --app-bg: #07110d;
+    --panel-bg: #0d1713;
+    --card-bg: linear-gradient(180deg, #11211a 0%, #0a130f 100%);
+    --nav-bg: #08100d;
+    --footer-bg: radial-gradient(circle at top, #10261c 0%, #08120d 65%);
+    --landing-bg:
+      radial-gradient(circle at 22% 20%, rgba(29, 231, 144, 0.3), transparent 30%),
+      radial-gradient(circle at 74% 16%, rgba(19, 163, 101, 0.22), transparent 26%),
+      radial-gradient(circle at 50% 62%, rgba(255, 255, 255, 0.04), transparent 32%),
+      linear-gradient(180deg, #0d1813 0%, #09120f 28%, #050907 60%, #030504 100%);
+    --landing-divider: linear-gradient(90deg, transparent 0%, rgba(29, 231, 144, 0.25) 18%, rgba(255, 255, 255, 0.08) 50%, rgba(29, 231, 144, 0.25) 82%, transparent 100%);
   }
 }
 
@@ -41,8 +77,10 @@
 
   body {
     @apply bg-background text-foreground font-inter;
-    background-color: #0a0a0a;
+    background-color: var(--app-bg);
+    color: var(--text-primary);
     overflow-x: hidden;
+    transition: background-color 180ms ease, color 180ms ease;
   }
 
   button,
@@ -131,11 +169,7 @@
   }
 
   .landing-hero-bg {
-    background:
-      radial-gradient(circle at 18% 18%, rgba(229, 9, 20, 0.38), transparent 28%),
-      radial-gradient(circle at 78% 22%, rgba(120, 18, 28, 0.28), transparent 24%),
-      radial-gradient(circle at 50% 62%, rgba(255, 255, 255, 0.05), transparent 30%),
-      linear-gradient(180deg, #1a070b 0%, #0e0507 25%, #050505 62%, #000000 100%);
+    background: var(--landing-bg);
   }
 
   .landing-vignette {
@@ -157,7 +191,7 @@
   }
 
   .landing-section-divider {
-    background: linear-gradient(90deg, transparent 0%, rgba(229, 9, 20, 0.3) 18%, rgba(255, 255, 255, 0.08) 50%, rgba(229, 9, 20, 0.3) 82%, transparent 100%);
+    background: var(--landing-divider);
   }
 
   .landing-grid-fade {
@@ -169,7 +203,12 @@
   }
 
   .admin-input {
-    @apply w-full rounded-xl border border-white/10 bg-black/25 px-4 py-3 text-sm text-white outline-none transition-colors focus:border-[#E50914];
+    @apply w-full rounded-xl border border-white/10 bg-black/25 px-4 py-3 text-sm text-white outline-none transition-colors;
+    border-color: rgb(var(--brand-rgb) / 0.14);
+  }
+
+  .admin-input:focus {
+    border-color: var(--brand);
   }
 
   .admin-input option {
@@ -179,5 +218,18 @@
 
   .admin-action {
     @apply inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-sm font-medium text-white/75 transition-colors hover:bg-white/[0.08] hover:text-white;
+  }
+
+  .brand-wordmark {
+    color: var(--brand);
+    font-size: inherit;
+    font-weight: 900;
+    letter-spacing: 0;
+    line-height: 1;
+    text-transform: none;
+  }
+
+  :root[data-app-theme="hulu"] .brand-wordmark {
+    font-weight: 800;
   }
 }

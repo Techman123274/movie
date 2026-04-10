@@ -16,7 +16,6 @@ import {
   Users,
 } from "lucide-react";
 import { base44 } from "@/api/base44Client";
-import { AvatarArt, AVATAR_COLORS } from "@/lib/avatar-options";
 import {
   fetchNotifications,
   getUnreadNotifications,
@@ -26,8 +25,13 @@ import {
 import { PREFERENCE_CHANGED_EVENT, readPreference } from "@/lib/preferences";
 import { fetchPublicSiteSettings, getDefaultSiteSettings } from "@/lib/admin-config";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import BrandWordmark from "@/components/layout/BrandWordmark";
+import ProfileAvatar from "@/components/profile/ProfileAvatar";
+import { useAppTheme } from "@/lib/theme";
 
 export default function Navbar({ user, activeProfile, onSwitchProfile }) {
+  const { theme, setTheme } = useAppTheme();
+  const isHulu = theme === "hulu";
   const [scrolled, setScrolled] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
@@ -163,6 +167,10 @@ export default function Navbar({ user, activeProfile, onSwitchProfile }) {
     base44.auth.logout();
   };
 
+  const handleThemeToggle = () => {
+    setTheme(theme === "netflix" ? "hulu" : "netflix");
+  };
+
   const handleOpenNotifications = () => {
     const nextOpen = !showNotifications;
     setShowNotifications(nextOpen);
@@ -216,24 +224,26 @@ export default function Navbar({ user, activeProfile, onSwitchProfile }) {
     <>
       <nav
         className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
-          scrolled ? "bg-[#0a0a0a] shadow-lg" : "bg-gradient-to-b from-black/80 to-transparent"
+          scrolled
+            ? "bg-[var(--nav-bg)] shadow-lg"
+            : isHulu
+              ? "bg-[linear-gradient(180deg,rgba(7,12,9,0.9)_0%,rgba(7,12,9,0.35)_72%,transparent_100%)]"
+              : "bg-gradient-to-b from-black/80 to-transparent"
         }`}
       >
-        <div className="flex items-center justify-between px-4 md:px-12 py-4">
-          <div className="flex items-center gap-4 md:gap-8">
-            <Link to="/" className="flex-shrink-0">
-              <span className="text-[#E50914] font-black text-2xl md:text-3xl tracking-tight select-none">
-                SUBFLIX
-              </span>
-            </Link>
+        <div className={`flex items-center justify-between px-4 md:px-12 ${isHulu ? "py-3" : "py-4"}`}>
+          <div className={`flex items-center ${isHulu ? "gap-3 md:gap-6" : "gap-4 md:gap-8"}`}>
+            <BrandWordmark className={isHulu ? "text-xl md:text-2xl" : "text-2xl md:text-3xl"} />
 
-            <div className="hidden md:flex items-center gap-5">
+            <div className={`hidden md:flex items-center ${isHulu ? "gap-4" : "gap-5"}`}>
               {primaryLinks.map((link) => (
                 <Link
                   key={link.path}
                   to={link.path}
-                  className={`text-sm font-medium transition-colors hover:text-white ${
+                  className={`transition-colors hover:text-white ${
                     isLinkActive(link.path) ? "text-white" : "text-gray-300"
+                  } ${isHulu ? "text-[13px] font-semibold uppercase tracking-[0.16em]" : "text-sm font-medium"} ${
+                    isLinkActive(link.path) && isHulu ? "text-[var(--brand)]" : ""
                   }`}
                 >
                   {link.label}
@@ -242,11 +252,11 @@ export default function Navbar({ user, activeProfile, onSwitchProfile }) {
             </div>
           </div>
 
-          <div className="flex items-center gap-3 md:gap-4">
+          <div className={`flex items-center ${isHulu ? "gap-2 md:gap-3" : "gap-3 md:gap-4"}`}>
             <div className="hidden md:flex md:items-center">
               {showSearch ? (
                 <form onSubmit={handleSearch} className="flex items-center">
-                  <div className="flex items-center bg-black/80 border border-white/40 rounded px-3 py-1.5">
+                  <div className={`flex items-center rounded ${isHulu ? "border border-white/10 bg-white/[0.04] px-3 py-2" : "border border-white/20 bg-black/60 px-3 py-1.5 backdrop-blur"}`}>
                     <Search className="w-4 h-4 text-gray-400 mr-2" />
                     <input
                       autoFocus
@@ -271,20 +281,17 @@ export default function Navbar({ user, activeProfile, onSwitchProfile }) {
             </div>
 
             <div className="relative hidden md:block">
-              <button
-                onClick={handleOpenNotifications}
-                className="relative text-white hover:text-gray-300 transition-colors"
-              >
+              <button onClick={handleOpenNotifications} className="relative text-white hover:text-gray-300 transition-colors">
                 <Bell className="w-5 h-5" />
                 {notificationsEnabled && unreadCount > 0 && (
-                  <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] rounded-full bg-[#E50914] text-[10px] font-bold text-white flex items-center justify-center px-1">
+                  <span className="absolute -top-1.5 -right-1.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-[var(--brand)] px-1 text-[10px] font-bold text-[var(--brand-contrast)]">
                     {Math.min(unreadCount, 9)}
                   </span>
                 )}
               </button>
 
               {showNotifications && (
-                <div className="absolute right-0 top-10 w-[min(360px,calc(100vw-1rem))] max-h-[420px] overflow-y-auto bg-[#141414] border border-white/10 rounded-2xl shadow-2xl p-3 z-50">
+                <div className="absolute right-0 top-10 z-50 max-h-[420px] w-[min(360px,calc(100vw-1rem))] overflow-y-auto rounded-2xl border border-white/10 bg-[var(--panel-bg)] p-3 shadow-2xl">
                   <div className="flex items-center justify-between px-2 py-2 border-b border-white/10 mb-2">
                     <div>
                       <p className="text-white text-sm font-semibold">
@@ -328,7 +335,7 @@ export default function Navbar({ user, activeProfile, onSwitchProfile }) {
                             <p className="text-white text-sm font-medium">{item.title}</p>
                             <p className="text-gray-400 text-xs mt-1 leading-relaxed">{item.body}</p>
                           </div>
-                          <span className="text-[10px] uppercase tracking-[0.2em] text-[#E50914] mt-1">
+                          <span className="mt-1 text-[10px] uppercase tracking-[0.2em] text-[var(--brand)]">
                             {item.type}
                           </span>
                         </div>
@@ -344,17 +351,9 @@ export default function Navbar({ user, activeProfile, onSwitchProfile }) {
                 <div className="relative hidden md:block">
                   <button onClick={() => setShowUserMenu(!showUserMenu)} className="flex items-center gap-2 group">
                     {activeProfile ? (
-                      <div
-                        className="w-8 h-8 rounded overflow-hidden"
-                        style={{ backgroundColor: activeProfile.avatar_color || AVATAR_COLORS[0] }}
-                      >
-                        <AvatarArt
-                          avatarIndex={activeProfile.avatar_index ?? 0}
-                          color={activeProfile.avatar_color || AVATAR_COLORS[0]}
-                        />
-                      </div>
+                      <ProfileAvatar profile={activeProfile} size={32} className="rounded" />
                     ) : (
-                      <div className="w-8 h-8 rounded bg-[#E50914] flex items-center justify-center text-white font-bold text-sm">
+                      <div className="flex h-8 w-8 items-center justify-center rounded bg-[var(--brand)] text-sm font-bold text-[var(--brand-contrast)]">
                         {user.full_name?.[0]?.toUpperCase() || "U"}
                       </div>
                     )}
@@ -362,7 +361,7 @@ export default function Navbar({ user, activeProfile, onSwitchProfile }) {
                   </button>
 
                   {showUserMenu && (
-                    <div className="absolute right-0 top-12 w-56 bg-[#1a1a1a] border border-white/10 rounded shadow-2xl py-2 z-50">
+                    <div className={`absolute right-0 top-12 z-50 w-56 rounded border border-white/10 bg-[var(--panel-bg)] py-2 shadow-2xl ${isHulu ? "rounded-2xl" : ""}`}>
                       <div className="px-4 py-2 border-b border-white/10">
                         <p className="text-white text-sm font-medium truncate">{activeProfile?.name || user.full_name || "User"}</p>
                         <p className="text-gray-400 text-xs truncate">{user.email}</p>
@@ -420,6 +419,17 @@ export default function Navbar({ user, activeProfile, onSwitchProfile }) {
                       </Link>
 
                       <button
+                        onClick={() => {
+                          setShowUserMenu(false);
+                          handleThemeToggle();
+                        }}
+                        className="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-gray-300 transition-colors hover:bg-white/5 hover:text-white"
+                      >
+                        <span className="w-4 text-center text-xs font-semibold">{theme === "netflix" ? "H" : "N"}</span>
+                        Switch to {theme === "netflix" ? "Hulu" : "Netflix"} mode
+                      </button>
+
+                      <button
                         onClick={handleLogout}
                         className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:text-white hover:bg-white/5 transition-colors w-full"
                       >
@@ -436,17 +446,9 @@ export default function Navbar({ user, activeProfile, onSwitchProfile }) {
                   aria-label="Open profile menu"
                 >
                   {activeProfile ? (
-                    <div
-                      className="h-9 w-9 overflow-hidden rounded-sm ring-1 ring-white/20 transition-transform hover:scale-[1.03]"
-                      style={{ backgroundColor: activeProfile.avatar_color || AVATAR_COLORS[0] }}
-                    >
-                      <AvatarArt
-                        avatarIndex={activeProfile.avatar_index ?? 0}
-                        color={activeProfile.avatar_color || AVATAR_COLORS[0]}
-                      />
-                    </div>
+                    <ProfileAvatar profile={activeProfile} size={36} className="rounded-sm ring-1 ring-white/20 transition-transform hover:scale-[1.03]" />
                   ) : (
-                    <div className="flex h-9 w-9 items-center justify-center rounded-sm bg-[#E50914] text-sm font-bold text-white ring-1 ring-white/20">
+                    <div className="flex h-9 w-9 items-center justify-center rounded-sm bg-[var(--brand)] text-sm font-bold text-[var(--brand-contrast)] ring-1 ring-white/20">
                       {user.full_name?.[0]?.toUpperCase() || "U"}
                     </div>
                   )}
@@ -455,7 +457,7 @@ export default function Navbar({ user, activeProfile, onSwitchProfile }) {
             ) : (
               <button
                 onClick={() => base44.auth.redirectToLogin()}
-                className="bg-[#E50914] hover:bg-[#c40812] text-white text-sm font-medium px-4 py-1.5 rounded transition-colors"
+                className="rounded bg-[var(--brand)] px-4 py-1.5 text-sm font-medium text-[var(--brand-contrast)] transition-colors hover:bg-[var(--brand-strong)]"
               >
                 Sign In
               </button>
@@ -466,7 +468,7 @@ export default function Navbar({ user, activeProfile, onSwitchProfile }) {
 
       {user && (
         <>
-          <div className="fixed inset-x-0 bottom-0 z-40 border-t border-white/10 bg-[#090909]/95 backdrop-blur md:hidden">
+          <div className="fixed inset-x-0 bottom-0 z-40 border-t border-white/10 bg-[var(--nav-bg)]/95 backdrop-blur md:hidden">
             <div className="grid grid-cols-5 px-2 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-2">
               {mobileBottomLinks.map((link) => {
                 const Icon = link.icon;
@@ -497,14 +499,16 @@ export default function Navbar({ user, activeProfile, onSwitchProfile }) {
           </div>
 
           <Sheet open={showMobileMenu} onOpenChange={setShowMobileMenu}>
-            <SheetContent side="left" className="flex h-dvh w-[88vw] max-w-sm flex-col overflow-hidden border-white/10 bg-[#111111] p-0 text-white">
+            <SheetContent side="left" className="flex h-dvh w-[88vw] max-w-sm flex-col overflow-hidden border-white/10 bg-[var(--panel-bg)] p-0 text-white">
               <SheetHeader className="shrink-0 border-b border-white/10 px-5 py-5 text-left">
                 <div className="flex items-center justify-between gap-3">
-                  <SheetTitle className="text-white">Browse Subflix</SheetTitle>
+                  <SheetTitle className="text-white">
+                    <BrandWordmark asText showMode />
+                  </SheetTitle>
                   <button
                     type="button"
                     onClick={handleLogout}
-                    className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-[#E50914]/40 bg-[#E50914]/10 px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-[#E50914]/20"
+                    className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-white/[0.08]"
                   >
                     <LogOut className="h-4 w-4" />
                     Sign Out
@@ -512,17 +516,9 @@ export default function Navbar({ user, activeProfile, onSwitchProfile }) {
                 </div>
                 <div className="mt-3 flex items-center gap-3">
                   {activeProfile ? (
-                    <div
-                      className="h-11 w-11 shrink-0 overflow-hidden rounded"
-                      style={{ backgroundColor: activeProfile.avatar_color || AVATAR_COLORS[0] }}
-                    >
-                      <AvatarArt
-                        avatarIndex={activeProfile.avatar_index ?? 0}
-                        color={activeProfile.avatar_color || AVATAR_COLORS[0]}
-                      />
-                    </div>
+                    <ProfileAvatar profile={activeProfile} size={44} className="rounded" />
                   ) : (
-                    <div className="w-11 h-11 rounded bg-[#E50914] flex items-center justify-center text-white font-bold text-sm">
+                    <div className="flex h-11 w-11 items-center justify-center rounded bg-[var(--brand)] text-sm font-bold text-[var(--brand-contrast)]">
                       {user.full_name?.[0]?.toUpperCase() || "U"}
                     </div>
                   )}
@@ -588,6 +584,14 @@ export default function Navbar({ user, activeProfile, onSwitchProfile }) {
                     </button>
                   )}
 
+                  <button
+                    onClick={handleThemeToggle}
+                    className="flex min-h-12 w-full items-center gap-3 rounded-xl px-4 py-3 text-left text-sm text-gray-300 transition-colors hover:bg-white/5 hover:text-white"
+                  >
+                    <span className="w-4 text-center text-xs font-semibold">{theme === "netflix" ? "H" : "N"}</span>
+                    <span>Switch to {theme === "netflix" ? "Hulu" : "Netflix"} mode</span>
+                  </button>
+
                   {user?.is_admin && (
                     <Link
                       to="/admin"
@@ -611,7 +615,7 @@ export default function Navbar({ user, activeProfile, onSwitchProfile }) {
                         {notificationCopy.notification_center_title || "Notifications"}
                       </p>
                       {notificationsEnabled && unreadCount > 0 && (
-                        <span className="rounded-full bg-[#E50914] px-2 py-0.5 text-[10px] font-bold text-white">
+                        <span className="rounded-full bg-[var(--brand)] px-2 py-0.5 text-[10px] font-bold text-[var(--brand-contrast)]">
                           {Math.min(unreadCount, 9)} new
                         </span>
                       )}
@@ -639,7 +643,7 @@ export default function Navbar({ user, activeProfile, onSwitchProfile }) {
                             <p className="text-sm font-medium text-white">{item.title}</p>
                             <p className="mt-1 text-xs leading-relaxed text-gray-400">{item.body}</p>
                           </div>
-                          <span className="text-[10px] uppercase tracking-[0.2em] text-[#E50914]">
+                          <span className="text-[10px] uppercase tracking-[0.2em] text-[var(--brand)]">
                             {item.type}
                           </span>
                         </div>
@@ -654,11 +658,11 @@ export default function Navbar({ user, activeProfile, onSwitchProfile }) {
                   </div>
                 </div>
               </div>
-              <div className="shrink-0 border-t border-white/10 bg-[#111111] px-3 py-3">
+              <div className="shrink-0 border-t border-white/10 bg-[var(--panel-bg)] px-3 py-3">
                 <button
                   type="button"
                   onClick={handleLogout}
-                  className="flex min-h-12 w-full items-center justify-center gap-3 rounded-lg bg-[#E50914] px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-[#c40812]"
+                  className="flex min-h-12 w-full items-center justify-center gap-3 rounded-lg bg-[var(--brand)] px-4 py-3 text-sm font-semibold text-[var(--brand-contrast)] transition-colors hover:bg-[var(--brand-strong)]"
                 >
                   <LogOut className="h-4 w-4" />
                   <span>Sign Out</span>

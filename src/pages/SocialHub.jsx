@@ -5,6 +5,7 @@ import { tmdbW300 } from "@/lib/tmdb";
 import { filterItemsForProfile } from "@/lib/preferences";
 import { listGlobalSocialFeed, SOCIAL_CHANGED_EVENT } from "@/lib/social";
 import { buildWatchPath } from "@/lib/playback";
+import { useAppTheme } from "@/lib/theme";
 
 const getActorName = (entry) =>
   entry.actor_name || entry.profile_name || entry.created_by || "Subflix Member";
@@ -46,6 +47,8 @@ const formatDate = (value) => {
 
 export default function SocialHub() {
   const { activeProfile } = useOutletContext() || {};
+  const { themeDefinition } = useAppTheme();
+  const isHulu = themeDefinition.shellVariant === "hulu";
   const [feedItems, setFeedItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
@@ -91,11 +94,11 @@ export default function SocialHub() {
   }, [visibleFeed]);
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] px-4 pb-28 pt-24 text-white md:px-12 md:pb-12">
+    <div className="min-h-screen bg-[var(--app-bg)] px-4 pb-28 pt-24 text-white md:px-12 md:pb-12">
       <div className="mx-auto max-w-7xl">
         <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div>
-            <p className="mb-3 text-xs uppercase tracking-[0.28em] text-[#E50914]">Community</p>
+            <p className="mb-3 text-xs uppercase tracking-[0.28em] text-[var(--brand)]">Community</p>
             <h1 className="text-3xl font-black tracking-tight md:text-5xl">Social Hub</h1>
             <p className="mt-3 max-w-2xl text-sm leading-relaxed text-gray-400 md:text-base">
               Shared comments, ratings, watch starts, likes, and saves from the database.
@@ -120,7 +123,7 @@ export default function SocialHub() {
         {loading ? (
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             {Array(6).fill(0).map((_, index) => (
-              <div key={index} className="h-56 animate-pulse rounded-2xl bg-white/[0.04]" />
+              <div key={index} className={`animate-pulse rounded-2xl ${isHulu ? "h-64 bg-white/[0.05]" : "h-56 bg-white/[0.04]"}`} />
             ))}
           </div>
         ) : visibleFeed.length === 0 ? (
@@ -136,14 +139,14 @@ export default function SocialHub() {
             {visibleFeed.map((entry, index) => (
               <article
                 key={`${entry.feed_type || entry.activity_type}-${entry.id || entry.tmdb_id}-${entry.updated_at}-${index}`}
-                className="overflow-hidden rounded-2xl border border-white/10 bg-[#111111]"
+                className={`overflow-hidden rounded-2xl border border-white/10 ${isHulu ? "bg-[rgba(255,255,255,0.03)]" : "bg-[#111111]"}`}
               >
                 <button
                   type="button"
                   onClick={() => navigate(`/${entry.media_type}/${entry.tmdb_id}`)}
-                  className="group flex w-full gap-4 p-4 text-left"
+                  className={`group w-full gap-4 p-4 text-left ${isHulu ? "block" : "flex"}`}
                 >
-                  <div className="h-32 w-24 shrink-0 overflow-hidden rounded-lg bg-[#1a1a1a]">
+                  <div className={`${isHulu ? "mb-4 h-40 w-full" : "h-32 w-24 shrink-0"} overflow-hidden rounded-lg bg-[#1a1a1a]`}>
                     {entry.poster_path ? (
                       <img
                         src={tmdbW300(entry.poster_path)}
@@ -173,7 +176,7 @@ export default function SocialHub() {
                           className="h-7 w-7 shrink-0 rounded-md object-cover"
                         />
                       ) : (
-                        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-[#E50914] text-[11px] font-black text-white">
+                        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-[var(--brand)] text-[11px] font-black text-[var(--brand-contrast)]">
                           {String(getActorName(entry)).charAt(0).toUpperCase()}
                         </div>
                       )}
@@ -225,7 +228,7 @@ export default function SocialHub() {
 function MetricCard({ icon: Icon, label, value }) {
   return (
     <div className="rounded-2xl border border-white/10 bg-[#111111] px-4 py-4">
-      <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-lg bg-white/[0.04] text-[#E50914]">
+      <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-lg bg-white/[0.04] text-[var(--brand)]">
         <Icon className="h-5 w-5" />
       </div>
       <p className="text-2xl font-black text-white">{value}</p>

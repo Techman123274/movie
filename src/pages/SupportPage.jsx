@@ -10,6 +10,7 @@ import {
   ShieldCheck,
   Wrench,
 } from "lucide-react";
+import BrandWordmark from "@/components/layout/BrandWordmark";
 import { SUPPORT_PAGES } from "@/lib/support-pages";
 
 const PAGE_META = {
@@ -56,13 +57,11 @@ export default function SupportPage({ page, standalone = false }) {
   const Icon = meta.icon;
 
   return (
-    <div className={`min-h-screen bg-[#0a0a0a] text-white ${standalone ? "" : "pt-24"}`}>
+    <div className={`min-h-screen bg-[var(--app-bg)] text-white ${standalone ? "" : "pt-24"}`}>
       {standalone && (
         <div className="px-4 md:px-12 py-6 border-b border-white/10">
           <div className="max-w-6xl mx-auto flex items-center justify-between gap-4">
-            <Link to="/" className="text-[#E50914] font-black text-3xl tracking-tight select-none">
-              SUBFLIX
-            </Link>
+            <BrandWordmark className="text-3xl" />
             <Link to="/" className="text-sm text-gray-300 hover:text-white transition-colors">
               Back
             </Link>
@@ -74,7 +73,7 @@ export default function SupportPage({ page, standalone = false }) {
         <div className="max-w-6xl mx-auto">
           <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
             <div className="max-w-3xl">
-              <p className="text-xs uppercase tracking-[0.35em] text-[#E50914] mb-4">{meta.tag}</p>
+              <p className="mb-4 text-xs uppercase tracking-[0.35em] text-[var(--brand)]">{meta.tag}</p>
               <h1 className="text-4xl md:text-6xl font-black tracking-tight mb-4">{page.title}</h1>
               <p className="text-gray-300 text-base md:text-lg leading-relaxed">{page.intro}</p>
             </div>
@@ -185,8 +184,8 @@ export default function SupportPage({ page, standalone = false }) {
                     href="mailto:support@subflix.app?subject=Subflix%20Support"
                     className="rounded-2xl border border-white/10 bg-black/20 p-4 hover:border-white/25 transition-colors"
                   >
-                    <div className="flex items-center gap-3 mb-2">
-                      <Mail className="w-4 h-4 text-[#E50914]" />
+                    <div className="mb-2 flex items-center gap-3">
+                      <Mail className="h-4 w-4 text-[var(--brand)]" />
                       <p className="font-semibold">Email support</p>
                     </div>
                     <p className="text-gray-400 text-sm">support@subflix.app</p>
@@ -247,7 +246,7 @@ function DeviceCard({ title, subtitle, note }) {
   return (
     <section className="rounded-3xl border border-white/10 bg-[linear-gradient(180deg,#141414_0%,#0f0f0f_100%)] p-6">
       <div className="w-12 h-12 rounded-2xl border border-white/10 bg-white/5 flex items-center justify-center mb-4">
-        <MonitorSmartphone className="w-5 h-5 text-[#E50914]" />
+        <MonitorSmartphone className="w-5 h-5 text-[var(--brand)]" />
       </div>
       <h2 className="text-2xl font-bold mb-2">{title}</h2>
       <p className="text-gray-500 text-sm mb-4">{subtitle}</p>
@@ -260,7 +259,7 @@ function PolicyCard({ heading, body }) {
   return (
     <section className="rounded-3xl border border-white/10 bg-[linear-gradient(180deg,#141414_0%,#0f0f0f_100%)] p-6">
       <div className="w-11 h-11 rounded-2xl border border-white/10 bg-white/5 flex items-center justify-center mb-4">
-        <ShieldCheck className="w-5 h-5 text-[#E50914]" />
+        <ShieldCheck className="w-5 h-5 text-[var(--brand)]" />
       </div>
       <h2 className="text-xl font-bold mb-3">{heading}</h2>
       <p className="text-gray-300 leading-relaxed">{body}</p>

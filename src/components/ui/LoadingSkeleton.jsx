@@ -1,16 +1,45 @@
+import { useAppTheme } from "@/lib/theme";
+
 export function HeroSkeleton() {
+  const { themeDefinition } = useAppTheme();
+  const isHulu = themeDefinition.heroVariant === "hulu";
+
   return (
-    <div className="relative w-full h-screen bg-[#0a0a0a] animate-pulse">
-      <div className="absolute bottom-24 left-4 md:left-16 max-w-lg space-y-4">
-        <div className="h-12 w-96 bg-[#1a1a1a] rounded" />
-        <div className="h-4 w-full bg-[#1a1a1a] rounded" />
-        <div className="h-4 w-3/4 bg-[#1a1a1a] rounded" />
-        <div className="flex gap-3 mt-6">
-          <div className="h-10 w-24 bg-[#1a1a1a] rounded" />
-          <div className="h-10 w-32 bg-[#1a1a1a] rounded" />
+    isHulu ? (
+      <div className="px-4 pb-8 pt-24 md:px-12 md:pt-28">
+        <div className="mx-auto animate-pulse overflow-hidden rounded-[24px] border border-white/8 bg-[#101412]">
+          <div className="grid min-h-[520px] md:grid-cols-[minmax(0,1fr)_280px]">
+            <div className="flex flex-col justify-end p-6 md:p-10">
+              <div className="mb-4 h-3 w-28 rounded-full bg-white/10" />
+              <div className="mb-4 h-14 w-full max-w-xl rounded bg-white/10" />
+              <div className="mb-3 h-4 w-full max-w-2xl rounded bg-white/10" />
+              <div className="mb-3 h-4 w-3/4 max-w-xl rounded bg-white/10" />
+              <div className="mt-4 flex gap-3">
+                <div className="h-11 w-32 rounded-full bg-white/10" />
+                <div className="h-11 w-36 rounded-full bg-white/10" />
+              </div>
+            </div>
+            <div className="hidden flex-col gap-3 p-5 md:flex">
+              {Array.from({ length: 4 }).map((_, index) => (
+                <div key={index} className="h-24 rounded-2xl bg-white/10" />
+              ))}
+            </div>
+          </div>
         </div>
       </div>
-    </div>
+    ) : (
+      <div className="relative h-screen w-full animate-pulse bg-[#0a0a0a]">
+        <div className="absolute bottom-24 left-4 max-w-lg space-y-4 md:left-16">
+          <div className="h-12 w-96 rounded bg-[#1a1a1a]" />
+          <div className="h-4 w-full rounded bg-[#1a1a1a]" />
+          <div className="h-4 w-3/4 rounded bg-[#1a1a1a]" />
+          <div className="mt-6 flex gap-3">
+            <div className="h-10 w-24 rounded bg-[#1a1a1a]" />
+            <div className="h-10 w-32 rounded bg-[#1a1a1a]" />
+          </div>
+        </div>
+      </div>
+    )
   );
 }
 

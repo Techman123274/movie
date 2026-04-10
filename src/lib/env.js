@@ -45,6 +45,11 @@ export const supabaseJwtTemplate = readEnv(
   "NEXT_PUBLIC_CLERK_SUPABASE_JWT_TEMPLATE"
 ) || "supabase";
 
+export const profileAvatarStorageBucket = readEnv(
+  "VITE_SUPABASE_PROFILE_AVATAR_BUCKET",
+  "NEXT_PUBLIC_SUPABASE_PROFILE_AVATAR_BUCKET"
+) || "profile-avatars";
+
 export const adminEmails = [...new Set([
   ...DEFAULT_ADMIN_EMAILS,
   ...readCsvEnv(

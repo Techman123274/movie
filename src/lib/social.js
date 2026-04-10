@@ -158,7 +158,7 @@ export const saveRating = async ({ user, profile, item, mediaType, ratingValue, 
     ...titlePayload,
     actor_email: normalizeEmail(user.email),
     actor_name: user.full_name || user.email || "Subflix Member",
-    actor_avatar_url: user.image_url || null,
+    actor_avatar_url: getActorAvatarUrl({ user, profile }),
     rating_value: numericRating,
     review_text: reviewText || "",
   };
@@ -171,7 +171,7 @@ export const saveRating = async ({ user, profile, item, mediaType, ratingValue, 
     ...titlePayload,
     activity_type: "rated",
     rating_value: numericRating,
-    actor_avatar_url: user.image_url || null,
+    actor_avatar_url: getActorAvatarUrl({ user, profile }),
     activity_message: `${user.full_name || user.email || "A friend"} rated this ${numericRating}/5`,
   }).catch(() => null);
 
@@ -197,14 +197,14 @@ export const saveComment = async ({ user, profile, item, mediaType, commentText 
     ...titlePayload,
     actor_email: normalizeEmail(user.email),
     actor_name: user.full_name || user.email || "Subflix Member",
-    actor_avatar_url: user.image_url || null,
+    actor_avatar_url: getActorAvatarUrl({ user, profile }),
     comment_text: text,
   });
 
   await base44.social.logActivity({
     ...titlePayload,
     activity_type: "commented",
-    actor_avatar_url: user.image_url || null,
+    actor_avatar_url: getActorAvatarUrl({ user, profile }),
     activity_message: `${user.full_name || user.email || "A friend"} commented on this`,
     metadata: {
       comment_id: entry?.id || null,
@@ -304,7 +304,7 @@ export const logSocialActivity = async ({ user, profile, item, mediaType, activi
     ...titlePayload,
     activity_type: activityType,
     rating_value: ratingValue,
-    actor_avatar_url: user.image_url || null,
+    actor_avatar_url: getActorAvatarUrl({ user, profile }),
     activity_message: message || null,
   }).catch(() => null);
 
@@ -397,3 +397,6 @@ export const getTitleSocialSummary = async ({ tmdbId, mediaType, limit = 40 } = 
     commentCount: comments.length,
   };
 };
+
+const getActorAvatarUrl = ({ user, profile }) =>
+  profile?.avatar_asset_url || profile?.avatar_url || user?.image_url || null;

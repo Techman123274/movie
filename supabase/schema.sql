@@ -166,9 +166,36 @@ create table if not exists public.comments (
   updated_at timestamptz not null default timezone('utc', now())
 );
 
+create table if not exists public.user_preferences (
+  user_id text primary key default public.requesting_user_id(),
+  app_theme text not null default 'netflix' check (app_theme in ('netflix', 'hulu')),
+  created_at timestamptz not null default timezone('utc', now()),
+  updated_at timestamptz not null default timezone('utc', now())
+);
+
+create table if not exists public.profile_avatar_assets (
+  id uuid primary key default gen_random_uuid(),
+  user_id text,
+  asset_kind text not null check (asset_kind in ('builtin', 'upload')),
+  storage_path text not null,
+  public_url text not null,
+  label text,
+  legacy_avatar_index integer,
+  is_active boolean not null default true,
+  created_at timestamptz not null default timezone('utc', now()),
+  updated_at timestamptz not null default timezone('utc', now())
+);
+
 alter table public.profiles
   add column if not exists is_kids boolean not null default false,
-  add column if not exists maturity_rating text not null default 'all';
+  add column if not exists maturity_rating text not null default 'all',
+  add column if not exists avatar_asset_id uuid references public.profile_avatar_assets(id) on delete set null,
+  add column if not exists avatar_asset_url text,
+  add column if not exists avatar_asset_label text;
+
+alter table public.profile_avatar_assets
+  add column if not exists legacy_avatar_index integer,
+  add column if not exists is_active boolean not null default true;
 
 alter table public.watch_history
   add column if not exists genre_ids jsonb default '[]'::jsonb,
@@ -243,8 +270,12 @@ create table if not exists public.admin_site_settings (
 create index if not exists ratings_title_lookup_idx on public.ratings (tmdb_id, media_type, updated_at desc);
 create index if not exists comments_title_lookup_idx on public.comments (tmdb_id, media_type, updated_at desc);
 create index if not exists social_activity_title_lookup_idx on public.social_activity (tmdb_id, media_type, updated_at desc);
+create index if not exists profile_avatar_assets_user_lookup_idx on public.profile_avatar_assets (user_id, asset_kind, is_active);
+create unique index if not exists profile_avatar_assets_storage_path_idx on public.profile_avatar_assets (storage_path);
 
 alter table public.profiles enable row level security;
+alter table public.user_preferences enable row level security;
+alter table public.profile_avatar_assets enable row level security;
 alter table public.watchlist enable row level security;
 alter table public.watch_history enable row level security;
 alter table public.ratings enable row level security;
@@ -285,6 +316,81 @@ create policy "profiles_delete_own"
 on public.profiles
 for delete
 using (user_id = public.requesting_user_id());
+
+drop policy if exists "user_preferences_select_own" on public.user_preferences;
+create policy "user_preferences_select_own"
+on public.user_preferences
+for select
+using (user_id = public.requesting_user_id());
+
+drop policy if exists "user_preferences_insert_own" on public.user_preferences;
+create policy "user_preferences_insert_own"
+on public.user_preferences
+for insert
+with check (user_id = public.requesting_user_id());
+
+drop policy if exists "user_preferences_update_own" on public.user_preferences;
+create policy "user_preferences_update_own"
+on public.user_preferences
+for update
+using (user_id = public.requesting_user_id())
+with check (user_id = public.requesting_user_id());
+
+drop policy if exists "profile_avatar_assets_select_active" on public.profile_avatar_assets;
+create policy "profile_avatar_assets_select_active"
+on public.profile_avatar_assets
+for select
+using (
+  is_active = true
+  and (
+    user_id is null
+    or user_id = public.requesting_user_id()
+    or public.requesting_user_id() is not null
+  )
+);
+
+drop policy if exists "profile_avatar_assets_insert_own" on public.profile_avatar_assets;
+create policy "profile_avatar_assets_insert_own"
+on public.profile_avatar_assets
+for insert
+with check (
+  (
+    user_id = public.requesting_user_id()
+    and asset_kind = 'upload'
+  )
+  or public.is_subflix_admin()
+);
+
+drop policy if exists "profile_avatar_assets_update_own" on public.profile_avatar_assets;
+create policy "profile_avatar_assets_update_own"
+on public.profile_avatar_assets
+for update
+using (
+  (
+    user_id = public.requesting_user_id()
+    and asset_kind = 'upload'
+  )
+  or public.is_subflix_admin()
+)
+with check (
+  (
+    user_id = public.requesting_user_id()
+    and asset_kind = 'upload'
+  )
+  or public.is_subflix_admin()
+);
+
+drop policy if exists "profile_avatar_assets_delete_own" on public.profile_avatar_assets;
+create policy "profile_avatar_assets_delete_own"
+on public.profile_avatar_assets
+for delete
+using (
+  (
+    user_id = public.requesting_user_id()
+    and asset_kind = 'upload'
+  )
+  or public.is_subflix_admin()
+);
 
 drop policy if exists "watchlist_select_own" on public.watchlist;
 create policy "watchlist_select_own"
@@ -588,3 +694,59 @@ create policy "admin_site_settings_delete_admin"
 on public.admin_site_settings
 for delete
 using (public.is_subflix_admin());
+
+insert into storage.buckets (id, name, public)
+values ('profile-avatars', 'profile-avatars', true)
+on conflict (id) do update set public = excluded.public;
+
+drop policy if exists "profile_avatars_public_read" on storage.objects;
+create policy "profile_avatars_public_read"
+on storage.objects
+for select
+using (bucket_id = 'profile-avatars');
+
+drop policy if exists "profile_avatars_insert_own" on storage.objects;
+create policy "profile_avatars_insert_own"
+on storage.objects
+for insert
+with check (
+  bucket_id = 'profile-avatars'
+  and (
+    public.is_subflix_admin()
+    or name like 'users/' || public.requesting_user_id() || '/%'
+    or name like 'system/%'
+  )
+);
+
+drop policy if exists "profile_avatars_update_own" on storage.objects;
+create policy "profile_avatars_update_own"
+on storage.objects
+for update
+using (
+  bucket_id = 'profile-avatars'
+  and (
+    public.is_subflix_admin()
+    or name like 'users/' || public.requesting_user_id() || '/%'
+    or name like 'system/%'
+  )
+)
+with check (
+  bucket_id = 'profile-avatars'
+  and (
+    public.is_subflix_admin()
+    or name like 'users/' || public.requesting_user_id() || '/%'
+    or name like 'system/%'
+  )
+);
+
+drop policy if exists "profile_avatars_delete_own" on storage.objects;
+create policy "profile_avatars_delete_own"
+on storage.objects
+for delete
+using (
+  bucket_id = 'profile-avatars'
+  and (
+    public.is_subflix_admin()
+    or name like 'users/' || public.requesting_user_id() || '/%'
+  )
+);

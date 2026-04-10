@@ -19,6 +19,7 @@ import {
   getProgressPercent,
 } from "@/lib/playback";
 import { logSocialActivity } from "@/lib/social";
+import { useAppTheme } from "@/lib/theme";
 
 const SAVE_INTERVAL_MS = 15000;
 const PLAYER_LOAD_TIMEOUT_MS = 10000;
@@ -27,6 +28,8 @@ const AUTO_NEXT_COUNTDOWN_SECONDS = 12;
 
 export default function Player() {
   const { type, id } = useParams();
+  const { themeDefinition } = useAppTheme();
+  const isHulu = themeDefinition.playerVariant === "hulu";
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const activeProfile = readActiveProfile();
@@ -531,12 +534,12 @@ export default function Player() {
   }
 
   return (
-    <div className="fixed inset-0 bg-black flex flex-col" style={{ zIndex: 100 }}>
-      <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-b from-black/80 to-transparent absolute top-0 left-0 right-0 z-20">
+    <div className={`fixed inset-0 flex flex-col bg-[var(--app-bg)] ${isHulu ? "text-white" : ""}`} style={{ zIndex: 100 }}>
+      <div className={`absolute left-0 right-0 top-0 z-20 flex items-center justify-between px-4 ${isHulu ? "border-b border-white/8 bg-[rgba(7,12,9,0.88)] py-2.5 backdrop-blur" : "bg-gradient-to-b from-black/80 to-transparent py-3"}`}>
         <div className="flex items-center gap-3">
           <button
             onClick={() => navigate(-1)}
-            className="text-white hover:text-gray-300 transition-colors"
+            className={`transition-colors ${isHulu ? "rounded-full border border-white/10 bg-white/[0.04] p-2 text-white hover:bg-white/[0.08]" : "text-white hover:text-gray-300"}`}
           >
             <ArrowLeft className="w-6 h-6" />
           </button>
@@ -560,7 +563,7 @@ export default function Player() {
           {showingResume && (
             <button
               onClick={handleStartOver}
-              className="flex items-center gap-1.5 text-white hover:text-gray-300 text-sm transition-colors"
+              className={`flex items-center gap-1.5 text-sm transition-colors ${isHulu ? "rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-white hover:bg-white/[0.08]" : "text-white hover:text-gray-300"}`}
             >
               <RotateCcw className="w-4 h-4" /> Start Over
             </button>
@@ -568,7 +571,7 @@ export default function Player() {
           {sourceCandidates.length > 1 && (
             <button
               onClick={handleSwitchSource}
-              className="flex items-center gap-1.5 text-white hover:text-gray-300 text-sm transition-colors"
+              className={`flex items-center gap-1.5 text-sm transition-colors ${isHulu ? "rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-white hover:bg-white/[0.08]" : "text-white hover:text-gray-300"}`}
             >
               <Layers3 className="w-4 h-4" />
               {embedSource?.label || "Source"}
@@ -578,13 +581,13 @@ export default function Player() {
             <>
               <button
                 onClick={goNextEpisode}
-                className="flex items-center gap-1.5 text-white hover:text-gray-300 text-sm transition-colors"
+                className={`flex items-center gap-1.5 text-sm transition-colors ${isHulu ? "rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-white hover:bg-white/[0.08]" : "text-white hover:text-gray-300"}`}
               >
                 <SkipForward className="w-5 h-5" /> Next
               </button>
               <button
                 onClick={() => setShowEpisodeList(!showEpisodeList)}
-                className="text-white hover:text-gray-300 transition-colors"
+                className={`transition-colors ${isHulu ? "rounded-full border border-white/10 bg-white/[0.04] p-2 text-white hover:bg-white/[0.08]" : "text-white hover:text-gray-300"}`}
               >
                 <List className="w-5 h-5" />
               </button>
@@ -595,7 +598,7 @@ export default function Player() {
 
       {loading ? (
         <div className="flex-1 flex items-center justify-center">
-          <div className="w-12 h-12 border-4 border-[#E50914] border-t-transparent rounded-full animate-spin" />
+          <div className="h-12 w-12 animate-spin rounded-full border-4 border-[var(--brand)] border-t-transparent" />
         </div>
       ) : embedSource?.url ? (
         <>
@@ -627,8 +630,8 @@ export default function Player() {
           )}
 
           {showAutoNext && nextEpisodeTarget && !autoNextDismissed && (
-            <div className="absolute bottom-8 right-6 z-30 w-full max-w-sm rounded-3xl border border-white/10 bg-black/85 p-5 shadow-[0_20px_80px_rgba(0,0,0,0.5)] backdrop-blur-md">
-              <p className="text-xs uppercase tracking-[0.25em] text-[#E50914]">Up Next</p>
+            <div className={`absolute bottom-8 right-6 z-30 w-full max-w-sm border border-white/10 p-5 shadow-[0_20px_80px_rgba(0,0,0,0.5)] backdrop-blur-md ${isHulu ? "rounded-[24px] bg-[rgba(10,19,14,0.9)]" : "rounded-3xl bg-black/85"}`}>
+              <p className="text-xs uppercase tracking-[0.25em] text-[var(--brand)]">Up Next</p>
               <h3 className="mt-3 text-xl font-bold text-white">
                 Starting next episode in {autoNextCountdown}s
               </h3>
@@ -662,7 +665,7 @@ export default function Player() {
             <p className="text-gray-400 text-sm mb-6">This title cannot be played at this time.</p>
             <button
               onClick={() => navigate(-1)}
-              className="bg-[#E50914] text-white px-6 py-2 rounded font-semibold hover:bg-[#c40812] transition-colors"
+              className="rounded bg-[var(--brand)] px-6 py-2 font-semibold text-[var(--brand-contrast)] transition-colors hover:bg-[var(--brand-strong)]"
             >
               Go Back
             </button>
@@ -671,7 +674,7 @@ export default function Player() {
       )}
 
       {showEpisodeList && type === "tv" && (
-        <div className="absolute right-0 top-0 bottom-0 w-80 bg-black/95 border-l border-white/10 z-30 flex flex-col">
+        <div className={`absolute bottom-0 right-0 top-0 z-30 flex w-80 flex-col border-l border-white/10 ${isHulu ? "bg-[rgba(8,14,11,0.96)]" : "bg-black/95"}`}>
           <div className="flex items-center justify-between px-4 py-4 border-b border-white/10">
             <h3 className="text-white font-semibold">Episodes</h3>
             <button
@@ -689,7 +692,7 @@ export default function Player() {
                 onChange={(event) => {
                   goToEpisode(Number(event.target.value), 1);
                 }}
-                className="bg-[#1a1a1a] text-white border border-gray-600 rounded px-3 py-1.5 text-sm w-full"
+                className={`w-full rounded px-3 py-1.5 text-sm text-white ${isHulu ? "border border-white/10 bg-[#101713]" : "border border-gray-600 bg-[#1a1a1a]"}`}
               >
                 {content.seasons.filter((item) => item.season_number > 0).map((item) => (
                   <option key={item.id} value={item.season_number}>
@@ -705,10 +708,10 @@ export default function Player() {
               <div
                 key={item.id}
                 onClick={() => goToEpisode(season, item.episode_number)}
-                className={`flex gap-3 p-3 cursor-pointer transition-colors border-b border-white/5 ${
+                className={`flex cursor-pointer gap-3 border-b border-white/5 p-3 transition-colors ${
                   item.episode_number === episode
-                    ? "bg-[#E50914]/20 border-l-2 border-l-[#E50914]"
-                    : "hover:bg-white/5"
+                    ? "border-l-2 border-l-[var(--brand)] bg-white/10"
+                    : isHulu ? "hover:bg-white/[0.04]" : "hover:bg-white/5"
                 }`}
               >
                 <span className="text-gray-500 text-sm w-6 text-center pt-0.5 flex-shrink-0 font-mono">
@@ -717,7 +720,7 @@ export default function Player() {
                 <div className="flex-1 min-w-0">
                   <p
                     className={`text-sm font-medium line-clamp-1 ${
-                      item.episode_number === episode ? "text-[#E50914]" : "text-white"
+                      item.episode_number === episode ? "text-[var(--brand)]" : "text-white"
                     }`}
                   >
                     {item.name}

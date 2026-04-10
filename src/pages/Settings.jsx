@@ -19,6 +19,9 @@ import { base44 } from "@/api/base44Client";
 import { hasTmdbCredentials, tmdbApiKey, tmdbReadAccessToken } from "@/lib/env";
 import { getProfileBadge, readPreference, removePreference, writePreference } from "@/lib/preferences";
 import { addFriend, listFriends, removeFriend, SOCIAL_CHANGED_EVENT } from "@/lib/social";
+import BrandWordmark from "@/components/layout/BrandWordmark";
+import ProfileAvatar from "@/components/profile/ProfileAvatar";
+import { useAppTheme } from "@/lib/theme";
 
 const sections = [
   { id: "account", label: "Account", icon: UserCircle2 },
@@ -31,6 +34,7 @@ const sections = [
 
 export default function SettingsPage() {
   const { user, activeProfile, onSwitchProfile, isAdmin } = useOutletContext() || {};
+  const { theme, themes, setTheme, saving: savingTheme } = useAppTheme();
   const [activeSection, setActiveSection] = useState("account");
   const [apiKey, setApiKey] = useState("");
   const [saved, setSaved] = useState(false);
@@ -163,10 +167,12 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] px-4 pb-28 pt-20 md:px-12 md:pb-14 md:pt-24">
+    <div className="min-h-screen bg-[var(--app-bg)] px-4 pb-28 pt-20 md:px-12 md:pb-14 md:pt-24">
       <div className="max-w-7xl mx-auto">
         <div className="mb-5 md:mb-8">
-          <p className="mb-3 text-xs uppercase tracking-[0.28em] text-[#E50914] md:tracking-[0.35em]">Subflix</p>
+          <div className="mb-3">
+            <BrandWordmark className="text-2xl md:text-3xl" showMode />
+          </div>
           <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
             <div className="min-w-0">
               <h1 className="text-3xl font-black tracking-tight text-white md:text-5xl">Settings</h1>
@@ -174,10 +180,15 @@ export default function SettingsPage() {
                 Manage your account, profile behavior, and playback preferences in one place.
               </p>
             </div>
-            <div className="mt-3 w-full rounded-2xl border border-white/10 bg-[#111111] px-4 py-4 md:mt-0 md:min-w-[260px] md:px-5">
+            <div className="mt-3 w-full rounded-2xl border border-white/10 bg-[var(--panel-bg)] px-4 py-4 md:mt-0 md:min-w-[260px] md:px-5">
               <p className="mb-1 text-xs uppercase tracking-[0.22em] text-gray-500">Active Profile</p>
-              <p className="truncate text-lg font-semibold text-white">{profileName}</p>
-              <p className="truncate text-sm text-gray-400">{user?.email || "Signed in"}</p>
+              <div className="mt-3 flex items-center gap-3">
+                <ProfileAvatar profile={activeProfile} size={44} fallbackText={profileName} className="rounded-lg" />
+                <div className="min-w-0">
+                  <p className="truncate text-lg font-semibold text-white">{profileName}</p>
+                  <p className="truncate text-sm text-gray-400">{user?.email || "Signed in"}</p>
+                </div>
+              </div>
               <button
                 type="button"
                 onClick={handleLogout}
@@ -230,10 +241,37 @@ export default function SettingsPage() {
                 <SettingsCard
                   eyebrow="Experience"
                   title="Profile behavior"
-                  description="Personalize how Subflix feels when you open it."
+                  description="Personalize how the app looks and how this profile behaves when you open it."
                   icon={UserCircle2}
                 >
                   <SettingsRow label="Profile type" value={profileType} muted={`Allowed content: ${profileMaturity}`} />
+                  <div className="rounded-xl border border-white/10 bg-black/20 px-4 py-4">
+                    <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-white">App theme</p>
+                        <p className="mt-1 text-xs text-gray-500">
+                          This saves to your account and follows you across devices.
+                        </p>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        {themes.map((option) => (
+                          <button
+                            key={option.id}
+                            type="button"
+                            onClick={() => setTheme(option.id)}
+                            disabled={savingTheme}
+                            className={`rounded-lg border px-4 py-2.5 text-sm font-semibold transition-colors ${
+                              theme === option.id
+                                ? "border-[var(--brand)] bg-[var(--brand)] text-[var(--brand-contrast)]"
+                                : "border-white/10 bg-white/[0.03] text-white hover:bg-white/[0.06]"
+                            }`}
+                          >
+                            {option.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
                   <ToggleRow
                     label="Autoplay previews"
                     description="Start teaser motion on featured titles while browsing."
@@ -301,8 +339,8 @@ export default function SettingsPage() {
                 />
                 <SettingsRow
                   label="Theme"
-                  value="Netflix-inspired dark"
-                  muted="Optimized for cinematic browsing"
+                  value={theme === "hulu" ? "Hulu mode" : "Netflix mode"}
+                  muted="This preference follows your account"
                 />
               </SettingsCard>
             )}
@@ -516,10 +554,10 @@ export default function SettingsPage() {
 
 function SettingsCard({ eyebrow, title, description, icon: Icon, children }) {
   return (
-    <section className="rounded-2xl border border-white/10 bg-[linear-gradient(180deg,#141414_0%,#0f0f0f_100%)] p-4 md:rounded-3xl md:p-8">
+    <section className="rounded-2xl border border-white/10 bg-[var(--card-bg)] p-4 md:rounded-3xl md:p-8">
       <div className="mb-5 flex items-start gap-3 md:mb-6 md:gap-4">
         <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-white/5 md:h-12 md:w-12">
-          <Icon className="w-5 h-5 text-[#E50914]" />
+          <Icon className="h-5 w-5 text-[var(--brand)]" />
         </div>
         <div className="min-w-0">
           <p className="mb-2 text-xs uppercase tracking-[0.22em] text-gray-500 md:tracking-[0.3em]">{eyebrow}</p>
@@ -556,7 +594,7 @@ function ToggleRow({ label, description, checked, onChange }) {
         onClick={() => onChange(!checked)}
         aria-pressed={checked}
         className={`inline-flex h-8 w-14 items-center rounded-full px-1 transition-colors shrink-0 ${
-          checked ? "bg-[#E50914] justify-end" : "bg-white/10 justify-start"
+          checked ? "justify-end bg-[var(--brand)]" : "justify-start bg-white/10"
         }`}
       >
         <span className="h-6 w-6 rounded-full bg-white shadow-sm" />

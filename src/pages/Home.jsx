@@ -36,6 +36,7 @@ import {
 import { LIBRARY_CHANGED_EVENT, readLikedItems } from "@/lib/library";
 import { attachPlaybackProgress, buildContinueWatchingItems } from "@/lib/playback";
 import { listFriendActivityItems, SOCIAL_CHANGED_EVENT } from "@/lib/social";
+import { useAppTheme } from "@/lib/theme";
 
 const KIDS_MOVIE_ROWS = [
   { id: 16, title: "Animated Favorites" },
@@ -68,6 +69,8 @@ const buildShelf = (...groups) => dedupeItems(groups.flat().filter(Boolean));
 
 export default function Home() {
   const { user, activeProfile } = useOutletContext() || {};
+  const { themeDefinition } = useAppTheme();
+  const isHulu = themeDefinition.shellVariant === "hulu";
   const [heroItems, setHeroItems] = useState([]);
   const [rows, setRows] = useState([]);
   const [continueWatching, setContinueWatching] = useState([]);
@@ -511,8 +514,8 @@ export default function Home() {
 
   if (!hasApiKey) {
     return (
-      <div className="min-h-screen bg-[#0a0a0a] flex flex-col items-center justify-center text-center px-4">
-        <span className="text-[#E50914] font-black text-4xl tracking-tight mb-6">SUBFLIX</span>
+      <div className="min-h-screen bg-[var(--app-bg)] flex flex-col items-center justify-center px-4 text-center">
+        <span className="mb-6 text-4xl font-black tracking-tight text-[var(--brand)]">SUBFLIX</span>
         <h2 className="text-white text-2xl font-bold mb-3">Welcome to Subflix</h2>
         <p className="text-gray-400 mb-8 max-w-md">Open Settings to connect TMDB and start browsing movies and TV shows.</p>
         <NoApiKeyBanner />
@@ -522,7 +525,7 @@ export default function Home() {
 
   if (loading) {
     return (
-      <div className="bg-[#0a0a0a]">
+      <div className="bg-[var(--app-bg)]">
         <HeroSkeleton />
         <div className="mt-4 space-y-2">
           {Array(4).fill(0).map((_, i) => <RowSkeleton key={i} />)}
@@ -532,11 +535,11 @@ export default function Home() {
   }
 
   return (
-    <div className="bg-[#0a0a0a]">
+    <div className="bg-[var(--app-bg)]">
       {!hasApiKey && <NoApiKeyBanner />}
       <HeroBanner items={heroItemsWithProgress} />
 
-      <div className="relative z-10 pb-8">
+      <div className={`relative z-10 pb-8 ${isHulu ? "-mt-1" : ""}`}>
         {user && continueWatching.length > 0 && (
           <ContentRow title="Continue Watching" items={continueWatching} />
         )}

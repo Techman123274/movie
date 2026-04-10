@@ -22,8 +22,10 @@ import {
 } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
+import BrandWordmark from "@/components/layout/BrandWordmark";
 import { getDefaultSiteSettings } from "@/lib/admin-config";
 import { searchMulti, tmdbW185 } from "@/lib/tmdb";
+import { useAppTheme } from "@/lib/theme";
 
 const sections = [
   { id: "overview", label: "Overview", icon: LayoutDashboard },
@@ -112,6 +114,7 @@ const formatDate = (value) => {
 
 export default function AdminPage() {
   const { user, isAdmin, logout } = useAuth();
+  const { theme } = useAppTheme();
   const [activeSection, setActiveSection] = useState("overview");
   const [dashboard, setDashboard] = useState({
     metrics: {
@@ -453,12 +456,12 @@ export default function AdminPage() {
 
   if (!isAdmin) {
     return (
-      <div className="min-h-screen bg-[#060606] px-6 py-20 text-white">
-        <div className="mx-auto max-w-3xl rounded-[2rem] border border-white/10 bg-[radial-gradient(circle_at_top,#1b0a0e_0%,#111111_38%,#090909_100%)] p-8 md:p-12">
-          <div className="mb-6 inline-flex h-14 w-14 items-center justify-center rounded-2xl border border-[#E50914]/30 bg-[#E50914]/10">
-            <ShieldAlert className="h-7 w-7 text-[#E50914]" />
+      <div className="min-h-screen bg-[var(--app-bg)] px-6 py-20 text-white">
+        <div className="mx-auto max-w-3xl rounded-[2rem] border border-white/10 bg-[var(--card-bg)] p-8 md:p-12">
+          <div className="mb-6 inline-flex h-14 w-14 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04]">
+            <ShieldAlert className="h-7 w-7 text-[var(--brand)]" />
           </div>
-          <p className="text-sm uppercase tracking-[0.3em] text-[#E50914]">Restricted Area</p>
+          <p className="text-sm uppercase tracking-[0.3em] text-[var(--brand)]">Restricted Area</p>
           <h1 className="mt-4 text-4xl font-black tracking-tight">This admin panel is only available to allowlisted Subflix operators.</h1>
           <p className="mt-4 max-w-2xl text-base text-white/70">
             Sign in with an allowlisted admin email, or head back to the member experience.
@@ -480,14 +483,14 @@ export default function AdminPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#050505] text-white">
-      <div className="border-b border-white/10 bg-[radial-gradient(circle_at_top,#260b12_0%,#111111_38%,#050505_100%)]">
+    <div className="min-h-screen bg-[var(--app-bg)] text-white">
+      <div className="border-b border-white/10 bg-[var(--card-bg)]">
         <div className="mx-auto flex max-w-7xl flex-col gap-6 px-6 py-8 md:flex-row md:items-end md:justify-between md:px-10">
           <div>
-            <p className="text-sm uppercase tracking-[0.32em] text-[#E50914]">Subflix Admin</p>
+            <BrandWordmark className="text-3xl md:text-4xl" showMode />
             <h1 className="mt-3 text-4xl font-black tracking-tight md:text-5xl">Advanced Control Room</h1>
             <p className="mt-3 max-w-2xl text-white/65">
-              Curate the homepage, schedule announcements, monitor activity, and tune site-wide behavior from one Netflix-style back office.
+              Curate the homepage, schedule announcements, monitor activity, and tune site-wide behavior from one {theme === "hulu" ? "Hulu-inspired" : "cinematic"} back office.
             </p>
           </div>
           <div className="flex flex-wrap gap-3">
@@ -507,7 +510,7 @@ export default function AdminPage() {
             </Link>
             <button
               onClick={() => logout()}
-              className="inline-flex items-center gap-2 rounded-full bg-[#E50914] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#c40812]"
+              className="inline-flex items-center gap-2 rounded-full bg-[var(--brand)] px-4 py-2.5 text-sm font-semibold text-[var(--brand-contrast)] hover:bg-[var(--brand-strong)]"
             >
               <LogOut className="h-4 w-4" />
               Sign Out
@@ -517,7 +520,7 @@ export default function AdminPage() {
       </div>
 
       <div className="mx-auto grid max-w-7xl gap-6 px-6 py-8 md:px-10 lg:grid-cols-[260px_minmax(0,1fr)]">
-        <aside className="h-fit rounded-[2rem] border border-white/10 bg-[#0f0f10] p-3 lg:sticky lg:top-6">
+        <aside className="h-fit rounded-[2rem] border border-white/10 bg-[var(--panel-bg)] p-3 lg:sticky lg:top-6">
           <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-4">
             <p className="text-xs uppercase tracking-[0.26em] text-white/35">Operator</p>
             <p className="mt-2 text-lg font-semibold">{user?.full_name || user?.email || "Admin"}</p>
