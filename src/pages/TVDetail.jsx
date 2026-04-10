@@ -263,23 +263,23 @@ export default function TVDetail() {
               ))}
             </div>
 
-            <div className="flex items-center gap-3 mb-6">
+            <div className="mb-6 flex flex-col items-stretch gap-3 sm:flex-row sm:flex-wrap sm:items-center">
               <button
                 onClick={() => navigate(playPath)}
-                className="flex items-center gap-2 bg-white text-black font-bold px-8 py-3 rounded hover:bg-gray-200 transition-colors text-sm"
+                className="flex min-h-11 items-center justify-center gap-2 rounded bg-white px-8 py-3 text-sm font-bold text-black transition-colors hover:bg-gray-200"
               >
                 <Play className="w-5 h-5 fill-black" /> {playLabel}
               </button>
               <button
                 onClick={handleWatchlist}
-                className="flex items-center gap-2 bg-gray-600/80 text-white font-semibold px-6 py-3 rounded hover:bg-gray-500/80 transition-colors text-sm"
+                className="flex min-h-11 items-center justify-center gap-2 rounded bg-gray-600/80 px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-gray-500/80"
               >
                 {inList ? <Check className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
                 {inList ? "In My List" : "My List"}
               </button>
               <button
                 onClick={handleLike}
-                className={`flex items-center gap-2 border px-6 py-3 rounded transition-colors text-sm ${
+                className={`flex min-h-11 items-center justify-center gap-2 rounded border px-6 py-3 text-sm transition-colors ${
                   liked
                     ? "border-[#E50914] bg-[#E50914]/15 text-white hover:bg-[#E50914]/25"
                     : "border-gray-500 text-white hover:border-white"
@@ -289,7 +289,7 @@ export default function TVDetail() {
                 {liked ? "Liked" : "Rate Up"}
               </button>
               {trailerUrl && (
-                <button onClick={() => setShowTrailer(true)} className="border border-gray-500 text-white font-semibold px-6 py-3 rounded hover:border-white transition-colors text-sm">
+                <button onClick={() => setShowTrailer(true)} className="min-h-11 rounded border border-gray-500 px-6 py-3 text-sm font-semibold text-white transition-colors hover:border-white">
                   Trailer
                 </button>
               )}
@@ -331,13 +331,13 @@ export default function TVDetail() {
             {/* Season Selector */}
             {show.seasons && show.seasons.length > 0 && (
               <div className="mb-6">
-                <div className="flex items-center justify-between mb-4">
+                <div className="mb-4 flex items-center justify-between gap-3">
                   <h2 className="text-white font-semibold text-xl">Episodes</h2>
                   <div className="relative">
                     <select
                       value={selectedSeason}
                       onChange={(e) => setSelectedSeason(Number(e.target.value))}
-                      className="bg-[#1a1a1a] text-white border border-gray-600 rounded px-3 py-1.5 text-sm appearance-none pr-8 cursor-pointer"
+                      className="min-h-11 cursor-pointer appearance-none rounded border border-gray-600 bg-[#1a1a1a] px-3 py-2 pr-8 text-sm text-white"
                     >
                       {show.seasons
                         .filter((s) => s.season_number > 0)
@@ -347,7 +347,7 @@ export default function TVDetail() {
                           </option>
                         ))}
                     </select>
-                    <ChevronDown className="absolute right-2 top-2 w-4 h-4 text-gray-400 pointer-events-none" />
+                    <ChevronDown className="pointer-events-none absolute right-2 top-3.5 h-4 w-4 text-gray-400" />
                   </div>
                 </div>
 
@@ -358,12 +358,12 @@ export default function TVDetail() {
                       <div
                         key={ep.id}
                         onClick={() => navigate(`/watch/tv/${id}?season=${selectedSeason}&episode=${ep.episode_number}`)}
-                        className="flex gap-3 p-3 rounded bg-[#141414] hover:bg-[#1f1f1f] cursor-pointer transition-colors group border border-transparent hover:border-white/10"
+                        className="flex cursor-pointer gap-3 rounded bg-[#141414] p-3 transition-colors group border border-transparent hover:border-white/10 hover:bg-[#1f1f1f]"
                       >
-                        <div className="flex-shrink-0 w-8 text-center text-gray-500 text-sm pt-0.5 font-mono">
+                        <div className="hidden w-8 flex-shrink-0 pt-0.5 text-center font-mono text-sm text-gray-500 sm:block">
                           {ep.episode_number}
                         </div>
-                        <div className="relative flex-shrink-0 w-28 aspect-video rounded overflow-hidden bg-[#1a1a1a]">
+                        <div className="relative aspect-video w-24 flex-shrink-0 overflow-hidden rounded bg-[#1a1a1a] sm:w-28">
                           {ep.still_path ? (
                             <img src={tmdbW300(ep.still_path)} alt={ep.name} className="w-full h-full object-cover" />
                           ) : null}

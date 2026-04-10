@@ -62,12 +62,12 @@ export default function MyList() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] pt-24 px-4 md:px-12 pb-12">
-      <div className="flex items-center gap-3 mb-8">
-        <Bookmark className="w-7 h-7 text-[#E50914]" />
-        <h1 className="text-white text-3xl font-bold">My List</h1>
+    <div className="min-h-screen bg-[#0a0a0a] px-4 pb-28 pt-24 md:px-12 md:pb-12">
+      <div className="mb-8 flex flex-wrap items-center gap-3">
+        <Bookmark className="h-7 w-7 text-[#E50914]" />
+        <h1 className="text-2xl font-bold text-white md:text-3xl">My List</h1>
         {visibleItems.length > 0 && (
-          <span className="text-gray-500 text-lg">
+          <span className="text-base text-gray-500 md:text-lg">
             {visibleItems.length} title{visibleItems.length !== 1 ? "s" : ""}
           </span>
         )}
@@ -86,7 +86,7 @@ export default function MyList() {
           </p>
           <button
             onClick={() => navigate("/")}
-            className="bg-[#E50914] text-white px-8 py-3 rounded font-semibold hover:bg-[#c40812] transition-colors"
+            className="min-h-11 rounded bg-[#E50914] px-8 py-3 font-semibold text-white transition-colors hover:bg-[#c40812]"
           >
             Browse Content
           </button>
@@ -115,7 +115,7 @@ export default function MyList() {
               </div>
 
               {/* Overlay on hover */}
-              <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2">
+              <div className="absolute inset-0 flex items-end justify-center gap-2 bg-gradient-to-t from-black/85 via-black/25 to-transparent p-3 opacity-100 transition-opacity md:items-center md:bg-black/60 md:p-0 md:opacity-0 md:group-hover:opacity-100">
                 <button
                   onClick={() => navigate(item.resume_path || buildWatchPath({
                     mediaType: item.media_type,
@@ -123,13 +123,13 @@ export default function MyList() {
                     seasonNumber: item.season_number,
                     episodeNumber: item.episode_number,
                   }))}
-                  className="bg-white text-black rounded-full p-3 hover:bg-gray-200 transition-colors"
+                  className="flex min-h-11 min-w-11 items-center justify-center rounded-full bg-white p-3 text-black transition-colors hover:bg-gray-200"
                 >
                   <Play className="w-5 h-5 fill-black" />
                 </button>
                 <button
                   onClick={(e) => { e.stopPropagation(); removeItem(item.id); }}
-                  className="bg-red-600/80 text-white rounded-full p-2 hover:bg-red-700 transition-colors"
+                  className="flex min-h-11 min-w-11 items-center justify-center rounded-full bg-red-600/90 p-2 text-white transition-colors hover:bg-red-700"
                 >
                   <Trash2 className="w-4 h-4" />
                 </button>

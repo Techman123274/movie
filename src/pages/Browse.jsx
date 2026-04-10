@@ -242,8 +242,8 @@ export default function Browse() {
   return (
     <div className="min-h-screen bg-[#0a0a0a] pt-20">
       {/* Header */}
-      <div className="px-4 md:px-12 py-8">
-        <h1 className="text-white text-3xl md:text-4xl font-bold">
+      <div className="px-4 py-6 md:px-12 md:py-8">
+        <h1 className="text-2xl font-bold text-white md:text-4xl">
           {type === "movie" ? "Movies" : "TV Shows"}
         </h1>
       </div>
@@ -255,8 +255,8 @@ export default function Browse() {
               <div className="h-5 w-40 bg-[#1a1a1a] rounded animate-pulse mb-3" />
               <div className="flex gap-2 overflow-hidden">
                 {Array(7).fill(0).map((_, j) => (
-                  <div key={j} className="flex-shrink-0 rounded bg-[#1a1a1a] animate-pulse"
-                    style={{ width: "clamp(140px,15vw,200px)", aspectRatio: "2/3" }} />
+                  <div key={j} className="w-[132px] flex-shrink-0 animate-pulse rounded bg-[#1a1a1a] sm:w-[150px] md:w-[clamp(140px,15vw,200px)]"
+                    style={{ aspectRatio: "2/3" }} />
                 ))}
               </div>
             </div>

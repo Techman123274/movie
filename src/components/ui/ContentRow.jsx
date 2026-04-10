@@ -22,12 +22,12 @@ export default function ContentRow({ title, items = [], loading = false }) {
     return (
       <div className="mb-8">
         <div className="h-5 w-48 bg-[#1a1a1a] rounded animate-pulse mb-4 mx-4 md:mx-12" />
-        <div className="flex gap-2 px-4 md:px-12 overflow-hidden">
+        <div className="flex gap-2 overflow-hidden px-4 md:px-12">
           {Array(7).fill(0).map((_, i) => (
             <div
               key={i}
-              className="flex-shrink-0 rounded bg-[#1a1a1a] animate-pulse"
-              style={{ width: "clamp(140px, 15vw, 200px)", aspectRatio: "2/3" }}
+              className="w-[132px] flex-shrink-0 animate-pulse rounded bg-[#1a1a1a] sm:w-[150px] md:w-[clamp(140px,15vw,200px)]"
+              style={{ aspectRatio: "2/3" }}
             />
           ))}
         </div>
@@ -38,8 +38,8 @@ export default function ContentRow({ title, items = [], loading = false }) {
   if (!items.length) return null;
 
   return (
-    <div className="mb-8 group/row">
-      <h2 className="text-white text-lg md:text-xl font-semibold px-4 md:px-12 mb-3 hover:text-gray-200 transition-colors">
+    <div className="mb-7 group/row md:mb-8">
+      <h2 className="mb-3 px-4 text-lg font-semibold text-white transition-colors hover:text-gray-200 md:px-12 md:text-xl">
         {title}
       </h2>
 
@@ -70,7 +70,7 @@ export default function ContentRow({ title, items = [], loading = false }) {
         {/* Scroll container — extra padding-bottom so hover cards expand without clipping */}
         <div
           ref={rowRef}
-          className="flex gap-2 px-4 md:px-12 overflow-x-auto scrollbar-hide"
+          className="scrollbar-hide flex snap-x gap-2 overflow-x-auto px-4 md:px-12"
           style={{ paddingBottom: "100px", marginBottom: "-100px" }}
           onScroll={(e) => {
             setShowLeft(e.target.scrollLeft > 0);

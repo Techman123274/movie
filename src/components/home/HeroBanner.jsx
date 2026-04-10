@@ -74,7 +74,7 @@ export default function HeroBanner({ items = [] }) {
   };
 
   return (
-    <div className="relative w-full h-screen min-h-[600px] max-h-[900px]">
+    <div className="relative h-[86svh] min-h-[560px] w-full md:h-screen md:max-h-[900px] md:min-h-[600px]">
       {/* Backdrop */}
       <div className="absolute inset-0 overflow-hidden">
         {item.backdrop_path ? (
@@ -94,7 +94,7 @@ export default function HeroBanner({ items = [] }) {
       </div>
 
       {/* Content */}
-      <div className="relative z-10 flex flex-col justify-end h-full pb-8 md:pb-24 px-4 md:px-16 max-w-2xl">
+      <div className="relative z-10 flex h-full max-w-2xl flex-col justify-end px-4 pb-8 md:px-16 md:pb-24">
         {/* Meta tags */}
         <div className="flex items-center gap-3 mb-3">
           {mediaType === "tv" && (
@@ -110,7 +110,7 @@ export default function HeroBanner({ items = [] }) {
         </div>
 
         {/* Title */}
-        <h1 className="text-4xl md:text-6xl font-black text-white mb-4 leading-tight tracking-tight drop-shadow-lg">
+        <h1 className="mb-4 text-3xl font-black leading-tight tracking-tight text-white drop-shadow-lg sm:text-4xl md:text-6xl">
           {title}
         </h1>
 
@@ -130,22 +130,22 @@ export default function HeroBanner({ items = [] }) {
         )}
 
         {/* Buttons */}
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <button
             onClick={handlePlay}
-            className="flex items-center gap-2 bg-white text-black font-bold px-6 py-2.5 rounded hover:bg-gray-200 transition-colors text-sm md:text-base"
+            className="flex min-h-11 flex-1 items-center justify-center gap-2 rounded bg-white px-5 py-2.5 text-sm font-bold text-black transition-colors hover:bg-gray-200 sm:flex-none sm:px-6 md:text-base"
           >
             <Play className="w-5 h-5 fill-black" /> {getResumeLabel(item, mediaType)}
           </button>
           <button
             onClick={handleDetails}
-            className="flex items-center gap-2 bg-gray-600/80 text-white font-semibold px-6 py-2.5 rounded hover:bg-gray-500/80 transition-colors text-sm md:text-base backdrop-blur-sm"
+            className="flex min-h-11 flex-1 items-center justify-center gap-2 rounded bg-gray-600/80 px-5 py-2.5 text-sm font-semibold text-white backdrop-blur-sm transition-colors hover:bg-gray-500/80 sm:flex-none sm:px-6 md:text-base"
           >
             <Info className="w-5 h-5" /> More Info
           </button>
           <button
             onClick={handleWatchlist}
-            className="w-10 h-10 rounded-full border-2 border-gray-400 flex items-center justify-center hover:border-white transition-colors ml-1"
+            className="ml-1 flex h-11 w-11 items-center justify-center rounded-full border-2 border-gray-400 transition-colors hover:border-white"
           >
             {inList ? <Check className="w-5 h-5 text-white" /> : <Plus className="w-5 h-5 text-white" />}
           </button>

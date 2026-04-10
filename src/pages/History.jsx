@@ -54,16 +54,16 @@ export default function History() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] pt-24 px-4 md:px-12 pb-12">
-      <div className="flex items-center justify-between mb-8">
+    <div className="min-h-screen bg-[#0a0a0a] px-4 pb-28 pt-24 md:px-12 md:pb-12">
+      <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
           <Clock className="w-7 h-7 text-[#E50914]" />
-          <h1 className="text-white text-3xl font-bold">Watch History</h1>
+          <h1 className="text-2xl font-bold text-white md:text-3xl">Watch History</h1>
         </div>
         {visibleItems.length > 0 && (
           <button
             onClick={clearAll}
-            className="text-gray-400 hover:text-white text-sm border border-gray-600 hover:border-gray-400 px-4 py-2 rounded transition-colors"
+            className="min-h-11 w-full rounded border border-gray-600 px-4 py-2 text-sm text-gray-400 transition-colors hover:border-gray-400 hover:text-white sm:w-auto"
           >
             Clear All
           </button>
@@ -81,7 +81,7 @@ export default function History() {
               ? "Start watching to build your history."
               : "Some entries are hidden because they are above this profile's maturity setting."}
           </p>
-          <button onClick={() => navigate("/")} className="bg-[#E50914] text-white px-8 py-3 rounded font-semibold hover:bg-[#c40812] transition-colors">
+          <button onClick={() => navigate("/")} className="min-h-11 rounded bg-[#E50914] px-8 py-3 font-semibold text-white transition-colors hover:bg-[#c40812]">
             Browse Content
           </button>
         </div>
@@ -108,7 +108,7 @@ export default function History() {
               </div>
 
               {/* Hover overlay */}
-              <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2">
+              <div className="absolute inset-0 flex items-end justify-center gap-2 bg-gradient-to-t from-black/85 via-black/25 to-transparent p-3 opacity-100 transition-opacity md:items-center md:bg-black/60 md:p-0 md:opacity-0 md:group-hover:opacity-100">
                 <button
                   onClick={() => {
                     navigate(item.resume_path || buildWatchPath({
@@ -118,13 +118,13 @@ export default function History() {
                       episodeNumber: item.episode_number,
                     }));
                   }}
-                  className="bg-white text-black rounded-full p-3 hover:bg-gray-200 transition-colors"
+                  className="flex min-h-11 min-w-11 items-center justify-center rounded-full bg-white p-3 text-black transition-colors hover:bg-gray-200"
                 >
                   <Play className="w-5 h-5 fill-black" />
                 </button>
                 <button
                   onClick={(e) => { e.stopPropagation(); removeItem(item.id); }}
-                  className="bg-red-600/80 text-white rounded-full p-2 hover:bg-red-700 transition-colors"
+                  className="flex min-h-11 min-w-11 items-center justify-center rounded-full bg-red-600/90 p-2 text-white transition-colors hover:bg-red-700"
                 >
                   <Trash2 className="w-4 h-4" />
                 </button>

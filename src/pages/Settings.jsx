@@ -5,6 +5,7 @@ import {
   ChevronRight,
   Film,
   KeyRound,
+  LogOut,
   MonitorPlay,
   BellRing,
   Settings as SettingsIcon,
@@ -14,6 +15,7 @@ import {
   UserCircle2,
   Users,
 } from "lucide-react";
+import { base44 } from "@/api/base44Client";
 import { hasTmdbCredentials, tmdbApiKey, tmdbReadAccessToken } from "@/lib/env";
 import { getProfileBadge, readPreference, removePreference, writePreference } from "@/lib/preferences";
 import { addFriend, listFriends, removeFriend, SOCIAL_CHANGED_EVENT } from "@/lib/social";
@@ -156,28 +158,40 @@ export default function SettingsPage() {
     }
   };
 
+  const handleLogout = () => {
+    base44.auth.logout();
+  };
+
   return (
-    <div className="min-h-screen bg-[#0a0a0a] pt-24 pb-14 px-4 md:px-12">
+    <div className="min-h-screen bg-[#0a0a0a] px-4 pb-28 pt-20 md:px-12 md:pb-14 md:pt-24">
       <div className="max-w-7xl mx-auto">
-        <div className="mb-8">
-          <p className="text-xs uppercase tracking-[0.35em] text-[#E50914] mb-3">Subflix</p>
+        <div className="mb-5 md:mb-8">
+          <p className="mb-3 text-xs uppercase tracking-[0.28em] text-[#E50914] md:tracking-[0.35em]">Subflix</p>
           <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
-            <div>
-              <h1 className="text-white text-4xl md:text-5xl font-black tracking-tight">Settings</h1>
-              <p className="text-gray-400 mt-2 max-w-2xl">
+            <div className="min-w-0">
+              <h1 className="text-3xl font-black tracking-tight text-white md:text-5xl">Settings</h1>
+              <p className="mt-2 max-w-2xl text-sm leading-relaxed text-gray-400 md:text-base">
                 Manage your account, profile behavior, and playback preferences in one place.
               </p>
             </div>
-            <div className="rounded-2xl border border-white/10 bg-[#111111] px-5 py-4 min-w-[260px]">
-              <p className="text-gray-500 text-xs uppercase tracking-[0.25em] mb-1">Active Profile</p>
-              <p className="text-white text-lg font-semibold">{profileName}</p>
-              <p className="text-gray-400 text-sm truncate">{user?.email || "Signed in"}</p>
+            <div className="mt-3 w-full rounded-2xl border border-white/10 bg-[#111111] px-4 py-4 md:mt-0 md:min-w-[260px] md:px-5">
+              <p className="mb-1 text-xs uppercase tracking-[0.22em] text-gray-500">Active Profile</p>
+              <p className="truncate text-lg font-semibold text-white">{profileName}</p>
+              <p className="truncate text-sm text-gray-400">{user?.email || "Signed in"}</p>
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="mt-4 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-white/[0.08] md:hidden"
+              >
+                <LogOut className="h-4 w-4" />
+                Sign Out
+              </button>
             </div>
           </div>
         </div>
 
         <div className="grid gap-6 lg:grid-cols-[280px_minmax(0,1fr)]">
-          <aside className="rounded-3xl border border-white/10 bg-[#101010] p-3 h-fit sticky top-24">
+          <aside className="scrollbar-hide flex gap-2 overflow-x-auto rounded-2xl border border-white/10 bg-[#101010] p-2 lg:sticky lg:top-24 lg:block lg:h-fit lg:space-y-1 lg:overflow-visible lg:rounded-3xl lg:p-3">
             {sections.map((section) => {
               const Icon = section.icon;
               const isActive = section.id === activeSection;
@@ -185,15 +199,15 @@ export default function SettingsPage() {
                 <button
                   key={section.id}
                   onClick={() => setActiveSection(section.id)}
-                  className={`w-full flex items-center justify-between rounded-2xl px-4 py-4 text-left transition-colors ${
+                  className={`flex min-h-11 min-w-[150px] items-center justify-between rounded-xl px-3 py-3 text-left text-sm transition-colors lg:w-full lg:min-w-0 lg:rounded-2xl lg:px-4 lg:py-4 ${
                     isActive ? "bg-white text-black" : "text-gray-300 hover:bg-white/5 hover:text-white"
                   }`}
                 >
-                  <span className="flex items-center gap-3">
+                  <span className="flex items-center gap-2 lg:gap-3">
                     <Icon className="w-5 h-5" />
                     <span className="font-medium">{section.label}</span>
                   </span>
-                  <ChevronRight className="w-4 h-4" />
+                  <ChevronRight className="hidden w-4 h-4 lg:block" />
                 </button>
               );
             })}
@@ -238,20 +252,29 @@ export default function SettingsPage() {
                   />
                   {onSwitchProfile && (
                     <button
+                      type="button"
                       onClick={onSwitchProfile}
-                      className="self-start bg-white text-black px-4 py-2 rounded-lg text-sm font-semibold hover:bg-gray-200 transition-colors"
+                      className="inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-white px-4 py-2.5 text-sm font-semibold text-black transition-colors hover:bg-gray-200 sm:w-auto"
                     >
-                      Manage Profiles
+                      Switch Profile
                     </button>
                   )}
                   {isAdmin && (
                     <Link
                       to="/admin"
-                      className="self-start rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-white/10"
+                      className="inline-flex min-h-11 w-full items-center justify-center rounded-lg border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-white/10 sm:w-auto"
                     >
                       Open Admin Panel
                     </Link>
                   )}
+                  <button
+                    type="button"
+                    onClick={handleLogout}
+                    className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg border border-[#E50914]/40 bg-[#E50914]/10 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#E50914]/20 sm:w-auto"
+                  >
+                    <LogOut className="h-4 w-4" />
+                    Sign Out
+                  </button>
                 </SettingsCard>
               </>
             )}
@@ -291,26 +314,26 @@ export default function SettingsPage() {
                 description="Build a lightweight social circle so Subflix can surface what your people liked, rated, and started watching."
                 icon={Users}
               >
-                <form onSubmit={handleAddFriend} className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                <form onSubmit={handleAddFriend} className="rounded-2xl border border-white/10 bg-black/20 p-3 md:p-4">
                   <div className="grid gap-3 md:grid-cols-[1.1fr_1fr_auto]">
                     <input
                       type="email"
                       value={friendEmail}
                       onChange={(event) => setFriendEmail(event.target.value)}
                       placeholder="friend@email.com"
-                      className="rounded-xl border border-white/10 bg-[#181818] px-4 py-3 text-sm text-white outline-none focus:border-[#E50914]"
+                      className="min-h-11 rounded-lg border border-white/10 bg-[#181818] px-4 py-3 text-sm text-white outline-none focus:border-[#E50914]"
                     />
                     <input
                       type="text"
                       value={friendName}
                       onChange={(event) => setFriendName(event.target.value)}
                       placeholder="Display name (optional)"
-                      className="rounded-xl border border-white/10 bg-[#181818] px-4 py-3 text-sm text-white outline-none focus:border-[#E50914]"
+                      className="min-h-11 rounded-lg border border-white/10 bg-[#181818] px-4 py-3 text-sm text-white outline-none focus:border-[#E50914]"
                     />
                     <button
                       type="submit"
                       disabled={socialBusy}
-                      className="rounded-xl bg-[#E50914] px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-[#c40812] disabled:cursor-not-allowed disabled:opacity-60"
+                      className="min-h-11 rounded-lg bg-[#E50914] px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-[#c40812] disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       Add Friend
                     </button>
@@ -344,7 +367,7 @@ export default function SettingsPage() {
                         <button
                           type="button"
                           onClick={() => handleRemoveFriend(friend.id)}
-                          className="inline-flex items-center gap-2 self-start rounded-full border border-white/10 px-4 py-2 text-sm text-white/75 transition-colors hover:border-white/20 hover:text-white"
+                          className="inline-flex min-h-11 w-full items-center justify-center gap-2 self-start rounded-lg border border-white/10 px-4 py-2 text-sm text-white/75 transition-colors hover:border-white/20 hover:text-white md:w-auto"
                         >
                           <Trash2 className="w-4 h-4" />
                           Remove
@@ -390,8 +413,9 @@ export default function SettingsPage() {
                 />
                 {notificationPermission !== "granted" && (
                   <button
+                    type="button"
                     onClick={requestBrowserNotifications}
-                    className="self-start bg-white text-black px-4 py-2 rounded-lg text-sm font-semibold hover:bg-gray-200 transition-colors"
+                    className="inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-white px-4 py-2.5 text-sm font-semibold text-black transition-colors hover:bg-gray-200 sm:w-auto"
                   >
                     Allow Browser Notifications
                   </button>
@@ -449,8 +473,9 @@ export default function SettingsPage() {
                     />
                     <div className="flex flex-wrap items-center gap-3 mt-4">
                       <button
+                        type="button"
                         onClick={saveTmdbKey}
-                        className="bg-[#E50914] hover:bg-[#c40812] text-white px-5 py-2.5 rounded-lg font-semibold transition-colors"
+                        className="min-h-11 w-full rounded-lg bg-[#E50914] px-5 py-2.5 font-semibold text-white transition-colors hover:bg-[#c40812] sm:w-auto"
                       >
                         Save in Browser
                       </button>
@@ -491,15 +516,15 @@ export default function SettingsPage() {
 
 function SettingsCard({ eyebrow, title, description, icon: Icon, children }) {
   return (
-    <section className="rounded-3xl border border-white/10 bg-[linear-gradient(180deg,#141414_0%,#0f0f0f_100%)] p-6 md:p-8">
-      <div className="flex items-start gap-4 mb-6">
-        <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center">
+    <section className="rounded-2xl border border-white/10 bg-[linear-gradient(180deg,#141414_0%,#0f0f0f_100%)] p-4 md:rounded-3xl md:p-8">
+      <div className="mb-5 flex items-start gap-3 md:mb-6 md:gap-4">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-white/5 md:h-12 md:w-12">
           <Icon className="w-5 h-5 text-[#E50914]" />
         </div>
-        <div>
-          <p className="text-xs uppercase tracking-[0.3em] text-gray-500 mb-2">{eyebrow}</p>
-          <h2 className="text-white text-2xl font-bold">{title}</h2>
-          <p className="text-gray-400 text-sm mt-2 max-w-2xl">{description}</p>
+        <div className="min-w-0">
+          <p className="mb-2 text-xs uppercase tracking-[0.22em] text-gray-500 md:tracking-[0.3em]">{eyebrow}</p>
+          <h2 className="text-xl font-bold leading-tight text-white md:text-2xl">{title}</h2>
+          <p className="mt-2 max-w-2xl text-sm leading-relaxed text-gray-400">{description}</p>
         </div>
       </div>
       <div className="space-y-3">{children}</div>
@@ -509,20 +534,20 @@ function SettingsCard({ eyebrow, title, description, icon: Icon, children }) {
 
 function SettingsRow({ label, value, muted }) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-black/20 px-4 py-4 flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
-      <div>
+    <div className="flex flex-col gap-2 rounded-xl border border-white/10 bg-black/20 px-4 py-4 md:flex-row md:items-center md:justify-between">
+      <div className="min-w-0">
         <p className="text-white text-sm font-medium">{label}</p>
         {muted && <p className="text-gray-500 text-xs mt-1">{muted}</p>}
       </div>
-      <p className="text-gray-300 text-sm">{value}</p>
+      <p className="min-w-0 break-words text-left text-sm text-gray-300 md:text-right">{value}</p>
     </div>
   );
 }
 
 function ToggleRow({ label, description, checked, onChange }) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-black/20 px-4 py-4 flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
-      <div>
+    <div className="flex items-center justify-between gap-4 rounded-xl border border-white/10 bg-black/20 px-4 py-4">
+      <div className="min-w-0 pr-2">
         <p className="text-white text-sm font-medium">{label}</p>
         <p className="text-gray-500 text-xs mt-1">{description}</p>
       </div>

@@ -69,10 +69,10 @@ export default function Search() {
   const POPULAR_SEARCHES = ["Action", "Comedy", "Thriller", "Romance", "Horror", "Sci-Fi", "Documentary", "Animation"];
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] pt-20 px-4 md:px-12">
+    <div className="min-h-screen bg-[#0a0a0a] px-4 pb-28 pt-20 md:px-12 md:pb-12">
       {/* Search Input */}
-      <div className="max-w-2xl mx-auto mb-10 mt-4">
-        <div className="relative flex items-center bg-[#141414] border border-gray-700 rounded-lg focus-within:border-white transition-colors">
+      <div className="mx-auto mb-8 mt-4 max-w-2xl md:mb-10">
+        <div className="relative flex items-center rounded-lg border border-gray-700 bg-[#141414] transition-colors focus-within:border-white">
           <SearchIcon className="w-5 h-5 text-gray-400 ml-4 flex-shrink-0" />
           <input
             ref={inputRef}
@@ -80,10 +80,10 @@ export default function Search() {
             value={query}
             onChange={handleInput}
             placeholder="Search movies, TV shows..."
-            className="flex-1 bg-transparent text-white text-lg py-4 px-4 outline-none placeholder-gray-600"
+            className="min-w-0 flex-1 bg-transparent px-4 py-4 text-base text-white outline-none placeholder-gray-600 md:text-lg"
           />
           {query && (
-            <button onClick={clearSearch} className="mr-4 text-gray-400 hover:text-white transition-colors">
+            <button onClick={clearSearch} className="mr-2 flex h-11 w-11 shrink-0 items-center justify-center text-gray-400 transition-colors hover:text-white md:mr-4">
               <X className="w-5 h-5" />
             </button>
           )}
@@ -102,7 +102,7 @@ export default function Search() {
                   setQuery(term);
                   setSearchParams({ q: term });
                 }}
-                className="bg-[#141414] hover:bg-[#1f1f1f] border border-gray-700 hover:border-gray-500 text-white px-4 py-2 rounded-full text-sm transition-colors"
+                className="min-h-11 rounded-full border border-gray-700 bg-[#141414] px-4 py-2 text-sm text-white transition-colors hover:border-gray-500 hover:bg-[#1f1f1f]"
               >
                 {term}
               </button>
@@ -135,7 +135,7 @@ export default function Search() {
               <p className="text-gray-600 text-sm">Try different keywords or browse our catalog</p>
               <button
                 onClick={() => navigate("/")}
-                className="mt-6 bg-[#E50914] text-white px-6 py-2 rounded font-semibold hover:bg-[#c40812] transition-colors"
+                className="mt-6 min-h-11 rounded bg-[#E50914] px-6 py-2 font-semibold text-white transition-colors hover:bg-[#c40812]"
               >
                 Browse Home
               </button>
@@ -144,7 +144,7 @@ export default function Search() {
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
               {results.map((item) => (
                 <div key={`${item.id}-${item.media_type}`} className="w-full">
-                  <ContentCard item={item} />
+                  <ContentCard item={item} layout="grid" />
                 </div>
               ))}
             </div>

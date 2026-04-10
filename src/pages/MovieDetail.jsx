@@ -248,23 +248,23 @@ export default function MovieDetail() {
             </div>
 
             {/* Actions */}
-            <div className="flex items-center gap-3 mb-6">
+            <div className="mb-6 flex flex-col items-stretch gap-3 sm:flex-row sm:flex-wrap sm:items-center">
               <button
                 onClick={() => navigate(playPath)}
-                className="flex items-center gap-2 bg-white text-black font-bold px-8 py-3 rounded hover:bg-gray-200 transition-colors text-sm"
+                className="flex min-h-11 items-center justify-center gap-2 rounded bg-white px-8 py-3 text-sm font-bold text-black transition-colors hover:bg-gray-200"
               >
                 <Play className="w-5 h-5 fill-black" /> {playLabel}
               </button>
               <button
                 onClick={handleWatchlist}
-                className="flex items-center gap-2 bg-gray-600/80 text-white font-semibold px-6 py-3 rounded hover:bg-gray-500/80 transition-colors text-sm"
+                className="flex min-h-11 items-center justify-center gap-2 rounded bg-gray-600/80 px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-gray-500/80"
               >
                 {inList ? <Check className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
                 {inList ? "In My List" : "My List"}
               </button>
               <button
                 onClick={handleLike}
-                className={`flex items-center gap-2 border px-6 py-3 rounded transition-colors text-sm ${
+                className={`flex min-h-11 items-center justify-center gap-2 rounded border px-6 py-3 text-sm transition-colors ${
                   liked
                     ? "border-[#E50914] bg-[#E50914]/15 text-white hover:bg-[#E50914]/25"
                     : "border-gray-500 text-white hover:border-white"
@@ -276,7 +276,7 @@ export default function MovieDetail() {
               {trailerUrl && (
                 <button
                   onClick={() => setShowTrailer(true)}
-                  className="flex items-center gap-2 border border-gray-500 text-white font-semibold px-6 py-3 rounded hover:border-white transition-colors text-sm"
+                  className="flex min-h-11 items-center justify-center gap-2 rounded border border-gray-500 px-6 py-3 text-sm font-semibold text-white transition-colors hover:border-white"
                 >
                   Trailer
                 </button>
@@ -318,7 +318,7 @@ export default function MovieDetail() {
             <p className="text-gray-300 text-sm md:text-base leading-relaxed mb-6 max-w-2xl">{movie.overview}</p>
 
             {/* Details grid */}
-            <div className="grid grid-cols-2 gap-4 text-sm mb-8">
+            <div className="mb-8 grid grid-cols-1 gap-3 text-sm sm:grid-cols-2 sm:gap-4">
               {movie.spoken_languages?.length > 0 && (
                 <div>
                   <span className="text-gray-500">Languages: </span>

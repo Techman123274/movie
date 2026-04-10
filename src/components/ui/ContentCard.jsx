@@ -15,7 +15,7 @@ import {
 import { readActiveProfile } from "@/lib/preferences";
 import PlaybackProgressBar from "@/components/ui/PlaybackProgressBar";
 
-export default function ContentCard({ item, onWatchlistChange, isInWatchlist = false }) {
+export default function ContentCard({ item, onWatchlistChange, isInWatchlist = false, layout = "row" }) {
   const [hovered, setHovered] = useState(false);
   const [inList, setInList] = useState(isInWatchlist);
   const [liked, setLiked] = useState(false);
@@ -39,6 +39,9 @@ export default function ContentCard({ item, onWatchlistChange, isInWatchlist = f
     seasonNumber: item.season_number,
     episodeNumber: item.episode_number,
   });
+  const cardWidthClass = layout === "grid"
+    ? "w-full"
+    : "w-[132px] sm:w-[150px] md:w-[clamp(140px,15vw,200px)]";
 
   const handlePlay = (event) => {
     event.stopPropagation();
@@ -148,8 +151,8 @@ export default function ContentCard({ item, onWatchlistChange, isInWatchlist = f
 
   return (
     <div
-      className="relative flex-shrink-0 cursor-pointer group"
-      style={{ width: "clamp(140px, 15vw, 200px)", zIndex: hovered ? 50 : 1, position: "relative" }}
+      className={`relative flex-shrink-0 snap-start cursor-pointer group ${cardWidthClass}`}
+      style={{ zIndex: hovered ? 50 : 1, position: "relative" }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       onClick={handleDetails}
