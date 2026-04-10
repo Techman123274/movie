@@ -1,14 +1,27 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Play, Plus, Check, ThumbsUp, ChevronDown } from "lucide-react";
 import { tmdbW300, tmdbW500, GENRE_MAP } from "@/lib/tmdb";
 import { base44 } from "@/api/base44Client";
 import { getMatchPercentage } from "@/lib/recommendations";
+import { buildWatchPath } from "@/lib/playback";
+import {
+  getWatchlistEntry,
+  isItemLiked,
+  LIBRARY_CHANGED_EVENT,
+  toggleLikedItem,
+  toggleWatchlistItem,
+} from "@/lib/library";
+import { readActiveProfile } from "@/lib/preferences";
+import PlaybackProgressBar from "@/components/ui/PlaybackProgressBar";
 
 export default function ContentCard({ item, onWatchlistChange, isInWatchlist = false }) {
   const [hovered, setHovered] = useState(false);
   const [inList, setInList] = useState(isInWatchlist);
+  const [liked, setLiked] = useState(false);
+  const [watchlistLoaded, setWatchlistLoaded] = useState(false);
   const navigate = useNavigate();
+  const activeProfile = readActiveProfile();
 
   const title = item.title || item.name || "Unknown";
   const year = (item.release_date || item.first_air_date || "").slice(0, 4);
@@ -16,15 +29,83 @@ export default function ContentCard({ item, onWatchlistChange, isInWatchlist = f
   const genres = (item.genre_ids || []).slice(0, 3).map((id) => GENRE_MAP[id]).filter(Boolean);
   const rating = item.vote_average ? Math.round(item.vote_average * 10) : null;
   const matchPercentage = item.match_percentage || getMatchPercentage(item);
+  const topRank = item.top_rank || null;
+  const progressPercent = Math.max(0, Math.min(100, Math.round(Number(item.progress_percent) || 0)));
+  const socialReason = item.social_reason || "";
+  const userRating = Number(item.user_rating) || 0;
+  const playPath = item.resume_path || buildWatchPath({
+    mediaType,
+    tmdbId: item.tmdb_id ?? item.id,
+    seasonNumber: item.season_number,
+    episodeNumber: item.episode_number,
+  });
 
   const handlePlay = (event) => {
     event.stopPropagation();
-    navigate(`/watch/${mediaType}/${item.id}`);
+    navigate(playPath);
   };
 
   const handleDetails = () => {
     navigate(`/${mediaType}/${item.id}`);
   };
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadLikeState = async () => {
+      const user = await base44.auth.me().catch(() => null);
+      if (!user || cancelled) {
+        return;
+      }
+      setLiked(isItemLiked(user, activeProfile, item, mediaType));
+    };
+
+    loadLikeState();
+
+    const handleLibraryChanged = async () => {
+      const user = await base44.auth.me().catch(() => null);
+      if (!user || cancelled) {
+        return;
+      }
+      setLiked(isItemLiked(user, activeProfile, item, mediaType));
+      if (watchlistLoaded) {
+        const entry = await getWatchlistEntry(item, mediaType).catch(() => null);
+        if (!cancelled) {
+          setInList(Boolean(entry));
+        }
+      }
+    };
+
+    window.addEventListener(LIBRARY_CHANGED_EVENT, handleLibraryChanged);
+    return () => {
+      cancelled = true;
+      window.removeEventListener(LIBRARY_CHANGED_EVENT, handleLibraryChanged);
+    };
+  }, [activeProfile, item, mediaType, watchlistLoaded]);
+
+  useEffect(() => {
+    if (!hovered || watchlistLoaded) {
+      return;
+    }
+
+    let cancelled = false;
+    const loadWatchlistState = async () => {
+      const user = await base44.auth.me().catch(() => null);
+      if (!user) {
+        return;
+      }
+      const entry = await getWatchlistEntry(item, mediaType).catch(() => null);
+      if (!cancelled) {
+        setInList(Boolean(entry));
+        setWatchlistLoaded(true);
+      }
+    };
+
+    loadWatchlistState();
+    return () => {
+      cancelled = true;
+    };
+  }, [hovered, item, mediaType, watchlistLoaded]);
 
   const handleWatchlist = async (event) => {
     event.stopPropagation();
@@ -35,27 +116,31 @@ export default function ContentCard({ item, onWatchlistChange, isInWatchlist = f
         return;
       }
 
-      if (inList) {
-        const items = await base44.entities.Watchlist.filter({ tmdb_id: item.id, created_by: user.email });
-        if (items.length > 0) {
-          await base44.entities.Watchlist.delete(items[0].id);
-        }
-        setInList(false);
-      } else {
-        await base44.entities.Watchlist.create({
-          tmdb_id: item.id,
-          media_type: mediaType,
-          title,
-          poster_path: item.poster_path,
-          backdrop_path: item.backdrop_path,
-          vote_average: item.vote_average,
-          overview: item.overview,
-          release_date: item.release_date || item.first_air_date,
-          genre_ids: item.genre_ids,
-        });
-        setInList(true);
-      }
+      const result = await toggleWatchlistItem({ item: { ...item, title }, mediaType });
+      setInList(result.inWatchlist);
+      setWatchlistLoaded(true);
       onWatchlistChange?.();
+    } catch {
+      base44.auth.redirectToLogin();
+    }
+  };
+
+  const handleLike = async (event) => {
+    event.stopPropagation();
+    try {
+      const user = await base44.auth.me();
+      if (!user) {
+        base44.auth.redirectToLogin();
+        return;
+      }
+
+      const nextLiked = toggleLikedItem({
+        user,
+        profile: activeProfile,
+        item: { ...item, title },
+        mediaType,
+      });
+      setLiked(nextLiked);
     } catch {
       base44.auth.redirectToLogin();
     }
@@ -85,11 +170,19 @@ export default function ContentCard({ item, onWatchlistChange, isInWatchlist = f
 
         <div className={`absolute inset-0 bg-black/20 transition-opacity duration-200 ${hovered ? "opacity-100" : "opacity-0"}`} />
 
-        {(matchPercentage || rating) && (
+        {topRank ? (
+          <div className="absolute top-2 left-2 rounded bg-[#E50914] px-2 py-1 text-xs font-black text-white shadow-lg">
+            #{topRank}
+          </div>
+        ) : (matchPercentage || rating) ? (
           <div className="absolute top-2 left-2 bg-[#E50914] text-white text-xs font-bold px-1.5 py-0.5 rounded">
             {matchPercentage || rating}%
           </div>
-        )}
+        ) : null}
+
+        <div className="absolute inset-x-2 bottom-2 z-10">
+          <PlaybackProgressBar progress={progressPercent} />
+        </div>
       </div>
 
       {hovered && (
@@ -139,8 +232,15 @@ export default function ContentCard({ item, onWatchlistChange, isInWatchlist = f
                   <Plus className="w-4 h-4 text-white" />
                 )}
               </button>
-              <button className="w-8 h-8 rounded-full border border-gray-500 flex items-center justify-center hover:border-white transition-colors">
-                <ThumbsUp className="w-4 h-4 text-white" />
+              <button
+                onClick={handleLike}
+                className={`w-8 h-8 rounded-full border flex items-center justify-center transition-colors ${
+                  liked
+                    ? "border-[#E50914] bg-[#E50914]/15 hover:bg-[#E50914]/25"
+                    : "border-gray-500 hover:border-white"
+                }`}
+              >
+                <ThumbsUp className={`w-4 h-4 ${liked ? "fill-[#E50914] text-[#E50914]" : "text-white"}`} />
               </button>
               <button
                 onClick={handleDetails}
@@ -153,11 +253,32 @@ export default function ContentCard({ item, onWatchlistChange, isInWatchlist = f
             <p className="text-white font-semibold text-sm leading-tight mb-1 line-clamp-1">{title}</p>
 
             <div className="flex items-center gap-2 text-xs mb-2">
-              {matchPercentage && <span className="text-green-400 font-bold">{matchPercentage}% Match</span>}
-              {!matchPercentage && rating && <span className="text-green-400 font-bold">{rating}% Rating</span>}
-              {year && <span className="text-gray-400">{year}</span>}
-              <span className="border border-gray-500 text-gray-400 px-1 text-[10px] rounded">HD</span>
-            </div>
+            {topRank && <span className="text-[#E50914] font-bold">Top {topRank} this week</span>}
+            {matchPercentage && <span className="text-green-400 font-bold">{matchPercentage}% Match</span>}
+            {!matchPercentage && rating && <span className="text-green-400 font-bold">{rating}% Rating</span>}
+            {!matchPercentage && !rating && userRating > 0 && (
+              <span className="text-yellow-400 font-bold">{userRating}/5 Rated</span>
+            )}
+            {year && <span className="text-gray-400">{year}</span>}
+            <span className="border border-gray-500 text-gray-400 px-1 text-[10px] rounded">HD</span>
+          </div>
+
+            {socialReason && (
+              <p className="mb-2 text-[11px] font-medium text-[#86efac] line-clamp-2">
+                {socialReason}
+              </p>
+            )}
+
+            {progressPercent > 0 && (
+              <div className="mb-2">
+                <p className="mb-1 text-[11px] font-medium text-white/70">
+                  {mediaType === "tv" && item.season_number
+                    ? `Resume S${String(item.season_number).padStart(2, "0")}:E${String(item.episode_number || 1).padStart(2, "0")}`
+                    : "Continue watching"}
+                </p>
+                <PlaybackProgressBar progress={progressPercent} />
+              </div>
+            )}
 
             {genres.length > 0 && (
               <div className="flex flex-wrap gap-1">

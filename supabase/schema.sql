@@ -72,6 +72,66 @@ create table if not exists public.watch_history (
   season_number integer,
   episode_number integer,
   progress_percent integer default 0,
+  progress_seconds integer default 0,
+  duration_seconds integer,
+  playback_provider text,
+  created_at timestamptz not null default timezone('utc', now()),
+  updated_at timestamptz not null default timezone('utc', now())
+);
+
+create table if not exists public.ratings (
+  id uuid primary key default gen_random_uuid(),
+  user_id text not null default public.requesting_user_id(),
+  created_by text,
+  profile_id text,
+  profile_name text,
+  tmdb_id integer not null,
+  media_type text not null,
+  title text not null,
+  poster_path text,
+  backdrop_path text,
+  vote_average numeric,
+  release_date text,
+  genre_ids jsonb default '[]'::jsonb,
+  rating_value integer not null check (rating_value between 1 and 5),
+  review_text text,
+  created_at timestamptz not null default timezone('utc', now()),
+  updated_at timestamptz not null default timezone('utc', now())
+);
+
+create table if not exists public.friendships (
+  id uuid primary key default gen_random_uuid(),
+  user_id text not null default public.requesting_user_id(),
+  created_by text,
+  friend_email text not null,
+  friend_name text,
+  status text not null default 'accepted',
+  created_at timestamptz not null default timezone('utc', now()),
+  updated_at timestamptz not null default timezone('utc', now())
+);
+
+create table if not exists public.social_activity (
+  id uuid primary key default gen_random_uuid(),
+  user_id text not null default public.requesting_user_id(),
+  created_by text,
+  actor_email text not null default public.requesting_user_email(),
+  actor_name text,
+  profile_id text,
+  profile_name text,
+  activity_type text not null,
+  tmdb_id integer not null,
+  media_type text not null,
+  title text not null,
+  poster_path text,
+  backdrop_path text,
+  vote_average numeric,
+  release_date text,
+  overview text,
+  genre_ids jsonb default '[]'::jsonb,
+  is_adult boolean not null default false,
+  rating_value integer,
+  activity_message text,
+  metadata jsonb default '{}'::jsonb,
   created_at timestamptz not null default timezone('utc', now()),
   updated_at timestamptz not null default timezone('utc', now())
 );
@@ -81,7 +141,10 @@ alter table public.profiles
   add column if not exists maturity_rating text not null default 'all';
 
 alter table public.watch_history
-  add column if not exists genre_ids jsonb default '[]'::jsonb;
+  add column if not exists genre_ids jsonb default '[]'::jsonb,
+  add column if not exists progress_seconds integer default 0,
+  add column if not exists duration_seconds integer,
+  add column if not exists playback_provider text;
 
 create table if not exists public.admin_notifications (
   id uuid primary key default gen_random_uuid(),
@@ -137,6 +200,9 @@ create table if not exists public.admin_site_settings (
 alter table public.profiles enable row level security;
 alter table public.watchlist enable row level security;
 alter table public.watch_history enable row level security;
+alter table public.ratings enable row level security;
+alter table public.friendships enable row level security;
+alter table public.social_activity enable row level security;
 alter table public.admin_notifications enable row level security;
 alter table public.admin_featured_entries enable row level security;
 alter table public.admin_site_settings enable row level security;
@@ -231,6 +297,103 @@ with check (user_id = public.requesting_user_id());
 drop policy if exists "watch_history_delete_own" on public.watch_history;
 create policy "watch_history_delete_own"
 on public.watch_history
+for delete
+using (user_id = public.requesting_user_id());
+
+drop policy if exists "ratings_select_own" on public.ratings;
+create policy "ratings_select_own"
+on public.ratings
+for select
+using (user_id = public.requesting_user_id());
+
+drop policy if exists "ratings_select_admin" on public.ratings;
+create policy "ratings_select_admin"
+on public.ratings
+for select
+using (public.is_subflix_admin());
+
+drop policy if exists "ratings_insert_own" on public.ratings;
+create policy "ratings_insert_own"
+on public.ratings
+for insert
+with check (user_id = public.requesting_user_id());
+
+drop policy if exists "ratings_update_own" on public.ratings;
+create policy "ratings_update_own"
+on public.ratings
+for update
+using (user_id = public.requesting_user_id())
+with check (user_id = public.requesting_user_id());
+
+drop policy if exists "ratings_delete_own" on public.ratings;
+create policy "ratings_delete_own"
+on public.ratings
+for delete
+using (user_id = public.requesting_user_id());
+
+drop policy if exists "friendships_select_own" on public.friendships;
+create policy "friendships_select_own"
+on public.friendships
+for select
+using (user_id = public.requesting_user_id());
+
+drop policy if exists "friendships_select_admin" on public.friendships;
+create policy "friendships_select_admin"
+on public.friendships
+for select
+using (public.is_subflix_admin());
+
+drop policy if exists "friendships_insert_own" on public.friendships;
+create policy "friendships_insert_own"
+on public.friendships
+for insert
+with check (user_id = public.requesting_user_id());
+
+drop policy if exists "friendships_update_own" on public.friendships;
+create policy "friendships_update_own"
+on public.friendships
+for update
+using (user_id = public.requesting_user_id())
+with check (user_id = public.requesting_user_id());
+
+drop policy if exists "friendships_delete_own" on public.friendships;
+create policy "friendships_delete_own"
+on public.friendships
+for delete
+using (user_id = public.requesting_user_id());
+
+drop policy if exists "social_activity_select_network" on public.social_activity;
+create policy "social_activity_select_network"
+on public.social_activity
+for select
+using (
+  user_id = public.requesting_user_id()
+  or public.is_subflix_admin()
+  or exists (
+    select 1
+    from public.friendships
+    where friendships.user_id = public.requesting_user_id()
+      and lower(friendships.friend_email) = lower(social_activity.actor_email)
+      and coalesce(friendships.status, 'accepted') = 'accepted'
+  )
+);
+
+drop policy if exists "social_activity_insert_own" on public.social_activity;
+create policy "social_activity_insert_own"
+on public.social_activity
+for insert
+with check (user_id = public.requesting_user_id());
+
+drop policy if exists "social_activity_update_own" on public.social_activity;
+create policy "social_activity_update_own"
+on public.social_activity
+for update
+using (user_id = public.requesting_user_id())
+with check (user_id = public.requesting_user_id());
+
+drop policy if exists "social_activity_delete_own" on public.social_activity;
+create policy "social_activity_delete_own"
+on public.social_activity
 for delete
 using (user_id = public.requesting_user_id());
 

@@ -11,6 +11,9 @@ const ENTITY_TABLES = {
   Profile: "profiles",
   WatchHistory: "watch_history",
   Watchlist: "watchlist",
+  Rating: "ratings",
+  Friendship: "friendships",
+  SocialActivity: "social_activity",
 };
 
 const ADMIN_ENTITY_TABLES = {
@@ -28,6 +31,9 @@ const ENTITY_UNIQUE_FIELDS = {
   Profile: ["name", "avatar_color", "avatar_index"],
   WatchHistory: ["tmdb_id", "media_type", "season_number", "episode_number"],
   Watchlist: ["tmdb_id", "media_type"],
+  Rating: ["tmdb_id", "media_type", "profile_id"],
+  Friendship: ["friend_email"],
+  SocialActivity: ["id"],
   AdminNotification: ["title", "publish_at"],
   AdminFeaturedEntry: ["tmdb_id", "media_type", "entry_type", "group_name", "audience"],
   AdminSiteSetting: ["setting_key"],
@@ -82,9 +88,11 @@ const getCurrentAdminUser = async () => {
 };
 
 const clone = (value) => JSON.parse(JSON.stringify(value));
+const normalizeEmail = (value) => String(value || "").trim().toLowerCase();
 
 const getStorageKey = (entityName, userId) => `cinestream:${entityName}:${userId}`;
 const getAdminStorageKey = (entityName) => `cinestream:admin:${entityName}`;
+const getSharedStorageKey = (entityName) => `cinestream:shared:${entityName}`;
 
 const readLocalRows = (entityName, userId) => {
   if (!isBrowser) {
@@ -137,6 +145,34 @@ const writeLocalAdminRows = (entityName, rows) => {
 
   window.localStorage.setItem(getAdminStorageKey(entityName), JSON.stringify(rows));
 };
+
+const readSharedRows = (entityName) => {
+  if (!isBrowser) {
+    return [];
+  }
+
+  const raw = window.localStorage.getItem(getSharedStorageKey(entityName));
+  if (!raw) {
+    return [];
+  }
+
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+};
+
+const writeSharedRows = (entityName, rows) => {
+  if (!isBrowser) {
+    return;
+  }
+
+  window.localStorage.setItem(getSharedStorageKey(entityName), JSON.stringify(rows));
+};
+
+const isSharedMirrorEntity = (entityName) => entityName === "SocialActivity";
 
 const createLocalId = () => {
   if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
@@ -223,6 +259,28 @@ const mergeEntityRows = (entityName, remoteRows = [], localRows = []) => {
   return [...merged.values()];
 };
 
+const mergeSharedEntityRows = (entityName, rows = []) => {
+  if (!isSharedMirrorEntity(entityName) || rows.length === 0) {
+    return;
+  }
+
+  writeSharedRows(
+    entityName,
+    mergeEntityRows(entityName, rows, readSharedRows(entityName))
+  );
+};
+
+const removeSharedEntityRow = (entityName, id) => {
+  if (!isSharedMirrorEntity(entityName)) {
+    return;
+  }
+
+  writeSharedRows(
+    entityName,
+    readSharedRows(entityName).filter((row) => row.id !== id)
+  );
+};
+
 const createSupabaseClient = () => {
   if (!isSupabaseConfigured) {
     return null;
@@ -286,6 +344,7 @@ const createEntityClient = (entityName) => {
 
         const mergedRows = mergeEntityRows(entityName, data || [], localRows);
         writeLocalRows(entityName, user.id, mergedRows);
+        mergeSharedEntityRows(entityName, data || []);
         return sortLocalRows(mergedRows, sort).slice(0, limit);
       } catch (error) {
         markTableUnavailableIfMissing(table, error);
@@ -322,6 +381,7 @@ const createEntityClient = (entityName) => {
         const filteredLocalRows = filterLocalRows(localRows, filters);
         const mergedRows = mergeEntityRows(entityName, data || [], filteredLocalRows);
         writeLocalRows(entityName, user.id, mergeEntityRows(entityName, data || [], localRows));
+        mergeSharedEntityRows(entityName, data || []);
         return mergedRows;
       } catch (error) {
         markTableUnavailableIfMissing(table, error);
@@ -345,6 +405,7 @@ const createEntityClient = (entityName) => {
       if (!canUseRemoteTable(table)) {
         const localRecord = { id: createLocalId(), ...record };
         writeLocalRows(entityName, user.id, mergeEntityRows(entityName, [localRecord], localRows));
+        mergeSharedEntityRows(entityName, [localRecord]);
         return localRecord;
       }
 
@@ -361,12 +422,14 @@ const createEntityClient = (entityName) => {
         }
 
         writeLocalRows(entityName, user.id, mergeEntityRows(entityName, [data], localRows));
+        mergeSharedEntityRows(entityName, [data]);
         return data;
       } catch (error) {
         markTableUnavailableIfMissing(table, error);
         console.warn(`[${entityName}] Falling back to local storage`, error);
         const localRecord = { id: createLocalId(), ...record };
         writeLocalRows(entityName, user.id, mergeEntityRows(entityName, [localRecord], localRows));
+        mergeSharedEntityRows(entityName, [localRecord]);
         return localRecord;
       }
     },
@@ -384,7 +447,9 @@ const createEntityClient = (entityName) => {
           row.id === id ? { ...row, ...changes } : row
         );
         writeLocalRows(entityName, user.id, updatedRows);
-        return updatedRows.find((row) => row.id === id) || null;
+        const updatedRow = updatedRows.find((row) => row.id === id) || null;
+        mergeSharedEntityRows(entityName, updatedRow ? [updatedRow] : []);
+        return updatedRow;
       }
 
       try {
@@ -403,6 +468,7 @@ const createEntityClient = (entityName) => {
 
         const updatedRows = localRows.map((row) => (row.id === id ? data : row));
         writeLocalRows(entityName, user.id, updatedRows);
+        mergeSharedEntityRows(entityName, [data]);
         return data;
       } catch (error) {
         markTableUnavailableIfMissing(table, error);
@@ -411,7 +477,9 @@ const createEntityClient = (entityName) => {
           row.id === id ? { ...row, ...changes } : row
         );
         writeLocalRows(entityName, user.id, updatedRows);
-        return updatedRows.find((row) => row.id === id) || null;
+        const updatedRow = updatedRows.find((row) => row.id === id) || null;
+        mergeSharedEntityRows(entityName, updatedRow ? [updatedRow] : []);
+        return updatedRow;
       }
     },
 
@@ -422,6 +490,7 @@ const createEntityClient = (entityName) => {
 
       if (!canUseRemoteTable(table)) {
         writeLocalRows(entityName, user.id, updatedRows);
+        removeSharedEntityRow(entityName, id);
         return true;
       }
 
@@ -438,11 +507,13 @@ const createEntityClient = (entityName) => {
         }
 
         writeLocalRows(entityName, user.id, updatedRows);
+        removeSharedEntityRow(entityName, id);
         return true;
       } catch (error) {
         markTableUnavailableIfMissing(table, error);
         console.warn(`[${entityName}] Falling back to local storage`, error);
         writeLocalRows(entityName, user.id, updatedRows);
+        removeSharedEntityRow(entityName, id);
         return true;
       }
     },
@@ -759,6 +830,107 @@ const getAdminDashboardData = async () => {
   };
 };
 
+const sortByUpdatedDateDesc = (rows = []) =>
+  [...rows].sort((a, b) => String(b.updated_at || "").localeCompare(String(a.updated_at || "")));
+
+const getFriendEmailsForCurrentUser = async () => {
+  const friendships = await createEntityClient("Friendship").list("-updated_date", 100).catch(() => []);
+  return friendships
+    .map((entry) => normalizeEmail(entry.friend_email))
+    .filter(Boolean);
+};
+
+const querySocialActivityByEmails = async ({ actorEmails = [], limit = 40, filters = {} } = {}) => {
+  if (actorEmails.length === 0) {
+    return [];
+  }
+
+  const table = ENTITY_TABLES.SocialActivity;
+
+  if (!canUseRemoteTable(table)) {
+    return sortByUpdatedDateDesc(
+      readSharedRows("SocialActivity").filter((row) => {
+        if (!actorEmails.includes(normalizeEmail(row.actor_email))) {
+          return false;
+        }
+
+        return Object.entries(filters).every(([key, value]) => row?.[key] === value);
+      })
+    ).slice(0, limit);
+  }
+
+  try {
+    const client = createSupabaseClient();
+    let query = client
+      .from(table)
+      .select("*")
+      .in("actor_email", actorEmails)
+      .order("updated_at", { ascending: false })
+      .limit(limit);
+
+    Object.entries(filters).forEach(([key, value]) => {
+      query = query.eq(key, value);
+    });
+
+    const { data, error } = await query;
+    if (error) {
+      throw error;
+    }
+
+    mergeSharedEntityRows("SocialActivity", data || []);
+    return data || [];
+  } catch (error) {
+    markTableUnavailableIfMissing(table, error);
+    console.warn("[SocialActivity] Falling back to local shared storage", error);
+    return sortByUpdatedDateDesc(
+      readSharedRows("SocialActivity").filter((row) => {
+        if (!actorEmails.includes(normalizeEmail(row.actor_email))) {
+          return false;
+        }
+
+        return Object.entries(filters).every(([key, value]) => row?.[key] === value);
+      })
+    ).slice(0, limit);
+  }
+};
+
+const logSocialActivity = async (payload = {}) => {
+  const user = await getCurrentUser();
+  const actorEmail = normalizeEmail(payload.actor_email || user.email);
+  const actorName = payload.actor_name || user.full_name || actorEmail || "Subflix Member";
+  const client = createEntityClient("SocialActivity");
+  const filters = {
+    activity_type: payload.activity_type,
+    tmdb_id: payload.tmdb_id,
+    media_type: payload.media_type,
+  };
+
+  if (payload.profile_id) {
+    filters.profile_id = payload.profile_id;
+  }
+
+  const existingEntries = await client.filter(filters).catch(() => []);
+  const existingEntry = existingEntries.find(
+    (entry) => normalizeEmail(entry.actor_email) === actorEmail
+  );
+
+  const record = {
+    ...clone(payload),
+    actor_email: actorEmail,
+    actor_name: actorName,
+  };
+
+  const nextEntry = existingEntry?.id
+    ? await client.update(existingEntry.id, record).catch(() => null)
+    : await client.create(record).catch(() => null);
+
+  if (nextEntry) {
+    mergeSharedEntityRows("SocialActivity", [nextEntry]);
+  }
+
+  return nextEntry;
+};
+
 export const base44 = {
   auth: {
     async me() {
@@ -775,6 +947,29 @@ export const base44 = {
     Profile: createEntityClient("Profile"),
     WatchHistory: createEntityClient("WatchHistory"),
     Watchlist: createEntityClient("Watchlist"),
+    Rating: createEntityClient("Rating"),
+    Friendship: createEntityClient("Friendship"),
+    SocialActivity: createEntityClient("SocialActivity"),
+  },
+  social: {
+    async logActivity(payload) {
+      return logSocialActivity(payload);
+    },
+    async listFriendActivity(limit = 24) {
+      const friendEmails = await getFriendEmailsForCurrentUser();
+      return querySocialActivityByEmails({ actorEmails: friendEmails, limit });
+    },
+    async listTitleFriendActivity(tmdbId, mediaType, limit = 12) {
+      const friendEmails = await getFriendEmailsForCurrentUser();
+      return querySocialActivityByEmails({
+        actorEmails: friendEmails,
+        limit,
+        filters: {
+          tmdb_id: Number(tmdbId),
+          media_type: mediaType,
+        },
+      });
+    },
   },
   admin: {
     getDashboardData: getAdminDashboardData,

@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Plus, Trash2, Check, X } from "lucide-react";
 import { base44 } from "@/api/base44Client";
-import { AvatarArt, AVATAR_COLORS, AVATAR_OPTIONS } from "@/lib/avatar-options";
+import { AvatarArt, AVATAR_COLORS, AVATAR_OPTIONS, DEFAULT_PROFILE_AVATAR_INDEX } from "@/lib/avatar-options";
 import { getProfileBadge, MATURITY_OPTIONS } from "@/lib/preferences";
 
 function AvatarPreview({ color, svgIndex, size = 80 }) {
@@ -16,7 +16,7 @@ function AvatarPreview({ color, svgIndex, size = 80 }) {
 function EditProfileModal({ profile, onSave, onClose }) {
   const [name, setName] = useState(profile?.name || "");
   const [color, setColor] = useState(profile?.avatar_color || AVATAR_COLORS[0]);
-  const [svgIndex, setSvgIndex] = useState(profile?.avatar_index ?? 0);
+  const [svgIndex, setSvgIndex] = useState(profile?.avatar_index ?? DEFAULT_PROFILE_AVATAR_INDEX);
   const [isKids, setIsKids] = useState(Boolean(profile?.is_kids));
   const [maturityRating, setMaturityRating] = useState(profile?.maturity_rating || "all");
   const [saving, setSaving] = useState(false);
@@ -88,6 +88,7 @@ function EditProfileModal({ profile, onSave, onClose }) {
                 key={i}
                 onClick={() => setSvgIndex(i)}
                 className="cursor-pointer rounded overflow-hidden transition-transform hover:scale-110"
+                title={AVATAR_OPTIONS[i]?.alt || `Avatar option ${i + 1}`}
                 style={{
                   width: 44, height: 44, backgroundColor: color,
                   outline: svgIndex === i ? "3px solid white" : "none", outlineOffset: 2

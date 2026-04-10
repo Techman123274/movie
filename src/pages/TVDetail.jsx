@@ -1,12 +1,27 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate, useOutletContext } from "react-router-dom";
-import { Play, Plus, Check, Star, X, ChevronDown } from "lucide-react";
+import { Play, Plus, Check, Star, X, ChevronDown, ThumbsUp } from "lucide-react";
 import { getTVDetails, getTVSeason, tmdbOriginal, tmdbW500, tmdbW185, tmdbW300, getYouTubeTrailer } from "@/lib/tmdb";
 import ContentRow from "@/components/ui/ContentRow";
+import RatingStars from "@/components/ui/RatingStars";
 import { DetailSkeleton } from "@/components/ui/LoadingSkeleton";
 import { base44 } from "@/api/base44Client";
 import ProfileRestrictionNotice from "@/components/profile/ProfileRestrictionNotice";
 import { filterItemsForProfile, isAllowedForProfile } from "@/lib/preferences";
+import { buildWatchPath, getLatestHistoryEntry, getResumeLabel, shouldResumePlayback } from "@/lib/playback";
+import {
+  getWatchlistEntry,
+  isItemLiked,
+  LIBRARY_CHANGED_EVENT,
+  toggleLikedItem,
+  toggleWatchlistItem,
+} from "@/lib/library";
+import {
+  clearRating,
+  getRatingEntry,
+  getTitleFriendSignals,
+  saveRating,
+} from "@/lib/social";
 
 export default function TVDetail() {
   const { id } = useParams();
@@ -18,6 +33,11 @@ export default function TVDetail() {
   const [seasonData, setSeasonData] = useState(null);
   const [showTrailer, setShowTrailer] = useState(false);
   const [inList, setInList] = useState(false);
+  const [liked, setLiked] = useState(false);
+  const [resumeEntry, setResumeEntry] = useState(null);
+  const [userRating, setUserRating] = useState(0);
+  const [friendsSummary, setFriendsSummary] = useState("");
+  const [savingRating, setSavingRating] = useState(false);
 
   useEffect(() => {
     setLoading(true);
@@ -37,25 +57,111 @@ export default function TVDetail() {
     getTVSeason(id, selectedSeason).then(setSeasonData).catch(() => setSeasonData(null));
   }, [id, selectedSeason, show]);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadLibraryState = async () => {
+      const user = await base44.auth.me().catch(() => null);
+      if (!user || cancelled) {
+        if (!cancelled) {
+          setInList(false);
+          setLiked(false);
+          setResumeEntry(null);
+          setUserRating(0);
+          setFriendsSummary("");
+        }
+        return;
+      }
+
+      const [watchlistEntry, historyEntries, ratingEntry, friendSignals] = await Promise.all([
+        getWatchlistEntry({ tmdb_id: Number(id), media_type: "tv" }, "tv").catch(() => null),
+        base44.entities.WatchHistory.filter({ tmdb_id: Number(id), media_type: "tv" }).catch(() => []),
+        getRatingEntry({ tmdbId: Number(id), mediaType: "tv", profile: activeProfile }).catch(() => null),
+        getTitleFriendSignals({ tmdbId: Number(id), mediaType: "tv" }).catch(() => ({ summary: "" })),
+      ]);
+
+      if (!cancelled) {
+        setInList(Boolean(watchlistEntry));
+        setLiked(isItemLiked(user, activeProfile, { tmdb_id: Number(id), media_type: "tv" }, "tv"));
+        setResumeEntry(getLatestHistoryEntry(historyEntries));
+        setUserRating(Number(ratingEntry?.rating_value) || 0);
+        setFriendsSummary(friendSignals.summary || "");
+      }
+    };
+
+    loadLibraryState();
+    window.addEventListener(LIBRARY_CHANGED_EVENT, loadLibraryState);
+    return () => {
+      cancelled = true;
+      window.removeEventListener(LIBRARY_CHANGED_EVENT, loadLibraryState);
+    };
+  }, [id, activeProfile]);
+
   const handleWatchlist = async () => {
     try {
       const user = await base44.auth.me();
       if (!user) { base44.auth.redirectToLogin(); return; }
-      if (inList) {
-        const items = await base44.entities.Watchlist.filter({ tmdb_id: Number(id), created_by: user.email });
-        if (items.length) await base44.entities.Watchlist.delete(items[0].id);
-        setInList(false);
-      } else {
-        await base44.entities.Watchlist.create({
-          tmdb_id: Number(id), media_type: "tv",
-          title: show.name, poster_path: show.poster_path,
-          backdrop_path: show.backdrop_path, vote_average: show.vote_average,
-          overview: show.overview, release_date: show.first_air_date,
-          genre_ids: show.genres?.map((g) => g.id),
-        });
-        setInList(true);
-      }
+      const result = await toggleWatchlistItem({ item: show, mediaType: "tv" });
+      setInList(result.inWatchlist);
     } catch { base44.auth.redirectToLogin(); }
+  };
+
+  const handleLike = async () => {
+    try {
+      const user = await base44.auth.me();
+      if (!user) { base44.auth.redirectToLogin(); return; }
+      const nextLiked = toggleLikedItem({
+        user,
+        profile: activeProfile,
+        item: show,
+        mediaType: "tv",
+      });
+      setLiked(nextLiked);
+    } catch { base44.auth.redirectToLogin(); }
+  };
+
+  const handleRate = async (nextRating) => {
+    try {
+      const user = await base44.auth.me();
+      if (!user) {
+        base44.auth.redirectToLogin();
+        return;
+      }
+
+      setSavingRating(true);
+      await saveRating({
+        user,
+        profile: activeProfile,
+        item: show,
+        mediaType: "tv",
+        ratingValue: nextRating,
+      });
+      setUserRating(nextRating);
+      const friendSignals = await getTitleFriendSignals({ tmdbId: Number(id), mediaType: "tv" }).catch(() => ({ summary: "" }));
+      setFriendsSummary(friendSignals.summary || "");
+    } catch {
+      base44.auth.redirectToLogin();
+    } finally {
+      setSavingRating(false);
+    }
+  };
+
+  const handleClearRating = async () => {
+    try {
+      const user = await base44.auth.me();
+      if (!user) {
+        base44.auth.redirectToLogin();
+        return;
+      }
+
+      setSavingRating(true);
+      await clearRating({ tmdbId: Number(id), mediaType: "tv", profile: activeProfile });
+      setUserRating(0);
+    } catch {
+      base44.auth.redirectToLogin();
+    } finally {
+      setSavingRating(false);
+    }
   };
 
   if (loading) return <DetailSkeleton />;
@@ -74,6 +180,19 @@ export default function TVDetail() {
     activeProfile
   );
   const isAllowed = isAllowedForProfile(show, activeProfile);
+  const canResume = shouldResumePlayback(resumeEntry);
+  const playPath = canResume
+    ? buildWatchPath({
+        mediaType: "tv",
+        tmdbId: Number(id),
+        seasonNumber: resumeEntry?.season_number,
+        episodeNumber: resumeEntry?.episode_number,
+      })
+    : buildWatchPath({
+        mediaType: "tv",
+        tmdbId: Number(id),
+      });
+  const playLabel = getResumeLabel(resumeEntry, "tv");
 
   if (!isAllowed) {
     return (
@@ -146,10 +265,10 @@ export default function TVDetail() {
 
             <div className="flex items-center gap-3 mb-6">
               <button
-                onClick={() => navigate(`/watch/tv/${id}?season=1&episode=1`)}
+                onClick={() => navigate(playPath)}
                 className="flex items-center gap-2 bg-white text-black font-bold px-8 py-3 rounded hover:bg-gray-200 transition-colors text-sm"
               >
-                <Play className="w-5 h-5 fill-black" /> Play S1:E1
+                <Play className="w-5 h-5 fill-black" /> {playLabel}
               </button>
               <button
                 onClick={handleWatchlist}
@@ -158,11 +277,53 @@ export default function TVDetail() {
                 {inList ? <Check className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
                 {inList ? "In My List" : "My List"}
               </button>
+              <button
+                onClick={handleLike}
+                className={`flex items-center gap-2 border px-6 py-3 rounded transition-colors text-sm ${
+                  liked
+                    ? "border-[#E50914] bg-[#E50914]/15 text-white hover:bg-[#E50914]/25"
+                    : "border-gray-500 text-white hover:border-white"
+                }`}
+              >
+                <ThumbsUp className={`w-4 h-4 ${liked ? "fill-[#E50914] text-[#E50914]" : ""}`} />
+                {liked ? "Liked" : "Rate Up"}
+              </button>
               {trailerUrl && (
                 <button onClick={() => setShowTrailer(true)} className="border border-gray-500 text-white font-semibold px-6 py-3 rounded hover:border-white transition-colors text-sm">
                   Trailer
                 </button>
               )}
+            </div>
+
+            {canResume && (
+              <p className="-mt-2 mb-6 text-sm text-white/65">
+                Resume from your latest in-progress episode.
+              </p>
+            )}
+
+            <div className="mb-6 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+              <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <div>
+                  <p className="text-xs uppercase tracking-[0.25em] text-gray-500">Your Rating</p>
+                  <div className="mt-2">
+                    <RatingStars value={userRating} onChange={handleRate} disabled={savingRating} />
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  {userRating > 0 && (
+                    <button
+                      type="button"
+                      onClick={handleClearRating}
+                      className="rounded-full border border-white/10 px-4 py-2 text-sm font-medium text-white/75 hover:border-white/25 hover:text-white"
+                    >
+                      Clear
+                    </button>
+                  )}
+                  {friendsSummary && (
+                    <p className="max-w-sm text-sm text-[#86efac]">{friendsSummary}</p>
+                  )}
+                </div>
+              </div>
             </div>
 
             <p className="text-gray-300 text-sm md:text-base leading-relaxed mb-6 max-w-2xl">{show.overview}</p>

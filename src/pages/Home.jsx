@@ -19,6 +19,8 @@ import {
   getNowPlayingMovies,
   getAiringTodayTV,
   getByGenre,
+  getMovieDetails,
+  getTVDetails,
   tmdbConfigured,
 } from "@/lib/tmdb";
 import { base44 } from "@/api/base44Client";
@@ -26,9 +28,14 @@ import { filterItemsForProfile } from "@/lib/preferences";
 import {
   buildTasteProfile,
   decorateItemsWithMatch,
+  getHiddenGemItems,
   getRecommendedItems,
+  getTrendingInFavoriteGenres,
   saveTasteProfile,
 } from "@/lib/recommendations";
+import { LIBRARY_CHANGED_EVENT, readLikedItems } from "@/lib/library";
+import { attachPlaybackProgress, buildContinueWatchingItems } from "@/lib/playback";
+import { listFriendActivityItems, SOCIAL_CHANGED_EVENT } from "@/lib/social";
 
 const KIDS_MOVIE_ROWS = [
   { id: 16, title: "Animated Favorites" },
@@ -65,21 +72,46 @@ export default function Home() {
   const [rows, setRows] = useState([]);
   const [continueWatching, setContinueWatching] = useState([]);
   const [myList, setMyList] = useState([]);
+  const [likedTitles, setLikedTitles] = useState([]);
+  const [friendActivityItems, setFriendActivityItems] = useState([]);
+  const [historyEntries, setHistoryEntries] = useState([]);
+  const [recentHistoryItems, setRecentHistoryItems] = useState([]);
   const [tasteProfile, setTasteProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [hasApiKey, setHasApiKey] = useState(true);
 
   useEffect(() => {
     loadContent();
-  }, [activeProfile, tasteProfile]);
+  }, [activeProfile, tasteProfile, recentHistoryItems]);
 
   useEffect(() => {
     if (user) {
       loadUserContent();
-      return;
+    } else {
+      setHistoryEntries([]);
+      setRecentHistoryItems([]);
+      setContinueWatching([]);
+      setMyList([]);
+      setLikedTitles([]);
+      setFriendActivityItems([]);
     }
-    setContinueWatching([]);
-    setMyList([]);
+  }, [user, activeProfile]);
+
+  useEffect(() => {
+    if (!user || typeof window === "undefined") {
+      return undefined;
+    }
+
+    const handleLibraryChanged = () => {
+      loadUserContent();
+    };
+
+    window.addEventListener(LIBRARY_CHANGED_EVENT, handleLibraryChanged);
+    window.addEventListener(SOCIAL_CHANGED_EVENT, handleLibraryChanged);
+    return () => {
+      window.removeEventListener(LIBRARY_CHANGED_EVENT, handleLibraryChanged);
+      window.removeEventListener(SOCIAL_CHANGED_EVENT, handleLibraryChanged);
+    };
   }, [user, activeProfile]);
 
   const loadContent = async () => {
@@ -310,15 +342,62 @@ export default function Home() {
     );
     const filteredCandidates = filterItemsForProfile(candidatePool, activeProfile);
     const recommendedItems = tasteProfile ? getRecommendedItems(filteredCandidates, tasteProfile, 20) : [];
+    const favoriteGenreItems = tasteProfile ? getTrendingInFavoriteGenres(filteredCandidates, tasteProfile, 20) : [];
+    const hiddenGemItems = tasteProfile ? getHiddenGemItems(filteredCandidates, tasteProfile, 20) : [];
     const heroSource = recommendedItems.length > 0
       ? recommendedItems
       : decorateItemsWithMatch(filterItemsForProfile(trending.results || [], activeProfile), tasteProfile);
+    const topTenThisWeek = decorateItemsWithMatch(
+      filterItemsForProfile(
+        (trending.results || [])
+          .slice(0, 10)
+          .map((item, index) => ({
+            ...item,
+            media_type: item.media_type || (item.title ? "movie" : "tv"),
+            top_rank: index + 1,
+          })),
+        activeProfile
+      ),
+      tasteProfile
+    );
 
     const curatedHero = decorateItemsWithMatch(curatedState.heroItems, tasteProfile).slice(0, 5);
     setHeroItems((curatedHero.length > 0 ? curatedHero : heroSource).slice(0, 5));
 
+    let becauseYouWatchedRow = null;
+    const seedItem = recentHistoryItems[0];
+    if (seedItem?.tmdb_id && seedItem?.media_type) {
+      const detail = seedItem.media_type === "tv"
+        ? await getTVDetails(seedItem.tmdb_id).catch(() => null)
+        : await getMovieDetails(seedItem.tmdb_id).catch(() => null);
+
+      const rawRelatedItems = [
+        ...(detail?.recommendations?.results || []),
+        ...(detail?.similar?.results || []),
+      ].map((entry) => ({
+        ...entry,
+        media_type: seedItem.media_type,
+      }));
+
+      const becauseYouWatchedItems = decorateItemsWithMatch(
+        filterItemsForProfile(dedupeItems(rawRelatedItems), activeProfile),
+        tasteProfile
+      ).slice(0, 20);
+
+      if (becauseYouWatchedItems.length > 0) {
+        becauseYouWatchedRow = {
+          title: `Because You Watched ${seedItem.title}`,
+          items: becauseYouWatchedItems,
+        };
+      }
+    }
+
     const nextRows = [
       recommendedItems.length > 0 ? { title: "Recommended For You", items: recommendedItems } : null,
+      becauseYouWatchedRow,
+      favoriteGenreItems.length > 0 ? { title: "Trending In Your Favorite Genres", items: favoriteGenreItems } : null,
+      hiddenGemItems.length > 0 ? { title: "Hidden Gems For You", items: hiddenGemItems } : null,
+      topTenThisWeek.length > 0 ? { title: "Top 10 This Week", items: topTenThisWeek } : null,
       { title: "Trending Now", items: decorateItemsWithMatch(filterItemsForProfile(trending.results || [], activeProfile), tasteProfile) },
       { title: "Now Playing in Theaters", items: decorateItemsWithMatch(filterItemsForProfile(nowPlaying.results || [], activeProfile), tasteProfile) },
       { title: "Popular Movies", items: decorateItemsWithMatch(filterItemsForProfile(popularMovies.results || [], activeProfile), tasteProfile) },
@@ -338,20 +417,31 @@ export default function Home() {
   };
 
   const loadUserContent = async () => {
-    const [history, watchlist] = await Promise.all([
+    const [history, watchlist, ratings, friendItems] = await Promise.all([
       base44.entities.WatchHistory.list("-updated_date", 10).catch(() => []),
       base44.entities.Watchlist.list("-created_date", 20).catch(() => []),
+      base44.entities.Rating.list("-updated_date", 20).catch(() => []),
+      listFriendActivityItems({ activeProfile, limit: 16 }).catch(() => []),
     ]);
+
+    setHistoryEntries(history);
+
     const historyItems = history.map((h) => ({
       id: h.tmdb_id,
+      tmdb_id: h.tmdb_id,
       title: h.title,
       poster_path: h.poster_path,
       backdrop_path: h.backdrop_path,
       media_type: h.media_type,
       vote_average: h.vote_average,
       progress_percent: h.progress_percent,
+      progress_seconds: h.progress_seconds,
+      duration_seconds: h.duration_seconds,
+      season_number: h.season_number,
+      episode_number: h.episode_number,
       release_date: h.release_date,
       genre_ids: h.genre_ids,
+      updated_at: h.updated_at,
     }));
     const watchlistItems = watchlist.map((w) => ({
       id: w.tmdb_id,
@@ -364,10 +454,29 @@ export default function Home() {
       release_date: w.release_date,
       genre_ids: w.genre_ids,
     }));
+    const likedItems = readLikedItems(user, activeProfile).map((item) => ({
+      ...item,
+      id: item.tmdb_id,
+    }));
+    const ratingItems = ratings
+      .filter((entry) => !activeProfile?.id || entry.profile_id === activeProfile.id)
+      .map((entry) => ({
+        id: entry.tmdb_id,
+        tmdb_id: entry.tmdb_id,
+        title: entry.title,
+        poster_path: entry.poster_path,
+        backdrop_path: entry.backdrop_path,
+        media_type: entry.media_type,
+        vote_average: entry.vote_average,
+        overview: entry.review_text || "",
+        release_date: entry.release_date,
+        genre_ids: entry.genre_ids,
+        user_rating: entry.rating_value,
+      }));
 
     const nextTasteProfile = buildTasteProfile({
       history: filterItemsForProfile(historyItems, activeProfile),
-      watchlist: filterItemsForProfile(watchlistItems, activeProfile),
+      watchlist: filterItemsForProfile([...watchlistItems, ...likedItems, ...ratingItems], activeProfile),
     });
 
     setTasteProfile(nextTasteProfile);
@@ -375,9 +484,30 @@ export default function Home() {
       saveTasteProfile(nextTasteProfile, activeProfile);
     }
 
-    setContinueWatching(decorateItemsWithMatch(filterItemsForProfile(historyItems, activeProfile), nextTasteProfile));
-    setMyList(decorateItemsWithMatch(filterItemsForProfile(watchlistItems, activeProfile), nextTasteProfile));
+    const filteredHistoryItems = filterItemsForProfile(historyItems, activeProfile);
+    const filteredWatchlistItems = filterItemsForProfile(watchlistItems, activeProfile);
+    const filteredLikedItems = filterItemsForProfile(likedItems, activeProfile);
+    setRecentHistoryItems(filteredHistoryItems.slice(0, 5));
+
+    setContinueWatching(
+      decorateItemsWithMatch(buildContinueWatchingItems(filteredHistoryItems), nextTasteProfile)
+    );
+    setMyList(
+      decorateItemsWithMatch(attachPlaybackProgress(filteredWatchlistItems, filteredHistoryItems), nextTasteProfile)
+    );
+    setLikedTitles(
+      decorateItemsWithMatch(attachPlaybackProgress(filteredLikedItems, filteredHistoryItems), nextTasteProfile)
+    );
+    setFriendActivityItems(
+      decorateItemsWithMatch(attachPlaybackProgress(friendItems, filteredHistoryItems), nextTasteProfile)
+    );
   };
+
+  const heroItemsWithProgress = attachPlaybackProgress(heroItems, historyEntries);
+  const rowsWithProgress = rows.map((row) => ({
+    ...row,
+    items: attachPlaybackProgress(row.items, historyEntries),
+  }));
 
   if (!hasApiKey) {
     return (
@@ -404,7 +534,7 @@ export default function Home() {
   return (
     <div className="bg-[#0a0a0a]">
       {!hasApiKey && <NoApiKeyBanner />}
-      <HeroBanner items={heroItems} />
+      <HeroBanner items={heroItemsWithProgress} />
 
       <div className="relative z-10 pb-8">
         {user && continueWatching.length > 0 && (
@@ -413,7 +543,13 @@ export default function Home() {
         {user && myList.length > 0 && (
           <ContentRow title="My List" items={myList} />
         )}
-        {rows.map((row) => (
+        {user && likedTitles.length > 0 && (
+          <ContentRow title="Your Thumbs Up" items={likedTitles} />
+        )}
+        {user && friendActivityItems.length > 0 && (
+          <ContentRow title="Friends Activity" items={friendActivityItems} />
+        )}
+        {rowsWithProgress.map((row) => (
           <ContentRow key={row.title} title={row.title} items={row.items} />
         ))}
       </div>

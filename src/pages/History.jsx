@@ -4,6 +4,8 @@ import { Clock, Play, Trash2 } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { tmdbW300 } from "@/lib/tmdb";
 import { filterItemsForProfile } from "@/lib/preferences";
+import { buildWatchPath } from "@/lib/playback";
+import PlaybackProgressBar from "@/components/ui/PlaybackProgressBar";
 
 export default function History() {
   const { activeProfile } = useOutletContext() || {};
@@ -101,14 +103,20 @@ export default function History() {
                 </div>
               )}
 
+              <div className="absolute inset-x-2 bottom-2 z-10">
+                <PlaybackProgressBar progress={item.progress_percent} />
+              </div>
+
               {/* Hover overlay */}
               <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2">
                 <button
                   onClick={() => {
-                    const params = item.media_type === "tv"
-                      ? `?season=${item.season_number || 1}&episode=${item.episode_number || 1}`
-                      : "";
-                    navigate(`/watch/${item.media_type}/${item.tmdb_id}${params}`);
+                    navigate(item.resume_path || buildWatchPath({
+                      mediaType: item.media_type,
+                      tmdbId: item.tmdb_id,
+                      seasonNumber: item.season_number,
+                      episodeNumber: item.episode_number,
+                    }));
                   }}
                   className="bg-white text-black rounded-full p-3 hover:bg-gray-200 transition-colors"
                 >

@@ -1,12 +1,27 @@
-import homelanderAvatar from "@/assets/avatars/homelander.jpg";
-import atrainAvatar from "@/assets/avatars/atrain.jpg";
+const avatarImageModules = import.meta.glob("../assets/avatars/*.{png,jpg,jpeg,webp,avif,gif}", {
+  eager: true,
+  import: "default",
+});
 
-export const AVATAR_COLORS = [
-  "#2d67b5", "#c6432a", "#5b6e3f", "#8c5ebf",
-  "#1a8a6e", "#c48a12", "#b53060", "#2a7a9b",
-];
+const formatAvatarLabel = (path) =>
+  path
+    .split("/")
+    .pop()
+    ?.replace(/\.[^.]+$/, "")
+    .replace(/[-_]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/\b\w/g, (char) => char.toUpperCase()) || "Profile avatar";
 
-export const AVATAR_OPTIONS = [
+const IMAGE_AVATAR_OPTIONS = Object.entries(avatarImageModules)
+  .sort(([pathA], [pathB]) => pathA.localeCompare(pathB))
+  .map(([path, src]) => ({
+    type: "image",
+    src,
+    alt: `${formatAvatarLabel(path)} profile avatar`,
+  }));
+
+const SVG_AVATAR_OPTIONS = [
   {
     type: "svg",
     content: (
@@ -84,20 +99,33 @@ export const AVATAR_OPTIONS = [
       </svg>
     ),
   },
-  {
-    type: "image",
-    src: homelanderAvatar,
-    alt: "Homelander profile avatar",
-  },
-  {
-    type: "image",
-    src: atrainAvatar,
-    alt: "A-Train profile avatar",
-  },
 ];
 
+export const AVATAR_COLORS = [
+  "#2d67b5", "#c6432a", "#5b6e3f", "#8c5ebf",
+  "#1a8a6e", "#c48a12", "#b53060", "#2a7a9b",
+];
+
+export const AVATAR_OPTIONS = [...SVG_AVATAR_OPTIONS, ...IMAGE_AVATAR_OPTIONS];
+export const DEFAULT_PROFILE_AVATAR_INDEX = SVG_AVATAR_OPTIONS.length;
+export const AVATAR_IMAGE_FOLDER = "src/assets/avatars";
+
+const getAvatarOption = (avatarIndex = 0) => {
+  if (!AVATAR_OPTIONS.length) {
+    return null;
+  }
+
+  if (avatarIndex >= SVG_AVATAR_OPTIONS.length && IMAGE_AVATAR_OPTIONS.length > 0) {
+    const imageOffset = (avatarIndex - SVG_AVATAR_OPTIONS.length) % IMAGE_AVATAR_OPTIONS.length;
+    return IMAGE_AVATAR_OPTIONS[(imageOffset + IMAGE_AVATAR_OPTIONS.length) % IMAGE_AVATAR_OPTIONS.length];
+  }
+
+  const safeIndex = ((avatarIndex % AVATAR_OPTIONS.length) + AVATAR_OPTIONS.length) % AVATAR_OPTIONS.length;
+  return AVATAR_OPTIONS[safeIndex];
+};
+
 export function AvatarArt({ avatarIndex = 0, color = AVATAR_COLORS[0] }) {
-  const option = AVATAR_OPTIONS[((avatarIndex % AVATAR_OPTIONS.length) + AVATAR_OPTIONS.length) % AVATAR_OPTIONS.length];
+  const option = getAvatarOption(avatarIndex) || SVG_AVATAR_OPTIONS[0];
 
   if (option?.type === "image") {
     return (

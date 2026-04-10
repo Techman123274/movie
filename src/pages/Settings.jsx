@@ -10,13 +10,17 @@ import {
   Settings as SettingsIcon,
   ShieldCheck,
   SlidersHorizontal,
+  Trash2,
   UserCircle2,
+  Users,
 } from "lucide-react";
 import { hasTmdbCredentials, tmdbApiKey, tmdbReadAccessToken } from "@/lib/env";
 import { getProfileBadge, readPreference, removePreference, writePreference } from "@/lib/preferences";
+import { addFriend, listFriends, removeFriend, SOCIAL_CHANGED_EVENT } from "@/lib/social";
 
 const sections = [
   { id: "account", label: "Account", icon: UserCircle2 },
+  { id: "social", label: "Social", icon: Users },
   { id: "playback", label: "Playback", icon: MonitorPlay },
   { id: "notifications", label: "Notifications", icon: BellRing },
   { id: "library", label: "Library", icon: Film },
@@ -34,6 +38,11 @@ export default function SettingsPage() {
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [browserNotifications, setBrowserNotifications] = useState(false);
   const [notificationPermission, setNotificationPermission] = useState("default");
+  const [friends, setFriends] = useState([]);
+  const [friendEmail, setFriendEmail] = useState("");
+  const [friendName, setFriendName] = useState("");
+  const [socialMessage, setSocialMessage] = useState("");
+  const [socialBusy, setSocialBusy] = useState(false);
 
   useEffect(() => {
     setApiKey(readPreference("tmdb_api_key", tmdbApiKey()));
@@ -46,6 +55,29 @@ export default function SettingsPage() {
       setNotificationPermission(Notification.permission);
     }
   }, []);
+
+  useEffect(() => {
+    if (!user) {
+      setFriends([]);
+      return undefined;
+    }
+
+    let cancelled = false;
+
+    const loadFriends = async () => {
+      const nextFriends = await listFriends().catch(() => []);
+      if (!cancelled) {
+        setFriends(nextFriends);
+      }
+    };
+
+    loadFriends();
+    window.addEventListener(SOCIAL_CHANGED_EVENT, loadFriends);
+    return () => {
+      cancelled = true;
+      window.removeEventListener(SOCIAL_CHANGED_EVENT, loadFriends);
+    };
+  }, [user]);
 
   const profileName = activeProfile?.name || user?.full_name || "Member";
   const profileType = activeProfile?.is_kids ? "Kids profile" : "Standard profile";
@@ -84,6 +116,43 @@ export default function SettingsPage() {
     setNotificationPermission(permission);
     if (permission === "granted") {
       updateToggle("subflix_browser_notifications", true, setBrowserNotifications);
+    }
+  };
+
+  const handleAddFriend = async (event) => {
+    event.preventDefault();
+    if (!friendEmail.trim()) {
+      return;
+    }
+
+    try {
+      setSocialBusy(true);
+      await addFriend({
+        user,
+        email: friendEmail,
+        name: friendName,
+      });
+      setFriendEmail("");
+      setFriendName("");
+      setSocialMessage("Friend added to your activity circle.");
+    } catch (error) {
+      setSocialMessage(error?.message || "Could not add that friend yet.");
+    } finally {
+      setSocialBusy(false);
+      window.setTimeout(() => setSocialMessage(""), 2200);
+    }
+  };
+
+  const handleRemoveFriend = async (friendshipId) => {
+    try {
+      setSocialBusy(true);
+      await removeFriend(friendshipId);
+      setSocialMessage("Friend removed.");
+    } catch {
+      setSocialMessage("Could not remove that friend yet.");
+    } finally {
+      setSocialBusy(false);
+      window.setTimeout(() => setSocialMessage(""), 2200);
     }
   };
 
@@ -212,6 +281,78 @@ export default function SettingsPage() {
                   value="Netflix-inspired dark"
                   muted="Optimized for cinematic browsing"
                 />
+              </SettingsCard>
+            )}
+
+            {activeSection === "social" && (
+              <SettingsCard
+                eyebrow="Social"
+                title="Friends and activity"
+                description="Build a lightweight social circle so Subflix can surface what your people liked, rated, and started watching."
+                icon={Users}
+              >
+                <form onSubmit={handleAddFriend} className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                  <div className="grid gap-3 md:grid-cols-[1.1fr_1fr_auto]">
+                    <input
+                      type="email"
+                      value={friendEmail}
+                      onChange={(event) => setFriendEmail(event.target.value)}
+                      placeholder="friend@email.com"
+                      className="rounded-xl border border-white/10 bg-[#181818] px-4 py-3 text-sm text-white outline-none focus:border-[#E50914]"
+                    />
+                    <input
+                      type="text"
+                      value={friendName}
+                      onChange={(event) => setFriendName(event.target.value)}
+                      placeholder="Display name (optional)"
+                      className="rounded-xl border border-white/10 bg-[#181818] px-4 py-3 text-sm text-white outline-none focus:border-[#E50914]"
+                    />
+                    <button
+                      type="submit"
+                      disabled={socialBusy}
+                      className="rounded-xl bg-[#E50914] px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-[#c40812] disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      Add Friend
+                    </button>
+                  </div>
+                  <p className="mt-3 text-xs text-gray-500">
+                    Friends you add can appear in your Home recommendations through likes, ratings, watchlist saves, and watch starts.
+                  </p>
+                </form>
+
+                {socialMessage && (
+                  <p className="text-sm text-[#86efac]">{socialMessage}</p>
+                )}
+
+                <div className="space-y-3">
+                  {friends.length === 0 ? (
+                    <div className="rounded-2xl border border-dashed border-white/10 bg-black/10 px-4 py-6 text-sm text-gray-500">
+                      Add a few friends to unlock the Friends Activity row on Home.
+                    </div>
+                  ) : (
+                    friends.map((friend) => (
+                      <div
+                        key={friend.id}
+                        className="rounded-2xl border border-white/10 bg-black/20 px-4 py-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between"
+                      >
+                        <div>
+                          <p className="text-white text-sm font-medium">
+                            {friend.friend_name || friend.friend_email}
+                          </p>
+                          <p className="text-gray-500 text-xs mt-1">{friend.friend_email}</p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveFriend(friend.id)}
+                          className="inline-flex items-center gap-2 self-start rounded-full border border-white/10 px-4 py-2 text-sm text-white/75 transition-colors hover:border-white/20 hover:text-white"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                          Remove
+                        </button>
+                      </div>
+                    ))
+                  )}
+                </div>
               </SettingsCard>
             )}
 

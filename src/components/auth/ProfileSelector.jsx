@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Plus, X, Check } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import ManageProfiles from "@/pages/ManageProfiles";
-import { AvatarArt, AVATAR_COLORS, AVATAR_OPTIONS } from "@/lib/avatar-options";
+import { AvatarArt, AVATAR_COLORS, AVATAR_OPTIONS, DEFAULT_PROFILE_AVATAR_INDEX } from "@/lib/avatar-options";
 import { getProfileBadge, MATURITY_OPTIONS } from "@/lib/preferences";
 
 function ProfileAvatar({ profile, index, onClick, isSelecting, isSelected }) {
@@ -80,7 +80,7 @@ export default function ProfileSelector({ user, onProfileSelect }) {
       const defaultProfile = await base44.entities.Profile.create({
         name: firstName,
         avatar_color: AVATAR_COLORS[0],
-        avatar_index: 0,
+        avatar_index: DEFAULT_PROFILE_AVATAR_INDEX,
       }).catch(() => null);
       setProfiles(defaultProfile ? [defaultProfile] : []);
     } else {
@@ -188,7 +188,7 @@ function AddProfileModal({ onSave, onClose }) {
   const COLORS = ["#2d67b5","#c6432a","#5b6e3f","#8c5ebf","#1a8a6e","#c48a12","#b53060","#2a7a9b"];
   const [name, setName] = useState("");
   const [color, setColor] = useState(COLORS[0]);
-  const [svgIndex, setSvgIndex] = useState(0);
+  const [svgIndex, setSvgIndex] = useState(DEFAULT_PROFILE_AVATAR_INDEX);
   const [isKids, setIsKids] = useState(false);
   const [maturityRating, setMaturityRating] = useState("all");
   const [saving, setSaving] = useState(false);
@@ -253,6 +253,7 @@ function AddProfileModal({ onSave, onClose }) {
           <div className="flex flex-wrap gap-2">
             {AVATAR_OPTIONS.map((_, i) => (
               <div key={i} onClick={() => setSvgIndex(i)} className="cursor-pointer rounded overflow-hidden transition-transform hover:scale-110"
+                title={AVATAR_OPTIONS[i]?.alt || `Avatar option ${i + 1}`}
                 style={{ width: 44, height: 44, backgroundColor: color, outline: svgIndex === i ? "3px solid white" : "none", outlineOffset: 2 }}>
                 <AvatarArt avatarIndex={i} color={color} />
               </div>

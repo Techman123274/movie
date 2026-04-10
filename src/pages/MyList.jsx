@@ -4,6 +4,9 @@ import { Bookmark, Trash2, Play } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { tmdbW300 } from "@/lib/tmdb";
 import { filterItemsForProfile } from "@/lib/preferences";
+import { LIBRARY_CHANGED_EVENT } from "@/lib/library";
+import { attachPlaybackProgress, buildWatchPath } from "@/lib/playback";
+import PlaybackProgressBar from "@/components/ui/PlaybackProgressBar";
 
 export default function MyList() {
   const { activeProfile } = useOutletContext() || {};
@@ -19,12 +22,26 @@ export default function MyList() {
     setLoading(true);
     const user = await base44.auth.me().catch(() => null);
     if (!user) { base44.auth.redirectToLogin(); return; }
-    const data = await base44.entities.Watchlist.list("-created_date", 100).catch(() => []);
-    setItems(data);
+    const [watchlist, history] = await Promise.all([
+      base44.entities.Watchlist.list("-created_date", 100).catch(() => []),
+      base44.entities.WatchHistory.list("-updated_date", 100).catch(() => []),
+    ]);
+    setItems(attachPlaybackProgress(watchlist, history));
     setLoading(false);
   };
 
-  useEffect(() => { loadList(); }, []);
+  useEffect(() => {
+    loadList();
+
+    const handleLibraryChanged = (event) => {
+      if (event.detail?.scope === "watchlist") {
+        loadList();
+      }
+    };
+
+    window.addEventListener(LIBRARY_CHANGED_EVENT, handleLibraryChanged);
+    return () => window.removeEventListener(LIBRARY_CHANGED_EVENT, handleLibraryChanged);
+  }, []);
 
   const removeItem = async (id) => {
     await base44.entities.Watchlist.delete(id);
@@ -93,10 +110,19 @@ export default function MyList() {
                 </div>
               )}
 
+              <div className="absolute inset-x-2 bottom-2 z-10">
+                <PlaybackProgressBar progress={item.progress_percent} />
+              </div>
+
               {/* Overlay on hover */}
               <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2">
                 <button
-                  onClick={() => navigate(`/watch/${item.media_type}/${item.tmdb_id}`)}
+                  onClick={() => navigate(item.resume_path || buildWatchPath({
+                    mediaType: item.media_type,
+                    tmdbId: item.tmdb_id,
+                    seasonNumber: item.season_number,
+                    episodeNumber: item.episode_number,
+                  }))}
                   className="bg-white text-black rounded-full p-3 hover:bg-gray-200 transition-colors"
                 >
                   <Play className="w-5 h-5 fill-black" />

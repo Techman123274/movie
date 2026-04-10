@@ -4,6 +4,8 @@ import { Play, Info, Plus, Check } from "lucide-react";
 import { tmdbOriginal } from "@/lib/tmdb";
 import { base44 } from "@/api/base44Client";
 import { getMatchPercentage } from "@/lib/recommendations";
+import { buildWatchPath, getResumeLabel } from "@/lib/playback";
+import PlaybackProgressBar from "@/components/ui/PlaybackProgressBar";
 
 export default function HeroBanner({ items = [] }) {
   const [current, setCurrent] = useState(0);
@@ -38,8 +40,15 @@ export default function HeroBanner({ items = [] }) {
   const year = (item.release_date || item.first_air_date || "").slice(0, 4);
   const rating = item.vote_average ? Math.round(item.vote_average * 10) : null;
   const matchPercentage = item.match_percentage || getMatchPercentage(item);
+  const progressPercent = Math.max(0, Math.min(100, Math.round(Number(item.progress_percent) || 0)));
+  const playPath = item.resume_path || buildWatchPath({
+    mediaType,
+    tmdbId: item.tmdb_id ?? item.id,
+    seasonNumber: item.season_number,
+    episodeNumber: item.episode_number,
+  });
 
-  const handlePlay = () => navigate(`/watch/${mediaType}/${item.id}`);
+  const handlePlay = () => navigate(playPath);
   const handleDetails = () => navigate(`/${mediaType}/${item.id}`);
 
   const handleWatchlist = async () => {
@@ -110,13 +119,23 @@ export default function HeroBanner({ items = [] }) {
           {overview}
         </p>
 
+        {progressPercent > 0 && (
+          <div className="mb-5 max-w-md">
+            <div className="mb-2 flex items-center justify-between text-xs font-medium uppercase tracking-[0.16em] text-white/65">
+              <span>{getResumeLabel(item, mediaType)}</span>
+              <span>{progressPercent}% watched</span>
+            </div>
+            <PlaybackProgressBar progress={progressPercent} className="h-2 bg-white/20" />
+          </div>
+        )}
+
         {/* Buttons */}
         <div className="flex items-center gap-3">
           <button
             onClick={handlePlay}
             className="flex items-center gap-2 bg-white text-black font-bold px-6 py-2.5 rounded hover:bg-gray-200 transition-colors text-sm md:text-base"
           >
-            <Play className="w-5 h-5 fill-black" /> Play
+            <Play className="w-5 h-5 fill-black" /> {getResumeLabel(item, mediaType)}
           </button>
           <button
             onClick={handleDetails}
