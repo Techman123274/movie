@@ -22,6 +22,7 @@ import Search from '@/pages/Search';
 import MyList from '@/pages/MyList';
 import History from '@/pages/History';
 import SettingsPage from '@/pages/Settings';
+import SocialHub from '@/pages/SocialHub';
 import AdminPage from '@/pages/Admin';
 import SupportPage from '@/pages/SupportPage';
 import SpeedTestPage from '@/pages/SpeedTestPage';
@@ -153,6 +154,7 @@ const AuthenticatedApp = () => {
         <Route path="/search" element={<Search />} />
         <Route path="/my-list" element={<MyList />} />
         <Route path="/history" element={<History />} />
+        <Route path="/social" element={<SocialHub />} />
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="/setup" element={<SettingsPage />} />
         <Route path="/speed-test" element={<SpeedTestPage />} />

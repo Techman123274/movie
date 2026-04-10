@@ -13,6 +13,7 @@ import {
   Search,
   Settings,
   Tv,
+  Users,
 } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { AvatarArt, AVATAR_COLORS } from "@/lib/avatar-options";
@@ -194,6 +195,7 @@ export default function Navbar({ user, activeProfile, onSwitchProfile }) {
     { label: "Movies", path: "/browse?type=movie", icon: Film },
     { label: "TV Shows", path: "/browse?type=tv", icon: Tv },
     { label: "My List", path: "/my-list", icon: Bookmark },
+    { label: "Social", path: "/social", icon: Users },
   ];
 
   const mobileBottomLinks = [
@@ -206,6 +208,7 @@ export default function Navbar({ user, activeProfile, onSwitchProfile }) {
   const mobileMenuLinks = [
     { label: "My List", path: "/my-list", icon: Bookmark },
     { label: "Watch History", path: "/history", icon: Clock },
+    { label: "Social Hub", path: "/social", icon: Users },
     { label: "Settings", path: "/settings", icon: Settings },
   ];
 

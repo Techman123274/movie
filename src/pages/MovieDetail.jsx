@@ -4,6 +4,7 @@ import { Play, Plus, Check, X, Star, Clock, ThumbsUp } from "lucide-react";
 import { getMovieDetails, tmdbOriginal, tmdbW500, tmdbW185, getYouTubeTrailer } from "@/lib/tmdb";
 import ContentRow from "@/components/ui/ContentRow";
 import RatingStars from "@/components/ui/RatingStars";
+import TitleSocialPanel from "@/components/social/TitleSocialPanel";
 import { DetailSkeleton } from "@/components/ui/LoadingSkeleton";
 import { base44 } from "@/api/base44Client";
 import ProfileRestrictionNotice from "@/components/profile/ProfileRestrictionNotice";
@@ -356,6 +357,8 @@ export default function MovieDetail() {
                 </div>
               </div>
             )}
+
+            <TitleSocialPanel item={movie} mediaType="movie" activeProfile={activeProfile} />
           </div>
         </div>
 

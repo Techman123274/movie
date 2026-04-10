@@ -4,6 +4,7 @@ import { Play, Plus, Check, Star, X, ChevronDown, ThumbsUp } from "lucide-react"
 import { getTVDetails, getTVSeason, tmdbOriginal, tmdbW500, tmdbW185, tmdbW300, getYouTubeTrailer } from "@/lib/tmdb";
 import ContentRow from "@/components/ui/ContentRow";
 import RatingStars from "@/components/ui/RatingStars";
+import TitleSocialPanel from "@/components/social/TitleSocialPanel";
 import { DetailSkeleton } from "@/components/ui/LoadingSkeleton";
 import { base44 } from "@/api/base44Client";
 import ProfileRestrictionNotice from "@/components/profile/ProfileRestrictionNotice";
@@ -414,6 +415,8 @@ export default function TVDetail() {
                 </div>
               </div>
             )}
+
+            <TitleSocialPanel item={show} mediaType="tv" activeProfile={activeProfile} />
           </div>
         </div>
 

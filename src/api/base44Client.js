@@ -14,6 +14,7 @@ const ENTITY_TABLES = {
   Rating: "ratings",
   Friendship: "friendships",
   SocialActivity: "social_activity",
+  Comment: "comments",
 };
 
 const ADMIN_ENTITY_TABLES = {
@@ -34,6 +35,7 @@ const ENTITY_UNIQUE_FIELDS = {
   Rating: ["tmdb_id", "media_type", "profile_id"],
   Friendship: ["friend_email"],
   SocialActivity: ["id"],
+  Comment: ["id"],
   AdminNotification: ["title", "publish_at"],
   AdminFeaturedEntry: ["tmdb_id", "media_type", "entry_type", "group_name", "audience"],
   AdminSiteSetting: ["setting_key"],
@@ -172,7 +174,8 @@ const writeSharedRows = (entityName, rows) => {
   window.localStorage.setItem(getSharedStorageKey(entityName), JSON.stringify(rows));
 };
 
-const isSharedMirrorEntity = (entityName) => entityName === "SocialActivity";
+const isSharedMirrorEntity = (entityName) =>
+  entityName === "SocialActivity" || entityName === "Rating" || entityName === "Comment";
 
 const createLocalId = () => {
   if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
@@ -833,6 +836,45 @@ const getAdminDashboardData = async () => {
 const sortByUpdatedDateDesc = (rows = []) =>
   [...rows].sort((a, b) => String(b.updated_at || "").localeCompare(String(a.updated_at || "")));
 
+const filterRowsByFields = (rows = [], filters = {}) =>
+  rows.filter((row) =>
+    Object.entries(filters).every(([key, value]) => row?.[key] === value)
+  );
+
+const querySharedEntityRows = async ({ entityName, limit = 40, filters = {}, sort = "-updated_date" } = {}) => {
+  const table = ENTITY_TABLES[entityName];
+
+  if (!canUseRemoteTable(table)) {
+    return sortLocalRows(filterRowsByFields(readSharedRows(entityName), filters), sort).slice(0, limit);
+  }
+
+  try {
+    const client = createSupabaseClient();
+    const { ascending, field } = normalizeSort(sort);
+    let query = client
+      .from(table)
+      .select("*")
+      .order(field, { ascending })
+      .limit(limit);
+
+    Object.entries(filters).forEach(([key, value]) => {
+      query = query.eq(key, value);
+    });
+
+    const { data, error } = await query;
+    if (error) {
+      throw error;
+    }
+
+    mergeSharedEntityRows(entityName, data || []);
+    return data || [];
+  } catch (error) {
+    markTableUnavailableIfMissing(table, error);
+    console.warn(`[${entityName}] Falling back to shared local storage`, error);
+    return sortLocalRows(filterRowsByFields(readSharedRows(entityName), filters), sort).slice(0, limit);
+  }
+};
+
 const getFriendEmailsForCurrentUser = async () => {
   const friendships = await createEntityClient("Friendship").list("-updated_date", 100).catch(() => []);
   return friendships
@@ -894,10 +936,19 @@ const querySocialActivityByEmails = async ({ actorEmails = [], limit = 40, filte
   }
 };
 
+const querySocialActivityAll = async ({ limit = 60, filters = {} } = {}) =>
+  querySharedEntityRows({
+    entityName: "SocialActivity",
+    limit,
+    filters,
+    sort: "-updated_date",
+  });
+
 const logSocialActivity = async (payload = {}) => {
   const user = await getCurrentUser();
   const actorEmail = normalizeEmail(payload.actor_email || user.email);
   const actorName = payload.actor_name || user.full_name || actorEmail || "Subflix Member";
+  const actorAvatarUrl = payload.actor_avatar_url || user.image_url || null;
   const client = createEntityClient("SocialActivity");
   const filters = {
     activity_type: payload.activity_type,
@@ -918,6 +969,7 @@ const logSocialActivity = async (payload = {}) => {
     ...clone(payload),
     actor_email: actorEmail,
     actor_name: actorName,
+    actor_avatar_url: actorAvatarUrl,
   };
 
   const nextEntry = existingEntry?.id
@@ -950,6 +1002,7 @@ export const base44 = {
     Rating: createEntityClient("Rating"),
     Friendship: createEntityClient("Friendship"),
     SocialActivity: createEntityClient("SocialActivity"),
+    Comment: createEntityClient("Comment"),
   },
   social: {
     async logActivity(payload) {
@@ -968,6 +1021,47 @@ export const base44 = {
           tmdb_id: Number(tmdbId),
           media_type: mediaType,
         },
+      });
+    },
+    async listGlobalActivity(limit = 60) {
+      return querySocialActivityAll({ limit });
+    },
+    async listTitleActivity(tmdbId, mediaType, limit = 40) {
+      return querySocialActivityAll({
+        limit,
+        filters: {
+          tmdb_id: Number(tmdbId),
+          media_type: mediaType,
+        },
+      });
+    },
+    async listTitleRatings(tmdbId, mediaType, limit = 40) {
+      return querySharedEntityRows({
+        entityName: "Rating",
+        limit,
+        filters: {
+          tmdb_id: Number(tmdbId),
+          media_type: mediaType,
+        },
+        sort: "-updated_date",
+      });
+    },
+    async listTitleComments(tmdbId, mediaType, limit = 60) {
+      return querySharedEntityRows({
+        entityName: "Comment",
+        limit,
+        filters: {
+          tmdb_id: Number(tmdbId),
+          media_type: mediaType,
+        },
+        sort: "-updated_date",
+      });
+    },
+    async listGlobalComments(limit = 60) {
+      return querySharedEntityRows({
+        entityName: "Comment",
+        limit,
+        sort: "-updated_date",
       });
     },
   },

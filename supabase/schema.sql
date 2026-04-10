@@ -83,6 +83,9 @@ create table if not exists public.ratings (
   id uuid primary key default gen_random_uuid(),
   user_id text not null default public.requesting_user_id(),
   created_by text,
+  actor_email text,
+  actor_name text,
+  actor_avatar_url text,
   profile_id text,
   profile_name text,
   tmdb_id integer not null,
@@ -116,6 +119,7 @@ create table if not exists public.social_activity (
   created_by text,
   actor_email text not null default public.requesting_user_email(),
   actor_name text,
+  actor_avatar_url text,
   profile_id text,
   profile_name text,
   activity_type text not null,
@@ -136,6 +140,32 @@ create table if not exists public.social_activity (
   updated_at timestamptz not null default timezone('utc', now())
 );
 
+create table if not exists public.comments (
+  id uuid primary key default gen_random_uuid(),
+  user_id text not null default public.requesting_user_id(),
+  created_by text,
+  actor_email text not null default public.requesting_user_email(),
+  actor_name text,
+  actor_avatar_url text,
+  profile_id text,
+  profile_name text,
+  tmdb_id integer not null,
+  media_type text not null,
+  title text not null,
+  poster_path text,
+  backdrop_path text,
+  vote_average numeric,
+  release_date text,
+  overview text,
+  genre_ids jsonb default '[]'::jsonb,
+  is_adult boolean not null default false,
+  comment_text text not null,
+  parent_comment_id uuid references public.comments(id) on delete cascade,
+  metadata jsonb default '{}'::jsonb,
+  created_at timestamptz not null default timezone('utc', now()),
+  updated_at timestamptz not null default timezone('utc', now())
+);
+
 alter table public.profiles
   add column if not exists is_kids boolean not null default false,
   add column if not exists maturity_rating text not null default 'all';
@@ -145,6 +175,19 @@ alter table public.watch_history
   add column if not exists progress_seconds integer default 0,
   add column if not exists duration_seconds integer,
   add column if not exists playback_provider text;
+
+alter table public.ratings
+  add column if not exists actor_email text,
+  add column if not exists actor_name text,
+  add column if not exists actor_avatar_url text,
+  add column if not exists is_adult boolean not null default false;
+
+alter table public.social_activity
+  add column if not exists actor_avatar_url text;
+
+alter table public.comments
+  add column if not exists actor_avatar_url text,
+  add column if not exists metadata jsonb default '{}'::jsonb;
 
 create table if not exists public.admin_notifications (
   id uuid primary key default gen_random_uuid(),
@@ -197,12 +240,17 @@ create table if not exists public.admin_site_settings (
   updated_at timestamptz not null default timezone('utc', now())
 );
 
+create index if not exists ratings_title_lookup_idx on public.ratings (tmdb_id, media_type, updated_at desc);
+create index if not exists comments_title_lookup_idx on public.comments (tmdb_id, media_type, updated_at desc);
+create index if not exists social_activity_title_lookup_idx on public.social_activity (tmdb_id, media_type, updated_at desc);
+
 alter table public.profiles enable row level security;
 alter table public.watchlist enable row level security;
 alter table public.watch_history enable row level security;
 alter table public.ratings enable row level security;
 alter table public.friendships enable row level security;
 alter table public.social_activity enable row level security;
+alter table public.comments enable row level security;
 alter table public.admin_notifications enable row level security;
 alter table public.admin_featured_entries enable row level security;
 alter table public.admin_site_settings enable row level security;
@@ -312,6 +360,12 @@ on public.ratings
 for select
 using (public.is_subflix_admin());
 
+drop policy if exists "ratings_select_authenticated" on public.ratings;
+create policy "ratings_select_authenticated"
+on public.ratings
+for select
+using (public.requesting_user_id() is not null);
+
 drop policy if exists "ratings_insert_own" on public.ratings;
 create policy "ratings_insert_own"
 on public.ratings
@@ -378,6 +432,12 @@ using (
   )
 );
 
+drop policy if exists "social_activity_select_authenticated" on public.social_activity;
+create policy "social_activity_select_authenticated"
+on public.social_activity
+for select
+using (public.requesting_user_id() is not null);
+
 drop policy if exists "social_activity_insert_own" on public.social_activity;
 create policy "social_activity_insert_own"
 on public.social_activity
@@ -396,6 +456,37 @@ create policy "social_activity_delete_own"
 on public.social_activity
 for delete
 using (user_id = public.requesting_user_id());
+
+drop policy if exists "comments_select_authenticated" on public.comments;
+create policy "comments_select_authenticated"
+on public.comments
+for select
+using (public.requesting_user_id() is not null);
+
+drop policy if exists "comments_select_admin" on public.comments;
+create policy "comments_select_admin"
+on public.comments
+for select
+using (public.is_subflix_admin());
+
+drop policy if exists "comments_insert_own" on public.comments;
+create policy "comments_insert_own"
+on public.comments
+for insert
+with check (user_id = public.requesting_user_id());
+
+drop policy if exists "comments_update_own" on public.comments;
+create policy "comments_update_own"
+on public.comments
+for update
+using (user_id = public.requesting_user_id())
+with check (user_id = public.requesting_user_id());
+
+drop policy if exists "comments_delete_own" on public.comments;
+create policy "comments_delete_own"
+on public.comments
+for delete
+using (user_id = public.requesting_user_id() or public.is_subflix_admin());
 
 drop policy if exists "admin_notifications_select_public" on public.admin_notifications;
 create policy "admin_notifications_select_public"

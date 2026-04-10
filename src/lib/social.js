@@ -97,6 +97,8 @@ export const buildFriendActivityLabel = (activities = []) => {
       return `${lead} added this to My List`;
     case "watch_started":
       return `${lead} started watching`;
+    case "commented":
+      return `${lead} commented on this`;
     default:
       return `${lead} interacted with this`;
   }
@@ -116,6 +118,28 @@ export const getRatingEntry = async ({ tmdbId, mediaType, profile }) => {
   return rows[0] || null;
 };
 
+export const listTitleRatings = async ({ tmdbId, mediaType, limit = 40 } = {}) =>
+  base44.social.listTitleRatings(Number(tmdbId), mediaType, limit);
+
+export const listTitleComments = async ({ tmdbId, mediaType, limit = 60 } = {}) =>
+  base44.social.listTitleComments(Number(tmdbId), mediaType, limit);
+
+export const listGlobalSocialFeed = async ({ limit = 60 } = {}) => {
+  const [activities, comments] = await Promise.all([
+    base44.social.listGlobalActivity(limit).catch(() => []),
+    base44.social.listGlobalComments(Math.ceil(limit / 2)).catch(() => []),
+  ]);
+
+  return [
+    ...activities
+      .filter((entry) => entry.activity_type !== "commented")
+      .map((entry) => ({ ...entry, feed_type: entry.activity_type || "activity" })),
+    ...comments.map((entry) => ({ ...entry, feed_type: "comment", activity_type: "comment" })),
+  ]
+    .sort((a, b) => String(b.updated_at || "").localeCompare(String(a.updated_at || "")))
+    .slice(0, limit);
+};
+
 export const saveRating = async ({ user, profile, item, mediaType, ratingValue, reviewText = "" }) => {
   const numericRating = Number(ratingValue);
   const identity = getMediaIdentity(item, mediaType);
@@ -132,6 +156,9 @@ export const saveRating = async ({ user, profile, item, mediaType, ratingValue, 
   });
   const payload = {
     ...titlePayload,
+    actor_email: normalizeEmail(user.email),
+    actor_name: user.full_name || user.email || "Subflix Member",
+    actor_avatar_url: user.image_url || null,
     rating_value: numericRating,
     review_text: reviewText || "",
   };
@@ -144,6 +171,7 @@ export const saveRating = async ({ user, profile, item, mediaType, ratingValue, 
     ...titlePayload,
     activity_type: "rated",
     rating_value: numericRating,
+    actor_avatar_url: user.image_url || null,
     activity_message: `${user.full_name || user.email || "A friend"} rated this ${numericRating}/5`,
   }).catch(() => null);
 
@@ -154,6 +182,53 @@ export const saveRating = async ({ user, profile, item, mediaType, ratingValue, 
   });
 
   return entry;
+};
+
+export const saveComment = async ({ user, profile, item, mediaType, commentText }) => {
+  const text = String(commentText || "").trim();
+  const identity = getMediaIdentity(item, mediaType);
+
+  if (!user || !identity.tmdb_id || !text) {
+    throw new Error("A comment is required.");
+  }
+
+  const titlePayload = buildTitlePayload({ item, mediaType, profile });
+  const entry = await base44.entities.Comment.create({
+    ...titlePayload,
+    actor_email: normalizeEmail(user.email),
+    actor_name: user.full_name || user.email || "Subflix Member",
+    actor_avatar_url: user.image_url || null,
+    comment_text: text,
+  });
+
+  await base44.social.logActivity({
+    ...titlePayload,
+    activity_type: "commented",
+    actor_avatar_url: user.image_url || null,
+    activity_message: `${user.full_name || user.email || "A friend"} commented on this`,
+    metadata: {
+      comment_id: entry?.id || null,
+      comment_text: text.slice(0, 240),
+    },
+  }).catch(() => null);
+
+  dispatchSocialChanged({
+    scope: "comment",
+    action: "created",
+    comment: entry,
+  });
+
+  return entry;
+};
+
+export const deleteComment = async (id) => {
+  await base44.entities.Comment.delete(id);
+  dispatchSocialChanged({
+    scope: "comment",
+    action: "deleted",
+    commentId: id,
+  });
+  return true;
 };
 
 export const clearRating = async ({ tmdbId, mediaType, profile }) => {
@@ -229,6 +304,7 @@ export const logSocialActivity = async ({ user, profile, item, mediaType, activi
     ...titlePayload,
     activity_type: activityType,
     rating_value: ratingValue,
+    actor_avatar_url: user.image_url || null,
     activity_message: message || null,
   }).catch(() => null);
 
@@ -299,5 +375,25 @@ export const getTitleFriendSignals = async ({ tmdbId, mediaType, limit = 3 } = {
     activities,
     names,
     summary: buildFriendActivityLabel(activities),
+  };
+};
+
+export const getTitleSocialSummary = async ({ tmdbId, mediaType, limit = 40 } = {}) => {
+  const [ratings, comments, activities] = await Promise.all([
+    listTitleRatings({ tmdbId, mediaType, limit }).catch(() => []),
+    listTitleComments({ tmdbId, mediaType, limit }).catch(() => []),
+    base44.social.listTitleActivity(Number(tmdbId), mediaType, limit).catch(() => []),
+  ]);
+  const averageRating = ratings.length
+    ? ratings.reduce((sum, entry) => sum + Number(entry.rating_value || 0), 0) / ratings.length
+    : 0;
+
+  return {
+    activities,
+    comments,
+    ratings,
+    averageRating,
+    ratingCount: ratings.length,
+    commentCount: comments.length,
   };
 };
