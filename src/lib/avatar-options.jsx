@@ -1,3 +1,5 @@
+import { useEffect, useState } from "react";
+
 const avatarImageModules = import.meta.glob("../assets/avatars/*.{png,jpg,jpeg,webp,avif,gif}", {
   eager: true,
   import: "default",
@@ -138,14 +140,22 @@ export const getLegacyAvatarOption = (avatarIndex = 0) => {
 
 export function AvatarArt({ avatarIndex = 0, color = AVATAR_COLORS[0] }) {
   const option = getLegacyAvatarOption(avatarIndex) || SVG_AVATAR_OPTIONS[0];
+  const [imageFailed, setImageFailed] = useState(false);
 
-  if (option?.type === "image") {
+  useEffect(() => {
+    setImageFailed(false);
+  }, [option?.src]);
+
+  if (option?.type === "image" && !imageFailed) {
     return (
       <img
         src={option.src}
         alt={option.alt}
         className="h-full w-full object-cover"
         draggable="false"
+        loading="eager"
+        decoding="async"
+        onError={() => setImageFailed(true)}
       />
     );
   }
