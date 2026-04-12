@@ -61,6 +61,13 @@ const createAdminError = () => {
   return Object.assign(new Error("Admin access required"), { status: 403 });
 };
 
+const createSupabaseTokenError = () => {
+  return Object.assign(
+    new Error("Supabase auth is not connected. In Clerk, enable the Supabase integration or configure the legacy `supabase` JWT template."),
+    { status: 401 }
+  );
+};
+
 const isMissingRemoteTableError = (error) => {
   const message = String(error?.message || "").toLowerCase();
   const details = String(error?.details || "").toLowerCase();
@@ -100,6 +107,24 @@ const getCurrentAdminUser = async () => {
 
 const clone = (value) => JSON.parse(JSON.stringify(value));
 const normalizeEmail = (value) => String(value || "").trim().toLowerCase();
+
+const getSupabaseAccessToken = async () => {
+  const getToken = getAuthAdapter().getToken;
+  if (!getToken) {
+    return null;
+  }
+
+  const sessionToken = await getToken().catch(() => null);
+  if (sessionToken) {
+    return sessionToken;
+  }
+
+  if (!supabaseJwtTemplate) {
+    return null;
+  }
+
+  return getToken({ template: supabaseJwtTemplate }).catch(() => null);
+};
 
 const buildPairKey = (emailA, emailB) => {
   const left = normalizeEmail(emailA);
@@ -359,23 +384,8 @@ const createSupabaseClient = () => {
       detectSessionInUrl: false,
       persistSession: false,
     },
-    global: {
-      fetch: async (url, options = {}) => {
-        const headers = new Headers(options.headers);
-        const getToken = getAuthAdapter().getToken;
-        const token = getToken
-          ? await getToken({ template: supabaseJwtTemplate }).catch(() => null)
-          : null;
-
-        if (token) {
-          headers.set("Authorization", `Bearer ${token}`);
-        }
-
-        return fetch(url, {
-          ...options,
-          headers,
-        });
-      },
+    accessToken: async () => {
+      return getSupabaseAccessToken();
     },
   });
 };
@@ -1292,8 +1302,9 @@ export const base44 = {
     async listRequests(limit = 200) {
       const user = await getCurrentUser();
       const normalizedEmail = normalizeEmail(user.email);
+      const supabaseToken = await getSupabaseAccessToken();
 
-      if (!normalizedEmail || !canUseRemoteTable(FRIEND_REQUESTS_TABLE)) {
+      if (!normalizedEmail || !canUseRemoteTable(FRIEND_REQUESTS_TABLE) || !supabaseToken) {
         return { incoming: [], outgoing: [], accepted: [] };
       }
 
@@ -1326,6 +1337,7 @@ export const base44 = {
       const user = await getCurrentUser();
       const normalizedEmail = normalizeEmail(user.email);
       const addresseeEmail = normalizeEmail(email);
+      const supabaseToken = await getSupabaseAccessToken();
 
       if (!addresseeEmail) {
         throw new Error("A valid email address is required.");
@@ -1339,7 +1351,12 @@ export const base44 = {
         throw new Error("Friend requests are unavailable (Supabase not configured).");
       }
 
+      if (!supabaseToken) {
+        throw createSupabaseTokenError();
+      }
+
       const payload = {
+        requester_user_id: user.id,
         requester_email: normalizedEmail,
         requester_name: String(name || "").trim() || user.full_name || normalizedEmail,
         requester_avatar_url: user.image_url || null,
@@ -1365,6 +1382,7 @@ export const base44 = {
       const user = await getCurrentUser();
       const normalizedEmail = normalizeEmail(user.email);
       const nextStatus = String(status || "").trim().toLowerCase();
+      const supabaseToken = await getSupabaseAccessToken();
 
       if (!id || !nextStatus) {
         throw new Error("Invalid friend request update.");
@@ -1372,6 +1390,10 @@ export const base44 = {
 
       if (!canUseRemoteTable(FRIEND_REQUESTS_TABLE)) {
         throw new Error("Friend requests are unavailable (Supabase not configured).");
+      }
+
+      if (!supabaseToken) {
+        throw createSupabaseTokenError();
       }
 
       const allowed = new Set(["accepted", "declined", "cancelled", "blocked", "removed", "pending"]);

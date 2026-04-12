@@ -379,6 +379,13 @@ export default function Player() {
       return { season, episode: episode + 1 };
     }
 
+    const knownSeasonEpisodeCount = Number(
+      content.seasons?.find((item) => item.season_number === season)?.episode_count
+    ) || 0;
+    if (knownSeasonEpisodeCount > 0 && episode < knownSeasonEpisodeCount) {
+      return { season, episode: episode + 1 };
+    }
+
     const lastSeason = Number(content.last_episode_to_air?.season_number) || 0;
     const lastEpisode = Number(content.last_episode_to_air?.episode_number) || 0;
     if (lastSeason === season && lastEpisode > 0 && episode < lastEpisode) {

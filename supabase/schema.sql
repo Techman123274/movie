@@ -13,7 +13,13 @@ returns text
 language sql
 stable
 as $$
-  select lower(nullif(auth.jwt() ->> 'email', ''));
+  select lower(coalesce(
+    nullif(auth.jwt() ->> 'email', ''),
+    nullif(auth.jwt() ->> 'email_address', ''),
+    nullif(auth.jwt() ->> 'primary_email_address', ''),
+    nullif(auth.jwt() -> 'user_metadata' ->> 'email', ''),
+    nullif(auth.jwt() -> 'app_metadata' ->> 'email', '')
+  ));
 $$;
 
 create or replace function public.is_subflix_admin()
@@ -315,6 +321,36 @@ alter table public.social_activity
 alter table public.comments
   add column if not exists actor_avatar_url text,
   add column if not exists metadata jsonb default '{}'::jsonb;
+
+alter table public.profiles
+  add column if not exists user_id text default public.requesting_user_id();
+
+alter table public.user_preferences
+  add column if not exists user_id text default public.requesting_user_id();
+
+alter table public.profile_avatar_assets
+  add column if not exists user_id text;
+
+alter table public.watchlist
+  add column if not exists user_id text default public.requesting_user_id();
+
+alter table public.watch_history
+  add column if not exists user_id text default public.requesting_user_id();
+
+alter table public.ratings
+  add column if not exists user_id text default public.requesting_user_id();
+
+alter table public.friendships
+  add column if not exists user_id text default public.requesting_user_id();
+
+alter table public.social_activity
+  add column if not exists user_id text default public.requesting_user_id();
+
+alter table public.comments
+  add column if not exists user_id text default public.requesting_user_id();
+
+alter table public.user_presence
+  add column if not exists user_id text default public.requesting_user_id();
 
 create table if not exists public.admin_notifications (
   id uuid primary key default gen_random_uuid(),
@@ -633,6 +669,7 @@ on public.friend_requests
 for select
 using (
   public.is_subflix_admin()
+  or requester_user_id = public.requesting_user_id()
   or lower(requester_email) = public.requesting_user_email()
   or lower(addressee_email) = public.requesting_user_email()
 );
@@ -642,8 +679,8 @@ create policy "friend_requests_insert_requester"
 on public.friend_requests
 for insert
 with check (
-  lower(requester_email) = public.requesting_user_email()
-  and lower(addressee_email) <> public.requesting_user_email()
+  requester_user_id = public.requesting_user_id()
+  and lower(addressee_email) <> coalesce(public.requesting_user_email(), lower(requester_email))
   and status = 'pending'
 );
 
@@ -663,11 +700,11 @@ create policy "friend_requests_update_requester_cancel"
 on public.friend_requests
 for update
 using (
-  lower(requester_email) = public.requesting_user_email()
+  requester_user_id = public.requesting_user_id()
   and status = 'pending'
 )
 with check (
-  lower(requester_email) = public.requesting_user_email()
+  requester_user_id = public.requesting_user_id()
   and status = 'cancelled'
 );
 
@@ -689,11 +726,11 @@ create policy "friend_requests_update_remove_accepted"
 on public.friend_requests
 for update
 using (
-  (lower(requester_email) = public.requesting_user_email() or lower(addressee_email) = public.requesting_user_email())
+  (requester_user_id = public.requesting_user_id() or lower(addressee_email) = public.requesting_user_email())
   and status = 'accepted'
 )
 with check (
-  (lower(requester_email) = public.requesting_user_email() or lower(addressee_email) = public.requesting_user_email())
+  (requester_user_id = public.requesting_user_id() or lower(addressee_email) = public.requesting_user_email())
   and status = 'removed'
 );
 
@@ -703,6 +740,7 @@ on public.friend_requests
 for delete
 using (
   public.is_subflix_admin()
+  or requester_user_id = public.requesting_user_id()
   or lower(requester_email) = public.requesting_user_email()
   or lower(addressee_email) = public.requesting_user_email()
 );
