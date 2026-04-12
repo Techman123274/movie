@@ -648,18 +648,53 @@ with check (
 );
 
 drop policy if exists "friend_requests_update_involved" on public.friend_requests;
-create policy "friend_requests_update_involved"
+create policy "friend_requests_update_admin"
 on public.friend_requests
 for update
 using (
   public.is_subflix_admin()
-  or lower(requester_email) = public.requesting_user_email()
-  or lower(addressee_email) = public.requesting_user_email()
 )
 with check (
   public.is_subflix_admin()
-  or lower(requester_email) = public.requesting_user_email()
-  or lower(addressee_email) = public.requesting_user_email()
+);
+
+drop policy if exists "friend_requests_update_requester_cancel" on public.friend_requests;
+create policy "friend_requests_update_requester_cancel"
+on public.friend_requests
+for update
+using (
+  lower(requester_email) = public.requesting_user_email()
+  and status = 'pending'
+)
+with check (
+  lower(requester_email) = public.requesting_user_email()
+  and status = 'cancelled'
+);
+
+drop policy if exists "friend_requests_update_addressee_respond" on public.friend_requests;
+create policy "friend_requests_update_addressee_respond"
+on public.friend_requests
+for update
+using (
+  lower(addressee_email) = public.requesting_user_email()
+  and status = 'pending'
+)
+with check (
+  lower(addressee_email) = public.requesting_user_email()
+  and status in ('accepted', 'declined', 'blocked')
+);
+
+drop policy if exists "friend_requests_update_remove_accepted" on public.friend_requests;
+create policy "friend_requests_update_remove_accepted"
+on public.friend_requests
+for update
+using (
+  (lower(requester_email) = public.requesting_user_email() or lower(addressee_email) = public.requesting_user_email())
+  and status = 'accepted'
+)
+with check (
+  (lower(requester_email) = public.requesting_user_email() or lower(addressee_email) = public.requesting_user_email())
+  and status = 'removed'
 );
 
 drop policy if exists "friend_requests_delete_involved" on public.friend_requests;

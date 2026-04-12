@@ -6,15 +6,24 @@ const normalizeEmail = (value) => String(value || "").trim().toLowerCase();
 
 const readLastReadMap = () => {
   if (typeof window === "undefined") {
-    return {};
+    return Object.create(null);
   }
 
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
-    const parsed = raw ? JSON.parse(raw) : {};
-    return parsed && typeof parsed === "object" ? parsed : {};
+    const parsed = raw ? JSON.parse(raw) : null;
+    if (!parsed || typeof parsed !== "object") {
+      return Object.create(null);
+    }
+
+    const safeMap = Object.create(null);
+    Object.entries(parsed).forEach(([key, value]) => {
+      safeMap[String(key)] = typeof value === "string" ? value : null;
+    });
+
+    return safeMap;
   } catch {
-    return {};
+    return Object.create(null);
   }
 };
 
@@ -58,4 +67,3 @@ export const createGroupThread = async ({ title, memberEmails }) =>
   base44.chat.createGroupThread({ title, memberEmails });
 
 export const leaveThread = async (threadId) => base44.chat.leaveThread(threadId);
-

@@ -3,6 +3,7 @@ import { base44 } from "@/api/base44Client";
 const HEARTBEAT_MS = 25_000;
 
 let heartbeatTimer = null;
+let presenceCleanup = null;
 let activeProfileSnapshot = null;
 let watchingSnapshot = {
   tmdb_id: null,
@@ -65,12 +66,12 @@ export const startPresenceHeartbeat = async ({ activeProfile } = {}) => {
     void pushPresence();
   };
 
-  window.addEventListener("visibilitychange", handleVisibility);
+  document.addEventListener("visibilitychange", handleVisibility);
   window.addEventListener("pagehide", handleVisibility);
   window.addEventListener("beforeunload", handleVisibility);
 
-  heartbeatTimer._presenceCleanup = () => {
-    window.removeEventListener("visibilitychange", handleVisibility);
+  presenceCleanup = () => {
+    document.removeEventListener("visibilitychange", handleVisibility);
     window.removeEventListener("pagehide", handleVisibility);
     window.removeEventListener("beforeunload", handleVisibility);
   };
@@ -79,9 +80,10 @@ export const startPresenceHeartbeat = async ({ activeProfile } = {}) => {
 export const stopPresenceHeartbeat = async () => {
   if (typeof window !== "undefined" && heartbeatTimer) {
     window.clearInterval(heartbeatTimer);
-    heartbeatTimer?._presenceCleanup?.();
+    presenceCleanup?.();
   }
   heartbeatTimer = null;
+  presenceCleanup = null;
   activeProfileSnapshot = null;
 };
 
@@ -120,4 +122,3 @@ export const clearWatching = async () => {
 
 export const listFriendsPresence = async (friendEmails = []) =>
   base44.presence.listByEmails(friendEmails);
-
