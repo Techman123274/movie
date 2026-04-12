@@ -122,7 +122,9 @@ export const estimateDurationSeconds = ({ mediaType, content, seasonData, episod
     return toFiniteNumber(content.episode_run_time[0]) * 60;
   }
 
-  return 0;
+  // TMDB can omit episode runtime for some shows/seasons. Use a conservative default so
+  // features like "Up Next" can still work.
+  return 45 * 60;
 };
 
 export const buildContinueWatchingItems = (historyEntries = []) => {

@@ -407,7 +407,7 @@ export default function Player() {
     }
 
     const remainingSeconds = durationSeconds - currentProgressSeconds;
-    if (remainingSeconds <= AUTO_NEXT_TRIGGER_SECONDS && remainingSeconds > 0) {
+    if (remainingSeconds <= AUTO_NEXT_TRIGGER_SECONDS && remainingSeconds > -5) {
       setShowAutoNext(true);
     }
   }, [autoplayNextEpisode, type, nextEpisodeTarget, autoNextDismissed, durationSeconds, currentProgressSeconds]);
