@@ -456,7 +456,7 @@ export default function AdminPage() {
 
   if (!isAdmin) {
     return (
-      <div className="min-h-screen bg-[var(--app-bg)] px-6 py-20 text-white">
+      <div className="min-h-[var(--app-viewport-height)] bg-[var(--app-bg)] px-6 py-20 text-white">
         <div className="mx-auto max-w-3xl rounded-[2rem] border border-white/10 bg-[var(--card-bg)] p-8 md:p-12">
           <div className="mb-6 inline-flex h-14 w-14 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04]">
             <ShieldAlert className="h-7 w-7 text-[var(--brand)]" />
@@ -483,7 +483,7 @@ export default function AdminPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[var(--app-bg)] text-white">
+    <div className="min-h-[var(--app-viewport-height)] bg-[var(--app-bg)] text-white">
       <div className="border-b border-white/10 bg-[var(--card-bg)]">
         <div className="mx-auto flex max-w-7xl flex-col gap-6 px-6 py-8 md:flex-row md:items-end md:justify-between md:px-10">
           <div>

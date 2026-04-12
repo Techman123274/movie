@@ -250,7 +250,7 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[var(--app-bg)] px-4 pb-28 pt-20 md:px-12 md:pb-14 md:pt-24">
+    <div className="app-page app-page-content app-page-animate bg-[var(--app-bg)]">
       <div className="max-w-7xl mx-auto">
         <div className="mb-5 md:mb-8">
           <div className="mb-3">

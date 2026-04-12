@@ -6,7 +6,7 @@ export function HeroSkeleton() {
 
   return (
     isHulu ? (
-      <div className="px-4 pb-8 pt-24 md:px-12 md:pt-28">
+      <div className="px-4 pb-[calc(var(--app-bottom-offset)+0.75rem)] pt-[calc(var(--app-top-offset)+0.75rem)] md:px-12 md:pb-8 md:pt-28">
         <div className="mx-auto animate-pulse overflow-hidden rounded-[24px] border border-white/8 bg-[#101412]">
           <div className="grid min-h-[520px] md:grid-cols-[minmax(0,1fr)_280px]">
             <div className="flex flex-col justify-end p-6 md:p-10">
@@ -28,7 +28,7 @@ export function HeroSkeleton() {
         </div>
       </div>
     ) : (
-      <div className="relative h-screen w-full animate-pulse bg-[#0a0a0a]">
+      <div className="relative h-[calc(var(--app-viewport-height)-var(--app-safe-top)-0.25rem)] min-h-[480px] max-h-[860px] w-full animate-pulse bg-[#0a0a0a]">
         <div className="absolute bottom-24 left-4 max-w-lg space-y-4 md:left-16">
           <div className="h-12 w-96 rounded bg-[#1a1a1a]" />
           <div className="h-4 w-full rounded bg-[#1a1a1a]" />
@@ -68,7 +68,7 @@ export function RowSkeleton() {
 
 export function DetailSkeleton() {
   return (
-    <div className="min-h-screen bg-[#0a0a0a] animate-pulse">
+    <div className="min-h-[var(--app-viewport-height)] bg-[#0a0a0a] animate-pulse">
       <div className="w-full h-[50vh] bg-[#1a1a1a]" />
       <div className="px-4 md:px-12 py-8 space-y-4">
         <div className="h-10 w-64 bg-[#1a1a1a] rounded" />

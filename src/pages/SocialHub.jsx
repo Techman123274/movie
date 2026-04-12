@@ -341,7 +341,7 @@ export default function SocialHub() {
   }, [visibleFeed]);
 
   return (
-    <div className="min-h-screen bg-[var(--app-bg)] px-4 pb-28 pt-24 text-white md:px-12 md:pb-12">
+    <div className="app-page app-page-content app-page-animate min-h-[var(--app-viewport-height)] bg-[var(--app-bg)] text-white">
       <div className="mx-auto max-w-7xl">
         <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div>

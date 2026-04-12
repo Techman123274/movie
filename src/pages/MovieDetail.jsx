@@ -160,7 +160,7 @@ export default function MovieDetail() {
 
   if (loading) return <DetailSkeleton />;
   if (!movie) return (
-    <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center pt-20">
+    <div className="app-page app-page-content app-page-animate flex items-center justify-center bg-[#0a0a0a]">
       <p className="text-gray-400">Movie not found.</p>
     </div>
   );
@@ -195,7 +195,7 @@ export default function MovieDetail() {
 
   if (isHulu) {
     return (
-      <div className="min-h-screen bg-[var(--app-bg)] pt-20">
+      <div className="min-h-[var(--app-viewport-height)] bg-[var(--app-bg)] pb-[calc(var(--app-bottom-offset)+0.75rem)] pt-[calc(var(--app-top-offset)+0.5rem)] md:pb-12 md:pt-20">
         <div className="mx-auto max-w-7xl px-4 pb-12 md:px-12">
           <section className="relative overflow-hidden rounded-[28px] border border-white/8 bg-[var(--panel-bg)] shadow-[0_30px_80px_rgba(0,0,0,0.28)]">
             <div className="absolute inset-0">
@@ -410,7 +410,7 @@ export default function MovieDetail() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a]">
+    <div className="min-h-[var(--app-viewport-height)] bg-[#0a0a0a] pb-[calc(var(--app-bottom-offset)+0.75rem)] md:pb-12">
       {/* Hero Backdrop */}
       <div className="relative w-full h-[55vh] md:h-[70vh]">
         {movie.backdrop_path && (

@@ -21,12 +21,14 @@ export default function AppLayout({ activeProfile, onSwitchProfile }) {
   }, [activeProfile?.id, isAdmin, user?.id]);
 
   return (
-    <div className="min-h-screen bg-[var(--app-bg)] pb-[calc(6rem+env(safe-area-inset-bottom))] text-[var(--text-primary)] md:pb-0">
+    <div className="min-h-[var(--app-viewport-height)] bg-[var(--app-bg)] text-[var(--text-primary)]">
       <Navbar user={user} activeProfile={activeProfile} onSwitchProfile={onSwitchProfile} />
       <main>
         <Outlet context={{ user, activeProfile, onSwitchProfile, isAdmin }} />
       </main>
-      <Footer />
+      <div className="hidden md:block">
+        <Footer />
+      </div>
     </div>
   );
 }

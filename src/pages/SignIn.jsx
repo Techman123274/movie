@@ -240,8 +240,8 @@ export default function SignIn() {
   };
 
   return (
-    <div className="min-h-screen bg-[var(--app-bg)] text-white">
-      <section className={`relative isolate overflow-hidden ${isHulu ? "mx-4 mt-20 rounded-[28px] border border-white/10 shadow-[0_30px_80px_rgba(0,0,0,0.28)] md:mx-8 lg:mx-12" : "border-b border-white/10"} landing-hero-bg`}>
+    <div className="min-h-[var(--app-viewport-height)] bg-[var(--app-bg)] text-white">
+      <section className={`relative isolate overflow-hidden ${isHulu ? "mx-4 mt-[calc(var(--app-safe-top)+1rem)] rounded-[28px] border border-white/10 shadow-[0_30px_80px_rgba(0,0,0,0.28)] md:mx-8 md:mt-20 lg:mx-12" : "border-b border-white/10"} landing-hero-bg`}>
         {heroBackdrop && (
           <div className="absolute inset-0">
             <img
@@ -294,7 +294,7 @@ export default function SignIn() {
           </div>
         </div>
 
-        <nav className={`relative z-10 mx-auto flex w-full max-w-7xl items-center justify-between px-6 md:px-12 lg:px-16 ${isHulu ? "py-5" : "py-6"}`}>
+        <nav className={`relative z-10 mx-auto flex w-full max-w-7xl items-center justify-between px-6 pt-[calc(var(--app-safe-top)+0.75rem)] md:px-12 md:pt-6 lg:px-16 ${isHulu ? "pb-5" : "pb-6"}`}>
           <BrandWordmark className="text-3xl md:text-4xl" showMode />
           <button
             onClick={() => base44.auth.redirectToLogin(window.location.href)}
@@ -304,7 +304,7 @@ export default function SignIn() {
           </button>
         </nav>
 
-        <div className={`relative z-10 mx-auto flex w-full max-w-7xl px-6 md:px-12 lg:px-16 ${isHulu ? "min-h-[min(82vh,760px)] items-center pb-14 pt-14 md:pt-16" : "min-h-[calc(100vh-5rem)] items-end pb-14 pt-24 md:pb-20 md:pt-32 lg:pb-24"}`}>
+        <div className={`relative z-10 mx-auto flex w-full max-w-7xl px-6 md:px-12 lg:px-16 ${isHulu ? "min-h-[min(82vh,760px)] items-center pb-14 pt-14 md:pt-16" : "min-h-[calc(var(--app-viewport-height)-5rem)] items-end pb-14 pt-24 md:pb-20 md:pt-32 lg:pb-24"}`}>
           <motion.div
             initial={shouldReduceMotion ? false : { opacity: 0, y: 24 }}
             animate={shouldReduceMotion ? undefined : { opacity: 1, y: 0 }}

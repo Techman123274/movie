@@ -11,8 +11,8 @@ export default function NetflixLoadingScreen({ onComplete }) {
 
   useEffect(() => {
     if (isHulu) {
-      const fadeTimer = window.setTimeout(() => setVisible(false), 1500);
-      const completeTimer = window.setTimeout(() => onComplete?.(), 1900);
+      const fadeTimer = window.setTimeout(() => setVisible(false), 950);
+      const completeTimer = window.setTimeout(() => onComplete?.(), 1300);
 
       return () => {
         window.clearTimeout(fadeTimer);
@@ -29,10 +29,10 @@ export default function NetflixLoadingScreen({ onComplete }) {
       if (index >= letters.length) {
         window.clearInterval(typingTimer);
       }
-    }, 140);
+    }, 100);
 
-    const fadeTimer = window.setTimeout(() => setVisible(false), 2200);
-    const completeTimer = window.setTimeout(() => onComplete?.(), 2650);
+    const fadeTimer = window.setTimeout(() => setVisible(false), 1500);
+    const completeTimer = window.setTimeout(() => onComplete?.(), 1850);
 
     return () => {
       window.clearInterval(typingTimer);

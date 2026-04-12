@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   Bell,
@@ -32,6 +32,8 @@ import { useAppTheme } from "@/lib/theme";
 export default function Navbar({ user, activeProfile, onSwitchProfile }) {
   const { theme, setTheme } = useAppTheme();
   const isHulu = theme === "hulu";
+  const topNavRef = useRef(null);
+  const mobileTabRef = useRef(null);
   const [scrolled, setScrolled] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
@@ -52,6 +54,60 @@ export default function Navbar({ user, activeProfile, onSwitchProfile }) {
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
+
+  useEffect(() => {
+    if (typeof document === "undefined") {
+      return undefined;
+    }
+
+    const root = document.documentElement;
+    const mediaQuery = window.matchMedia("(max-width: 767px)");
+
+    const syncShellMetrics = () => {
+      const topHeight = Math.round(topNavRef.current?.getBoundingClientRect().height || 72);
+      const showMobileTabs = mediaQuery.matches && Boolean(user);
+      const bottomHeight = showMobileTabs
+        ? Math.round(mobileTabRef.current?.getBoundingClientRect().height || 92)
+        : 0;
+
+      root.style.setProperty("--app-nav-height", `${topHeight}px`);
+      root.style.setProperty("--app-tabbar-height", `${bottomHeight}px`);
+    };
+
+    syncShellMetrics();
+
+    const resizeObserver = typeof ResizeObserver === "function"
+      ? new ResizeObserver(() => syncShellMetrics())
+      : null;
+
+    if (topNavRef.current) {
+      resizeObserver?.observe(topNavRef.current);
+    }
+    if (mobileTabRef.current) {
+      resizeObserver?.observe(mobileTabRef.current);
+    }
+
+    window.addEventListener("resize", syncShellMetrics);
+    window.addEventListener("orientationchange", syncShellMetrics);
+    if (typeof mediaQuery.addEventListener === "function") {
+      mediaQuery.addEventListener("change", syncShellMetrics);
+    } else if (typeof mediaQuery.addListener === "function") {
+      mediaQuery.addListener(syncShellMetrics);
+    }
+
+    return () => {
+      resizeObserver?.disconnect();
+      window.removeEventListener("resize", syncShellMetrics);
+      window.removeEventListener("orientationchange", syncShellMetrics);
+      if (typeof mediaQuery.removeEventListener === "function") {
+        mediaQuery.removeEventListener("change", syncShellMetrics);
+      } else if (typeof mediaQuery.removeListener === "function") {
+        mediaQuery.removeListener(syncShellMetrics);
+      }
+      root.style.setProperty("--app-nav-height", "72px");
+      root.style.setProperty("--app-tabbar-height", "0px");
+    };
+  }, [location.pathname, location.search, scrolled, showMobileMenu, user]);
 
   useEffect(() => {
     let active = true;
@@ -223,15 +279,16 @@ export default function Navbar({ user, activeProfile, onSwitchProfile }) {
   return (
     <>
       <nav
-        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
+        ref={topNavRef}
+        className={`fixed inset-x-0 top-0 z-50 border-b transition-[background-color,box-shadow,border-color] duration-300 ${
           scrolled
-            ? "bg-[var(--nav-bg)] shadow-lg"
+            ? "border-white/10 bg-[color:rgb(8_8_8_/_0.9)] shadow-[0_12px_30px_rgba(0,0,0,0.38)] backdrop-blur-xl"
             : isHulu
-              ? "bg-[linear-gradient(180deg,rgba(7,12,9,0.9)_0%,rgba(7,12,9,0.35)_72%,transparent_100%)]"
-              : "bg-gradient-to-b from-black/80 to-transparent"
+              ? "border-white/5 bg-[linear-gradient(180deg,rgba(7,12,9,0.94)_0%,rgba(7,12,9,0.5)_72%,transparent_100%)] backdrop-blur-md"
+              : "border-transparent bg-gradient-to-b from-black/82 to-transparent backdrop-blur-sm"
         }`}
       >
-        <div className={`flex items-center justify-between px-4 md:px-12 ${isHulu ? "py-3" : "py-4"}`}>
+        <div className={`flex items-center justify-between px-4 md:px-12 ${isHulu ? "pb-3 pt-[calc(var(--app-safe-top)+0.45rem)] md:py-3" : "pb-3 pt-[calc(var(--app-safe-top)+0.35rem)] md:py-4"}`}>
           <div className={`flex items-center ${isHulu ? "gap-3 md:gap-6" : "gap-4 md:gap-8"}`}>
             <BrandWordmark className={isHulu ? "text-xl md:text-2xl" : "text-2xl md:text-3xl"} />
 
@@ -468,8 +525,9 @@ export default function Navbar({ user, activeProfile, onSwitchProfile }) {
 
       {user && (
         <>
-          <div className="fixed inset-x-0 bottom-0 z-40 border-t border-white/10 bg-[var(--nav-bg)]/95 backdrop-blur md:hidden">
-            <div className="grid grid-cols-5 px-2 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-2">
+          <div ref={mobileTabRef} className="fixed inset-x-0 bottom-0 z-40 px-3 pb-[calc(var(--app-safe-bottom)+0.5rem)] md:hidden">
+            <div className="overflow-hidden rounded-[1.6rem] border border-white/10 bg-[color:rgb(10_10_10_/_0.82)] shadow-[0_20px_40px_rgba(0,0,0,0.45)] backdrop-blur-2xl">
+              <div className="grid grid-cols-5 gap-1 px-1.5 py-1.5">
               {mobileBottomLinks.map((link) => {
                 const Icon = link.icon;
                 const active = isLinkActive(link.path);
@@ -478,8 +536,10 @@ export default function Navbar({ user, activeProfile, onSwitchProfile }) {
                   <Link
                     key={link.path}
                     to={link.path}
-                    className={`flex min-h-12 flex-col items-center justify-center gap-1 rounded-xl px-2 py-2 text-[11px] font-medium transition-colors ${
-                      active ? "bg-white/10 text-white" : "text-gray-400 hover:text-white"
+                    className={`flex min-h-[3.35rem] flex-col items-center justify-center gap-1 rounded-[1rem] px-2 py-2 text-[11px] font-medium transition-colors ${
+                      active
+                        ? "bg-white/[0.16] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]"
+                        : "text-gray-400 hover:bg-white/[0.06] hover:text-white"
                     }`}
                   >
                     <Icon className="w-4 h-4" />
@@ -490,17 +550,22 @@ export default function Navbar({ user, activeProfile, onSwitchProfile }) {
 
               <button
                 onClick={() => setShowMobileMenu(true)}
-                className="flex min-h-12 flex-col items-center justify-center gap-1 rounded-xl px-2 py-2 text-[11px] font-medium text-gray-400 transition-colors hover:text-white"
+                className={`flex min-h-[3.35rem] flex-col items-center justify-center gap-1 rounded-[1rem] px-2 py-2 text-[11px] font-medium transition-colors ${
+                  showMobileMenu
+                    ? "bg-white/[0.16] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]"
+                    : "text-gray-400 hover:bg-white/[0.06] hover:text-white"
+                }`}
               >
                 <Menu className="w-4 h-4" />
                 <span>Menu</span>
               </button>
             </div>
+            </div>
           </div>
 
           <Sheet open={showMobileMenu} onOpenChange={setShowMobileMenu}>
-            <SheetContent side="left" className="flex h-dvh w-[88vw] max-w-sm flex-col overflow-hidden border-white/10 bg-[var(--panel-bg)] p-0 text-white">
-              <SheetHeader className="shrink-0 border-b border-white/10 px-5 py-5 text-left">
+            <SheetContent side="left" className="flex h-[var(--app-viewport-height)] w-[88vw] max-w-sm flex-col overflow-hidden border-white/10 bg-[var(--panel-bg)] p-0 text-white">
+              <SheetHeader className="shrink-0 border-b border-white/10 px-5 pb-5 pt-[calc(var(--app-safe-top)+1.1rem)] text-left">
                 <div className="flex items-center justify-between gap-3">
                   <SheetTitle className="text-white">
                     <BrandWordmark asText showMode />
@@ -658,7 +723,7 @@ export default function Navbar({ user, activeProfile, onSwitchProfile }) {
                   </div>
                 </div>
               </div>
-              <div className="shrink-0 border-t border-white/10 bg-[var(--panel-bg)] px-3 py-3">
+              <div className="shrink-0 border-t border-white/10 bg-[var(--panel-bg)] px-3 pb-[calc(var(--app-safe-bottom)+0.75rem)] pt-3">
                 <button
                   type="button"
                   onClick={handleLogout}

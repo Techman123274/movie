@@ -8,7 +8,7 @@ export default function ProfileRestrictionNotice({
   onAction,
 }) {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[var(--app-bg)] px-4">
+    <div className="flex min-h-[var(--app-viewport-height)] items-center justify-center bg-[var(--app-bg)] px-4 py-6">
       <div className="max-w-xl w-full rounded-3xl border border-white/10 bg-black/45 backdrop-blur-sm p-8 md:p-10 text-center">
         <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04]">
           <ShieldAlert className="h-8 w-8 text-[var(--brand)]" />

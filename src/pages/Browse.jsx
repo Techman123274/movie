@@ -243,8 +243,8 @@ export default function Browse() {
   };
 
   return (
-    <div className="min-h-screen bg-[var(--app-bg)] pt-20">
-      <div className={`px-4 py-6 md:px-12 ${isHulu ? "md:py-6" : "md:py-8"}`}>
+    <div className="app-page app-page-animate bg-[var(--app-bg)]">
+      <div className={`app-page-content py-4 md:py-8 ${isHulu ? "md:py-6" : "md:py-8"}`}>
         {isHulu && (
           <p className="mb-2 text-xs font-semibold uppercase tracking-[0.28em] text-[var(--brand)]">
             Browse
@@ -261,7 +261,7 @@ export default function Browse() {
       </div>
 
       {loading ? (
-        <div className="space-y-8 px-4 md:px-12">
+        <div className="app-page-content space-y-8">
           {Array(4).fill(0).map((_, i) => (
             <div key={i}>
               <div className={`mb-3 animate-pulse rounded ${isHulu ? "h-4 w-52 bg-white/10" : "h-5 w-40 bg-[#1a1a1a]"}`} />

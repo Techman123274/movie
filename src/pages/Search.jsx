@@ -72,7 +72,7 @@ export default function Search() {
   const POPULAR_SEARCHES = ["Action", "Comedy", "Thriller", "Romance", "Horror", "Sci-Fi", "Documentary", "Animation"];
 
   return (
-    <div className="min-h-screen bg-[var(--app-bg)] px-4 pb-28 pt-20 md:px-12 md:pb-12">
+    <div className="app-page app-page-content app-page-animate bg-[var(--app-bg)]">
       <div className={`mx-auto mt-4 ${isHulu ? "mb-10 max-w-5xl" : "mb-8 max-w-2xl md:mb-10"}`}>
         {isHulu && (
           <div className="mb-5">

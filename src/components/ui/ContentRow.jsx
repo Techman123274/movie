@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import ContentCard from "./ContentCard";
 import { useAppTheme } from "@/lib/theme";
@@ -24,6 +24,25 @@ export default function ContentRow({ title, items = [], loading = false, layout 
       setShowRight(row.scrollLeft < row.scrollWidth - row.clientWidth - 10);
     }, 400);
   };
+
+  useEffect(() => {
+    const row = rowRef.current;
+    if (!row) {
+      return undefined;
+    }
+
+    const syncArrows = () => {
+      setShowLeft(row.scrollLeft > 0);
+      setShowRight(row.scrollLeft < row.scrollWidth - row.clientWidth - 10);
+    };
+
+    syncArrows();
+    window.addEventListener("resize", syncArrows);
+
+    return () => {
+      window.removeEventListener("resize", syncArrows);
+    };
+  }, [items.length]);
 
   if (loading) {
     return (
@@ -65,7 +84,7 @@ export default function ContentRow({ title, items = [], loading = false, layout 
         {showLeft && (
           <button
             onClick={() => scroll("left")}
-            className={`absolute left-0 top-0 z-30 flex items-center justify-center transition-opacity ${isHulu ? "bottom-0 w-14 rounded-l-2xl bg-[linear-gradient(90deg,rgba(7,12,9,0.92)_0%,rgba(7,12,9,0.04)_100%)] opacity-100" : "bottom-[80px] w-12 bg-black/60 opacity-0 hover:bg-black/80 group-hover/row:opacity-100"}`}
+            className={`absolute left-0 top-0 z-30 hidden items-center justify-center transition-opacity md:flex ${isHulu ? "bottom-0 w-14 rounded-l-2xl bg-[linear-gradient(90deg,rgba(7,12,9,0.92)_0%,rgba(7,12,9,0.04)_100%)] opacity-100" : "bottom-[80px] w-12 bg-black/60 opacity-0 hover:bg-black/80 group-hover/row:opacity-100"}`}
           >
             <ChevronLeft className="h-6 w-6 text-white" />
           </button>
@@ -74,7 +93,7 @@ export default function ContentRow({ title, items = [], loading = false, layout 
         {showRight && (
           <button
             onClick={() => scroll("right")}
-            className={`absolute right-0 top-0 z-30 flex items-center justify-center transition-opacity ${isHulu ? "bottom-0 w-14 rounded-r-2xl bg-[linear-gradient(270deg,rgba(7,12,9,0.92)_0%,rgba(7,12,9,0.04)_100%)] opacity-100" : "bottom-[80px] w-12 bg-black/60 opacity-0 hover:bg-black/80 group-hover/row:opacity-100"}`}
+            className={`absolute right-0 top-0 z-30 hidden items-center justify-center transition-opacity md:flex ${isHulu ? "bottom-0 w-14 rounded-r-2xl bg-[linear-gradient(270deg,rgba(7,12,9,0.92)_0%,rgba(7,12,9,0.04)_100%)] opacity-100" : "bottom-[80px] w-12 bg-black/60 opacity-0 hover:bg-black/80 group-hover/row:opacity-100"}`}
           >
             <ChevronRight className="h-6 w-6 text-white" />
           </button>
