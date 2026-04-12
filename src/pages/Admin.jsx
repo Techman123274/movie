@@ -885,7 +885,7 @@ function ContentSection({
         description="Browse popular titles by tab and genre, load more when needed, then place picks on the homepage."
       >
         <div className="rounded-2xl border border-white/10 bg-black/20 p-4 sm:p-5">
-          <div className="flex flex-wrap gap-2">
+          <div className="scrollbar-hide -mx-1 flex snap-x gap-2 overflow-x-auto px-1 pb-1">
             {[
               { value: "movie", label: "Movies" },
               { value: "tv", label: "TV Shows" },
@@ -899,7 +899,7 @@ function ContentSection({
                     setCatalogTab(tab.value);
                     setCatalogGenre("all");
                   }}
-                  className={`rounded-xl px-4 py-2 text-sm font-semibold transition-colors ${
+                  className={`min-h-11 shrink-0 snap-start rounded-xl px-4 py-2 text-sm font-semibold transition-colors ${
                     isActive
                       ? "bg-[#E50914] text-white"
                       : "border border-white/10 bg-white/[0.04] text-white/70 hover:bg-white/[0.08] hover:text-white"
@@ -934,8 +934,20 @@ function ContentSection({
           )}
 
           {catalogLoading ? (
-            <div className="mt-4 flex min-h-32 items-center justify-center rounded-2xl border border-white/8 bg-white/[0.02]">
-              <Loader2 className="h-5 w-5 animate-spin text-[#E50914]" />
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              {Array.from({ length: 4 }).map((_, index) => (
+                <div
+                  key={`catalog-skeleton-${index}`}
+                  className="admin-catalog-skeleton flex min-h-[108px] items-center gap-3 rounded-2xl border border-white/8 bg-white/[0.02] p-3"
+                >
+                  <div className="h-24 w-16 flex-shrink-0 rounded-xl bg-white/10" />
+                  <div className="min-w-0 flex-1 space-y-2.5">
+                    <div className="h-3 w-3/4 rounded-full bg-white/10" />
+                    <div className="h-2.5 w-2/5 rounded-full bg-white/10" />
+                    <div className="h-2.5 w-full rounded-full bg-white/10" />
+                  </div>
+                </div>
+              ))}
             </div>
           ) : catalogItems.length === 0 ? (
             <div className="mt-4 rounded-2xl border border-white/8 bg-white/[0.02] px-4 py-6 text-center text-sm text-white/55">
@@ -943,7 +955,7 @@ function ContentSection({
             </div>
           ) : (
             <div className="mt-4 space-y-3">
-              <div className="grid gap-3 sm:grid-cols-2">
+              <div key={`${catalogTab}-${catalogGenre}`} className="admin-catalog-grid grid gap-3 sm:grid-cols-2">
                 {catalogItems.map((item) => {
                   const isSelected =
                     String(contentDraft.tmdb_id || "") === String(item.id) && contentDraft.media_type === catalogTab;
@@ -955,7 +967,7 @@ function ContentSection({
                       key={`${catalogTab}-${item.id}`}
                       type="button"
                       onClick={() => handleSelectCatalogItem(item)}
-                      className={`flex min-w-0 items-center gap-3 rounded-2xl border p-3 text-left transition-colors ${
+                      className={`admin-catalog-card flex min-h-[108px] min-w-0 items-center gap-3 rounded-2xl border p-3 text-left transition-colors ${
                         isSelected
                           ? "border-[#E50914]/60 bg-[#E50914]/12"
                           : "border-white/8 bg-white/[0.02] hover:border-[#E50914]/40 hover:bg-white/[0.04]"
@@ -986,7 +998,7 @@ function ContentSection({
                   type="button"
                   onClick={handleLoadMoreCatalog}
                   disabled={catalogLoadingMore}
-                  className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-4 text-sm font-semibold text-white transition-colors hover:bg-white/[0.08] disabled:opacity-70"
+                  className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-4 text-sm font-semibold text-white transition-colors hover:bg-white/[0.08] disabled:opacity-70 sm:w-auto"
                 >
                   {catalogLoadingMore ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
                   Load More {catalogTab === "movie" ? "Movies" : "Shows"}
@@ -1007,7 +1019,7 @@ function ContentSection({
           <button
             type="submit"
             disabled={searching}
-            className="inline-flex min-h-12 items-center gap-2 rounded-xl bg-[#E50914] px-4 text-sm font-semibold text-white hover:bg-[#c40812]"
+            className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#E50914] px-4 text-sm font-semibold text-white hover:bg-[#c40812] sm:w-auto"
           >
             {searching ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
             Search
