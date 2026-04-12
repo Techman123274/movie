@@ -78,77 +78,79 @@ export default function ManageProfiles({ onDone }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-[var(--app-bg)] px-6 py-8 text-white">
-      <div className="mb-8 flex items-center justify-between gap-4">
-        <BrandWordmark className="text-3xl" showMode />
-        <button
-          type="button"
-          onClick={onDone}
-          className="inline-flex min-h-11 items-center justify-center rounded-lg border border-white/15 bg-white/[0.04] px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-white/[0.08]"
-        >
-          Done
-        </button>
-      </div>
-
-      <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col justify-center">
-        <div className="mb-10 text-center">
-          <p className="mb-3 text-xs uppercase tracking-[0.3em] text-[var(--brand)]">Profiles</p>
-          <h1 className="text-4xl font-light tracking-tight md:text-5xl">Manage Profiles</h1>
-          <p className="mx-auto mt-3 max-w-2xl text-sm text-gray-400 md:text-base">
-            Switch artwork, upload new profile pictures, and fine-tune what each profile can watch.
-          </p>
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-[var(--app-bg)] text-white">
+      <div className="mx-auto min-h-[var(--app-viewport-height)] w-full max-w-6xl px-4 pb-[calc(var(--app-safe-bottom)+1rem)] pt-[calc(var(--app-safe-top)+0.85rem)] md:px-6 md:pt-8">
+        <div className="sticky top-[var(--app-safe-top)] z-10 mb-8 flex items-center justify-between gap-4 rounded-2xl border border-white/10 bg-[color:rgb(8_8_8_/_0.82)] px-4 py-3 backdrop-blur-xl">
+          <BrandWordmark className="text-2xl md:text-3xl" showMode />
+          <button
+            type="button"
+            onClick={onDone}
+            className="inline-flex min-h-11 items-center justify-center rounded-lg border border-white/15 bg-white/[0.04] px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-white/[0.08]"
+          >
+            Done
+          </button>
         </div>
 
-        {loading ? (
-          <div className="flex items-center justify-center py-16">
-            <div className="h-10 w-10 animate-spin rounded-full border-4 border-[var(--brand)] border-t-transparent" />
+        <div className="mx-auto w-full max-w-5xl pb-8">
+          <div className="mb-8 text-center md:mb-10">
+            <p className="mb-3 text-xs uppercase tracking-[0.3em] text-[var(--brand)]">Profiles</p>
+            <h1 className="text-3xl font-light tracking-tight md:text-5xl">Manage Profiles</h1>
+            <p className="mx-auto mt-3 max-w-2xl text-sm text-gray-400 md:text-base">
+              Switch artwork, upload new profile pictures, and fine-tune what each profile can watch.
+            </p>
           </div>
-        ) : (
-          <div className="flex flex-wrap justify-center gap-5">
-            {profiles.map((profile) => (
-              <div key={profile.id} className="group flex w-[152px] flex-col items-center gap-3">
-                <div className="relative">
-                  <button
-                    type="button"
-                    onClick={() => setEditingProfile(profile)}
-                    className="overflow-hidden rounded-md transition-transform hover:scale-[1.02]"
-                  >
-                    <ProfileAvatar profile={profile} avatarAssets={avatarAssets} size={132} className="rounded-md" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleDelete(profile)}
-                    disabled={deletingProfileId === profile.id}
-                    className="absolute -right-2 -top-2 inline-flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-black/80 text-white opacity-0 transition-opacity hover:border-red-400 hover:text-red-300 group-hover:opacity-100 disabled:opacity-40"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                </div>
-                <div className="text-center">
-                  <p className="text-sm text-white">{profile.name}</p>
-                  {getProfileBadge(profile) && (
-                    <p className="mt-1 text-[10px] uppercase tracking-[0.2em] text-[var(--brand)]">
-                      {getProfileBadge(profile)}
-                    </p>
-                  )}
-                </div>
-              </div>
-            ))}
 
-            {profiles.length < 5 && (
-              <button
-                type="button"
-                onClick={() => setEditingProfile({})}
-                className="flex w-[152px] flex-col items-center gap-3"
-              >
-                <div className="flex h-[132px] w-[132px] items-center justify-center rounded-md border-2 border-dashed border-white/20 bg-white/[0.03] transition-colors hover:border-white/45 hover:bg-white/[0.05]">
-                  <UserPlus className="h-10 w-10 text-gray-500" />
+          {loading ? (
+            <div className="flex items-center justify-center py-16">
+              <div className="h-10 w-10 animate-spin rounded-full border-4 border-[var(--brand)] border-t-transparent" />
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 justify-items-center gap-5 sm:grid-cols-3 lg:grid-cols-5">
+              {profiles.map((profile) => (
+                <div key={profile.id} className="group flex w-[152px] flex-col items-center gap-3">
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() => setEditingProfile(profile)}
+                      className="overflow-hidden rounded-md transition-transform hover:scale-[1.02]"
+                    >
+                      <ProfileAvatar profile={profile} avatarAssets={avatarAssets} size={132} className="rounded-md" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDelete(profile)}
+                      disabled={deletingProfileId === profile.id}
+                      className="absolute -right-2 -top-2 inline-flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-black/80 text-white opacity-100 transition-opacity hover:border-red-400 hover:text-red-300 md:opacity-0 md:group-hover:opacity-100 disabled:opacity-40"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-sm text-white">{profile.name}</p>
+                    {getProfileBadge(profile) && (
+                      <p className="mt-1 text-[10px] uppercase tracking-[0.2em] text-[var(--brand)]">
+                        {getProfileBadge(profile)}
+                      </p>
+                    )}
+                  </div>
                 </div>
-                <p className="text-sm text-gray-400">Add Profile</p>
-              </button>
-            )}
-          </div>
-        )}
+              ))}
+
+              {profiles.length < 5 && (
+                <button
+                  type="button"
+                  onClick={() => setEditingProfile({})}
+                  className="flex w-[152px] flex-col items-center gap-3"
+                >
+                  <div className="flex h-[132px] w-[132px] items-center justify-center rounded-md border-2 border-dashed border-white/20 bg-white/[0.03] transition-colors hover:border-white/45 hover:bg-white/[0.05]">
+                    <UserPlus className="h-10 w-10 text-gray-500" />
+                  </div>
+                  <p className="text-sm text-gray-400">Add Profile</p>
+                </button>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
       {editingProfile && (

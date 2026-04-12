@@ -10,6 +10,7 @@ import {
   LayoutDashboard,
   LogOut,
   Menu,
+  MessageCircle,
   Search,
   Settings,
   Tv,
@@ -270,9 +271,9 @@ export default function Navbar({ user, activeProfile, onSwitchProfile }) {
   ];
 
   const mobileMenuLinks = [
+    { label: "Social", path: "/social", icon: MessageCircle },
     { label: "My List", path: "/my-list", icon: Bookmark },
     { label: "Watch History", path: "/history", icon: Clock },
-    { label: "Social Hub", path: "/social", icon: Users },
     { label: "Settings", path: "/settings", icon: Settings },
   ];
 
@@ -566,19 +567,9 @@ export default function Navbar({ user, activeProfile, onSwitchProfile }) {
           <Sheet open={showMobileMenu} onOpenChange={setShowMobileMenu}>
             <SheetContent side="left" className="flex h-[var(--app-viewport-height)] w-[88vw] max-w-sm flex-col overflow-hidden border-white/10 bg-[var(--panel-bg)] p-0 text-white">
               <SheetHeader className="shrink-0 border-b border-white/10 px-5 pb-5 pt-[calc(var(--app-safe-top)+1.1rem)] text-left">
-                <div className="flex items-center justify-between gap-3">
-                  <SheetTitle className="text-white">
-                    <BrandWordmark asText showMode />
-                  </SheetTitle>
-                  <button
-                    type="button"
-                    onClick={handleLogout}
-                    className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-white/[0.08]"
-                  >
-                    <LogOut className="h-4 w-4" />
-                    Sign Out
-                  </button>
-                </div>
+                <SheetTitle className="text-white">
+                  <BrandWordmark asText showMode />
+                </SheetTitle>
                 <div className="mt-3 flex items-center gap-3">
                   {activeProfile ? (
                     <ProfileAvatar profile={activeProfile} size={44} className="rounded" />
@@ -598,25 +589,6 @@ export default function Navbar({ user, activeProfile, onSwitchProfile }) {
 
               <div className="flex-1 overflow-y-auto px-3 py-4 pb-4">
                 <div className="space-y-1">
-                  {primaryLinks.map((link) => {
-                    const Icon = link.icon;
-                    const active = isLinkActive(link.path);
-
-                    return (
-                      <Link
-                        key={link.path}
-                        to={link.path}
-                        onClick={() => setShowMobileMenu(false)}
-                        className={`flex min-h-12 items-center gap-3 rounded-xl px-4 py-3 text-sm transition-colors ${
-                          active ? "bg-white/10 text-white" : "text-gray-300 hover:bg-white/5 hover:text-white"
-                        }`}
-                      >
-                        <Icon className="w-4 h-4" />
-                        <span>{link.label}</span>
-                      </Link>
-                    );
-                  })}
-
                   {mobileMenuLinks.map((link) => {
                     const Icon = link.icon;
                     const active = isLinkActive(link.path);
