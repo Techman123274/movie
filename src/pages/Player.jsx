@@ -379,6 +379,23 @@ export default function Player() {
       return { season, episode: episode + 1 };
     }
 
+    const lastSeason = Number(content.last_episode_to_air?.season_number) || 0;
+    const lastEpisode = Number(content.last_episode_to_air?.episode_number) || 0;
+    if (lastSeason === season && lastEpisode > 0 && episode < lastEpisode) {
+      return { season, episode: episode + 1 };
+    }
+
+    const nextSeason = Number(content.next_episode_to_air?.season_number) || 0;
+    const nextEpisode = Number(content.next_episode_to_air?.episode_number) || 0;
+    if (nextSeason > 0 && nextEpisode > 0) {
+      if (season < nextSeason) {
+        return { season: nextSeason, episode: nextEpisode };
+      }
+      if (season === nextSeason && episode < nextEpisode) {
+        return { season: nextSeason, episode: nextEpisode };
+      }
+    }
+
     if (content.number_of_seasons && season < content.number_of_seasons) {
       return { season: season + 1, episode: 1 };
     }
