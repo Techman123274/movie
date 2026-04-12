@@ -233,8 +233,10 @@ It lets the user manage:
 
 Important implementation note:
 
-- Some settings are currently UI/preferences only.
-- Playback uses the VidLink embed regardless, and watch history is still logged when playback starts.
+- Playback uses an embedded provider (VidLink/VidSrc) regardless, and watch history is still logged when playback starts.
+- Autoplay settings are stored in browser localStorage:
+  - `Autoplay previews` controls homepage hero auto-rotation.
+  - `Autoplay next episode` controls the in-player Up Next countdown and automatic episode advance.
 
 ## Admin Panel
 

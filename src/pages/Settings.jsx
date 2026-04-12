@@ -18,7 +18,15 @@ import {
 import { base44 } from "@/api/base44Client";
 import { hasTmdbCredentials, tmdbApiKey, tmdbReadAccessToken } from "@/lib/env";
 import { getProfileBadge, readPreference, removePreference, writePreference } from "@/lib/preferences";
-import { addFriend, listFriends, removeFriend, SOCIAL_CHANGED_EVENT } from "@/lib/social";
+import {
+  acceptFriendRequest,
+  cancelFriendRequest,
+  declineFriendRequest,
+  getOtherFriendEmail,
+  listFriendRequests,
+  removeFriend as removeFriendRequest,
+  sendFriendRequest,
+} from "@/lib/friends";
 import BrandWordmark from "@/components/layout/BrandWordmark";
 import ProfileAvatar from "@/components/profile/ProfileAvatar";
 import { useAppTheme } from "@/lib/theme";
@@ -44,7 +52,8 @@ export default function SettingsPage() {
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [browserNotifications, setBrowserNotifications] = useState(false);
   const [notificationPermission, setNotificationPermission] = useState("default");
-  const [friends, setFriends] = useState([]);
+  const [presenceVisibility, setPresenceVisibility] = useState("public");
+  const [friendRequests, setFriendRequests] = useState({ incoming: [], outgoing: [], accepted: [] });
   const [friendEmail, setFriendEmail] = useState("");
   const [friendName, setFriendName] = useState("");
   const [socialMessage, setSocialMessage] = useState("");
@@ -64,24 +73,27 @@ export default function SettingsPage() {
 
   useEffect(() => {
     if (!user) {
-      setFriends([]);
+      setFriendRequests({ incoming: [], outgoing: [], accepted: [] });
       return undefined;
     }
 
     let cancelled = false;
 
-    const loadFriends = async () => {
-      const nextFriends = await listFriends().catch(() => []);
+    const loadSocialState = async () => {
+      const [requests, visibility] = await Promise.all([
+        listFriendRequests().catch(() => ({ incoming: [], outgoing: [], accepted: [] })),
+        base44.preferences.getPresenceVisibility().catch(() => "public"),
+      ]);
+
       if (!cancelled) {
-        setFriends(nextFriends);
+        setFriendRequests(requests);
+        setPresenceVisibility(visibility);
       }
     };
 
-    loadFriends();
-    window.addEventListener(SOCIAL_CHANGED_EVENT, loadFriends);
+    loadSocialState();
     return () => {
       cancelled = true;
-      window.removeEventListener(SOCIAL_CHANGED_EVENT, loadFriends);
     };
   }, [user]);
 
@@ -125,6 +137,27 @@ export default function SettingsPage() {
     }
   };
 
+  const refreshFriendRequests = async () => {
+    const requests = await listFriendRequests().catch(() => ({ incoming: [], outgoing: [], accepted: [] }));
+    setFriendRequests(requests);
+  };
+
+  const handlePresenceVisibilityChange = async (nextValue) => {
+    try {
+      setSocialBusy(true);
+      const savedValue = await base44.preferences.setPresenceVisibility(nextValue);
+      setPresenceVisibility(savedValue);
+      setSocialMessage("Presence setting saved.");
+    } catch (error) {
+      setSocialMessage(error?.message || "Could not save presence setting yet.");
+    } finally {
+      setSocialBusy(false);
+      if (typeof window !== "undefined") {
+        window.setTimeout(() => setSocialMessage(""), 2200);
+      }
+    }
+  };
+
   const handleAddFriend = async (event) => {
     event.preventDefault();
     if (!friendEmail.trim()) {
@@ -133,32 +166,82 @@ export default function SettingsPage() {
 
     try {
       setSocialBusy(true);
-      await addFriend({
-        user,
-        email: friendEmail,
-        name: friendName,
-      });
+      await sendFriendRequest({ email: friendEmail, name: friendName });
       setFriendEmail("");
       setFriendName("");
-      setSocialMessage("Friend added to your activity circle.");
+      setSocialMessage("Friend request sent.");
+      await refreshFriendRequests();
     } catch (error) {
-      setSocialMessage(error?.message || "Could not add that friend yet.");
+      setSocialMessage(error?.message || "Could not send that friend request yet.");
     } finally {
       setSocialBusy(false);
-      window.setTimeout(() => setSocialMessage(""), 2200);
+      if (typeof window !== "undefined") {
+        window.setTimeout(() => setSocialMessage(""), 2200);
+      }
     }
   };
 
-  const handleRemoveFriend = async (friendshipId) => {
+  const handleAcceptRequest = async (requestId) => {
     try {
       setSocialBusy(true);
-      await removeFriend(friendshipId);
-      setSocialMessage("Friend removed.");
-    } catch {
-      setSocialMessage("Could not remove that friend yet.");
+      await acceptFriendRequest(requestId);
+      setSocialMessage("Friend request accepted.");
+      await refreshFriendRequests();
+    } catch (error) {
+      setSocialMessage(error?.message || "Could not accept that request yet.");
     } finally {
       setSocialBusy(false);
-      window.setTimeout(() => setSocialMessage(""), 2200);
+      if (typeof window !== "undefined") {
+        window.setTimeout(() => setSocialMessage(""), 2200);
+      }
+    }
+  };
+
+  const handleDeclineRequest = async (requestId) => {
+    try {
+      setSocialBusy(true);
+      await declineFriendRequest(requestId);
+      setSocialMessage("Friend request declined.");
+      await refreshFriendRequests();
+    } catch (error) {
+      setSocialMessage(error?.message || "Could not decline that request yet.");
+    } finally {
+      setSocialBusy(false);
+      if (typeof window !== "undefined") {
+        window.setTimeout(() => setSocialMessage(""), 2200);
+      }
+    }
+  };
+
+  const handleCancelRequest = async (requestId) => {
+    try {
+      setSocialBusy(true);
+      await cancelFriendRequest(requestId);
+      setSocialMessage("Friend request cancelled.");
+      await refreshFriendRequests();
+    } catch (error) {
+      setSocialMessage(error?.message || "Could not cancel that request yet.");
+    } finally {
+      setSocialBusy(false);
+      if (typeof window !== "undefined") {
+        window.setTimeout(() => setSocialMessage(""), 2200);
+      }
+    }
+  };
+
+  const handleRemoveFriend = async (requestId) => {
+    try {
+      setSocialBusy(true);
+      await removeFriendRequest(requestId);
+      setSocialMessage("Friend removed.");
+      await refreshFriendRequests();
+    } catch (error) {
+      setSocialMessage(error?.message || "Could not remove that friend yet.");
+    } finally {
+      setSocialBusy(false);
+      if (typeof window !== "undefined") {
+        window.setTimeout(() => setSocialMessage(""), 2200);
+      }
     }
   };
 
@@ -352,6 +435,35 @@ export default function SettingsPage() {
                 description="Build a lightweight social circle so Subflix can surface what your people liked, rated, and started watching."
                 icon={Users}
               >
+                <div className="rounded-2xl border border-white/10 bg-black/20 px-4 py-4">
+                  <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-white">Presence visibility</p>
+                      <p className="mt-1 text-xs text-gray-500">
+                        Controls who can see when you’re online and what you’re watching.
+                      </p>
+                    </div>
+                    <select
+                      value={presenceVisibility}
+                      onChange={(event) => handlePresenceVisibilityChange(event.target.value)}
+                      disabled={socialBusy}
+                      className="min-h-11 w-full rounded-lg border border-white/10 bg-[#181818] px-4 py-3 text-sm text-white outline-none focus:border-[#E50914] md:w-auto"
+                    >
+                      <option value="public">Public</option>
+                      <option value="friends">Friends-only</option>
+                      <option value="off">Off</option>
+                    </select>
+                  </div>
+                </div>
+
+                <Link
+                  to="/social"
+                  className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-white/[0.08]"
+                >
+                  Open Social Hub
+                  <ChevronRight className="h-4 w-4" />
+                </Link>
+
                 <form onSubmit={handleAddFriend} className="rounded-2xl border border-white/10 bg-black/20 p-3 md:p-4">
                   <div className="grid gap-3 md:grid-cols-[1.1fr_1fr_auto]">
                     <input
@@ -373,11 +485,11 @@ export default function SettingsPage() {
                       disabled={socialBusy}
                       className="min-h-11 rounded-lg bg-[#E50914] px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-[#c40812] disabled:cursor-not-allowed disabled:opacity-60"
                     >
-                      Add Friend
+                      Send Request
                     </button>
                   </div>
                   <p className="mt-3 text-xs text-gray-500">
-                    Friends you add can appear in your Home recommendations through likes, ratings, watchlist saves, and watch starts.
+                    Your friend must accept before you can message them or see their presence.
                   </p>
                 </form>
 
@@ -386,32 +498,96 @@ export default function SettingsPage() {
                 )}
 
                 <div className="space-y-3">
-                  {friends.length === 0 ? (
+                  {friendRequests.incoming.length > 0 && (
+                    <div className="rounded-2xl border border-white/10 bg-black/20 px-4 py-4">
+                      <p className="text-sm font-semibold text-white">Incoming requests</p>
+                      <div className="mt-3 space-y-3">
+                        {friendRequests.incoming.map((request) => (
+                          <div key={request.id} className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                            <div className="min-w-0">
+                              <p className="truncate text-sm font-medium text-white">
+                                {request.requester_name || request.requester_email}
+                              </p>
+                              <p className="truncate text-xs text-gray-500">{request.requester_email}</p>
+                            </div>
+                            <div className="flex gap-2">
+                              <button
+                                type="button"
+                                disabled={socialBusy}
+                                onClick={() => handleAcceptRequest(request.id)}
+                                className="inline-flex min-h-11 flex-1 items-center justify-center rounded-lg bg-white px-4 py-2 text-sm font-semibold text-black transition-colors hover:bg-gray-200 disabled:opacity-60"
+                              >
+                                Accept
+                              </button>
+                              <button
+                                type="button"
+                                disabled={socialBusy}
+                                onClick={() => handleDeclineRequest(request.id)}
+                                className="inline-flex min-h-11 flex-1 items-center justify-center rounded-lg border border-white/10 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-white/[0.06] disabled:opacity-60"
+                              >
+                                Decline
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {friendRequests.outgoing.length > 0 && (
+                    <div className="rounded-2xl border border-white/10 bg-black/20 px-4 py-4">
+                      <p className="text-sm font-semibold text-white">Pending requests</p>
+                      <div className="mt-3 space-y-3">
+                        {friendRequests.outgoing.map((request) => (
+                          <div key={request.id} className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                            <div className="min-w-0">
+                              <p className="truncate text-sm font-medium text-white">{request.addressee_email}</p>
+                              <p className="truncate text-xs text-gray-500">Waiting for acceptance</p>
+                            </div>
+                            <button
+                              type="button"
+                              disabled={socialBusy}
+                              onClick={() => handleCancelRequest(request.id)}
+                              className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg border border-white/10 px-4 py-2 text-sm text-white/75 transition-colors hover:border-white/20 hover:text-white disabled:opacity-60 md:w-auto"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {friendRequests.accepted.length === 0 ? (
                     <div className="rounded-2xl border border-dashed border-white/10 bg-black/10 px-4 py-6 text-sm text-gray-500">
-                      Add a few friends to unlock the Friends Activity row on Home.
+                      No accepted friends yet.
                     </div>
                   ) : (
-                    friends.map((friend) => (
-                      <div
-                        key={friend.id}
-                        className="rounded-2xl border border-white/10 bg-black/20 px-4 py-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between"
-                      >
-                        <div>
-                          <p className="text-white text-sm font-medium">
-                            {friend.friend_name || friend.friend_email}
-                          </p>
-                          <p className="text-gray-500 text-xs mt-1">{friend.friend_email}</p>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveFriend(friend.id)}
-                          className="inline-flex min-h-11 w-full items-center justify-center gap-2 self-start rounded-lg border border-white/10 px-4 py-2 text-sm text-white/75 transition-colors hover:border-white/20 hover:text-white md:w-auto"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                          Remove
-                        </button>
+                    <div className="rounded-2xl border border-white/10 bg-black/20 px-4 py-4">
+                      <p className="text-sm font-semibold text-white">Friends</p>
+                      <div className="mt-3 space-y-3">
+                        {friendRequests.accepted.map((request) => {
+                          const otherEmail = getOtherFriendEmail(request, user?.email);
+                          return (
+                            <div key={request.id} className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                              <div className="min-w-0">
+                                <p className="truncate text-sm font-medium text-white">{otherEmail}</p>
+                                <p className="truncate text-xs text-gray-500">Accepted</p>
+                              </div>
+                              <button
+                                type="button"
+                                disabled={socialBusy}
+                                onClick={() => handleRemoveFriend(request.id)}
+                                className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg border border-white/10 px-4 py-2 text-sm text-white/75 transition-colors hover:border-white/20 hover:text-white disabled:opacity-60 md:w-auto"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                                Remove
+                              </button>
+                            </div>
+                          );
+                        })}
                       </div>
-                    ))
+                    </div>
                   )}
                 </div>
               </SettingsCard>

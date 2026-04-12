@@ -7,6 +7,7 @@ import { getMatchPercentage } from "@/lib/recommendations";
 import { buildWatchPath, getResumeLabel } from "@/lib/playback";
 import PlaybackProgressBar from "@/components/ui/PlaybackProgressBar";
 import { useAppTheme } from "@/lib/theme";
+import { useBooleanPreference } from "@/hooks/use-boolean-preference";
 
 export default function HeroBanner({ items = [] }) {
   const [current, setCurrent] = useState(0);
@@ -14,11 +15,12 @@ export default function HeroBanner({ items = [] }) {
   const navigate = useNavigate();
   const { themeDefinition } = useAppTheme();
   const isHulu = themeDefinition.heroVariant === "hulu";
+  const autoplayPreviews = useBooleanPreference("subflix_autoplay_previews", true);
 
   const item = items[current];
 
   useEffect(() => {
-    if (!items.length) {
+    if (!items.length || !autoplayPreviews) {
       return undefined;
     }
 
@@ -27,7 +29,7 @@ export default function HeroBanner({ items = [] }) {
     }, isHulu ? 9000 : 8000);
 
     return () => window.clearInterval(timer);
-  }, [isHulu, items.length]);
+  }, [isHulu, items.length, autoplayPreviews]);
 
   useEffect(() => {
     setInList(false);

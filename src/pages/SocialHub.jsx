@@ -1,32 +1,25 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useOutletContext } from "react-router-dom";
-import { MessageCircle, Play, RefreshCw, Star, Users } from "lucide-react";
-import { tmdbW300 } from "@/lib/tmdb";
 import { filterItemsForProfile } from "@/lib/preferences";
 import { listGlobalSocialFeed, SOCIAL_CHANGED_EVENT } from "@/lib/social";
-import { buildWatchPath } from "@/lib/playback";
 import { useAppTheme } from "@/lib/theme";
+import {
+  getOtherFriendEmail,
+  listFriendRequests,
+  sendFriendRequest,
+} from "@/lib/friends";
+import { listFriendsPresence } from "@/lib/presence";
+import {
+  createGroupThread,
+  getOrCreateDmThread,
+  listMyThreads,
+  listThreadMembers,
+  listThreadMessages,
+  markThreadRead,
+  sendChatMessage,
+} from "@/lib/chat";
 
-const getActorName = (entry) =>
-  entry.actor_name || entry.profile_name || entry.created_by || "Subflix Member";
-
-const getActionCopy = (entry) => {
-  switch (entry.activity_type) {
-    case "liked":
-      return "liked";
-    case "rated":
-      return `rated ${entry.rating_value || ""}/5`;
-    case "watchlist_added":
-      return "saved to My List";
-    case "watch_started":
-      return "started watching";
-    case "commented":
-    case "comment":
-      return "commented";
-    default:
-      return "shared";
-  }
-};
+const normalizeEmail = (value) => String(value || "").trim().toLowerCase();
 
 const formatDate = (value) => {
   if (!value) {
@@ -46,28 +39,77 @@ const formatDate = (value) => {
 };
 
 export default function SocialHub() {
-  const { activeProfile } = useOutletContext() || {};
+  const { user, activeProfile } = useOutletContext() || {};
   const { themeDefinition } = useAppTheme();
   const isHulu = themeDefinition.shellVariant === "hulu";
-  const [feedItems, setFeedItems] = useState([]);
-  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
-  const visibleFeed = useMemo(() => {
-    const normalized = feedItems.map((entry) => ({
-      ...entry,
-      adult: Boolean(entry.is_adult),
-      id: entry.tmdb_id,
-    }));
+  const [tab, setTab] = useState("friends");
+  const [notice, setNotice] = useState("");
+  const [busy, setBusy] = useState(false);
 
-    return filterItemsForProfile(normalized, activeProfile);
-  }, [feedItems, activeProfile]);
+  const [friendEmail, setFriendEmail] = useState("");
+  const [friendName, setFriendName] = useState("");
+  const [friendRequests, setFriendRequests] = useState({ incoming: [], outgoing: [], accepted: [] });
+  const [presenceRows, setPresenceRows] = useState([]);
+
+  const [threads, setThreads] = useState([]);
+  const [selectedThread, setSelectedThread] = useState(null);
+  const [selectedThreadMembers, setSelectedThreadMembers] = useState([]);
+  const [messages, setMessages] = useState([]);
+  const [messageText, setMessageText] = useState("");
+  const messagesEndRef = useRef(null);
+  const [groupTitle, setGroupTitle] = useState("");
+  const [groupMembersText, setGroupMembersText] = useState("");
+
+  // community
+  const [feedItems, setFeedItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  const showNotice = (message) => {
+    setNotice(message);
+    if (typeof window !== "undefined") {
+      window.setTimeout(() => setNotice(""), 2200);
+    }
+  };
 
   const loadFeed = async () => {
     setLoading(true);
     const items = await listGlobalSocialFeed({ limit: 80 }).catch(() => []);
     setFeedItems(items);
     setLoading(false);
+  };
+
+  const refreshFriends = async () => {
+    const requests = await listFriendRequests().catch(() => ({ incoming: [], outgoing: [], accepted: [] }));
+    setFriendRequests(requests);
+
+    const emails = (requests.accepted || [])
+      .map((row) => getOtherFriendEmail(row, user?.email))
+      .filter(Boolean);
+
+    const rows = await listFriendsPresence(emails).catch(() => []);
+    setPresenceRows(rows);
+  };
+
+  const refreshThreads = async () => {
+    const rows = await listMyThreads().catch(() => []);
+    setThreads(rows);
+  };
+
+  const refreshSelectedThread = async (threadId) => {
+    if (!threadId) {
+      return;
+    }
+
+    const [memberRows, messageRows] = await Promise.all([
+      listThreadMembers(threadId).catch(() => []),
+      listThreadMessages(threadId, 120).catch(() => []),
+    ]);
+
+    setSelectedThreadMembers(memberRows);
+    setMessages(messageRows);
+    markThreadRead(threadId);
   };
 
   useEffect(() => {
@@ -80,6 +122,211 @@ export default function SocialHub() {
     window.addEventListener(SOCIAL_CHANGED_EVENT, handleSocialChange);
     return () => window.removeEventListener(SOCIAL_CHANGED_EVENT, handleSocialChange);
   }, []);
+
+  useEffect(() => {
+    if (!user) {
+      return undefined;
+    }
+
+    void refreshFriends();
+    void refreshThreads();
+    return undefined;
+  }, [user?.email]);
+
+  useEffect(() => {
+    if (tab !== "friends" || !user) {
+      return undefined;
+    }
+
+    void refreshFriends();
+    const timer = window.setInterval(() => void refreshFriends(), 12_000);
+    return () => window.clearInterval(timer);
+  }, [tab, user?.email]);
+
+  useEffect(() => {
+    if (tab !== "chat" || !user) {
+      return undefined;
+    }
+
+    void refreshThreads();
+    const timer = window.setInterval(() => void refreshThreads(), 7_000);
+    return () => window.clearInterval(timer);
+  }, [tab, user?.email]);
+
+  useEffect(() => {
+    if (tab !== "chat" || !selectedThread?.id) {
+      return undefined;
+    }
+
+    void refreshSelectedThread(selectedThread.id);
+    const timer = window.setInterval(() => void refreshSelectedThread(selectedThread.id), 3_000);
+    return () => window.clearInterval(timer);
+  }, [selectedThread?.id, tab]);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+  }, [messages.length, selectedThread?.id]);
+
+  const presenceByEmail = useMemo(() => {
+    const map = new Map();
+    presenceRows.forEach((row) => {
+      if (row?.user_email) {
+        map.set(String(row.user_email).toLowerCase(), row);
+      }
+    });
+    return map;
+  }, [presenceRows]);
+
+  const acceptedFriends = useMemo(() => {
+    const mine = normalizeEmail(user?.email);
+    return (friendRequests.accepted || [])
+      .map((row) => {
+        const otherEmail = getOtherFriendEmail(row, mine);
+        return {
+          id: row.id,
+          email: otherEmail,
+          presence: otherEmail ? presenceByEmail.get(String(otherEmail).toLowerCase()) : null,
+        };
+      })
+      .filter((row) => row.email);
+  }, [friendRequests.accepted, presenceByEmail, user?.email]);
+
+  const isPresenceOnline = (presence) => {
+    const updatedAt = presence?.last_seen_at || presence?.updated_at;
+    if (!updatedAt) {
+      return false;
+    }
+    const ageMs = Date.now() - new Date(updatedAt).getTime();
+    return ageMs < 70_000;
+  };
+
+  const sendRequest = async (event) => {
+    event.preventDefault();
+    if (!friendEmail.trim()) {
+      return;
+    }
+
+    try {
+      setBusy(true);
+      await sendFriendRequest({ email: friendEmail, name: friendName });
+      setFriendEmail("");
+      setFriendName("");
+      showNotice("Friend request sent.");
+      await refreshFriends();
+    } catch (error) {
+      showNotice(error?.message || "Could not send that friend request yet.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const runRequestAction = async (fn, id, message) => {
+    try {
+      setBusy(true);
+      await fn(id);
+      showNotice(message);
+      await refreshFriends();
+    } catch (error) {
+      showNotice(error?.message || "Action failed.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const openDmForFriend = async (email) => {
+    if (!email) {
+      return;
+    }
+
+    try {
+      setBusy(true);
+      const thread = await getOrCreateDmThread(email);
+      setTab("chat");
+      setSelectedThread(thread);
+      await refreshThreads();
+    } catch (error) {
+      showNotice(error?.message || "Could not open chat yet.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const sendMessage = async () => {
+    if (!selectedThread?.id || !messageText.trim()) {
+      return;
+    }
+
+    try {
+      setBusy(true);
+      await sendChatMessage({
+        threadId: selectedThread.id,
+        messageText,
+        senderName: activeProfile?.name || user?.full_name || user?.email,
+        senderAvatarUrl: activeProfile?.avatar_asset_url || user?.image_url || null,
+      });
+      setMessageText("");
+      await refreshSelectedThread(selectedThread.id);
+      await refreshThreads();
+    } catch (error) {
+      showNotice(error?.message || "Could not send message yet.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const submitCreateGroup = async (event) => {
+    event.preventDefault();
+    const memberEmails = groupMembersText
+      .split(",")
+      .map((value) => value.trim())
+      .filter(Boolean);
+
+    try {
+      setBusy(true);
+      const thread = await createGroupThread({ title: groupTitle, memberEmails });
+      setGroupTitle("");
+      setGroupMembersText("");
+      showNotice("Group created.");
+      setTab("chat");
+      setSelectedThread(thread);
+      await refreshThreads();
+    } catch (error) {
+      showNotice(error?.message || "Could not create group yet.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const getActorName = (entry) =>
+    entry.actor_name || entry.profile_name || entry.created_by || "Subflix Member";
+
+  const getActionCopy = (entry) => {
+    switch (entry.activity_type) {
+      case "liked":
+        return "liked";
+      case "rated":
+        return `rated ${entry.rating_value || ""}/5`;
+      case "watchlist_added":
+        return "saved to My List";
+      case "watch_started":
+        return "started watching";
+      case "commented":
+      case "comment":
+        return "commented";
+      default:
+        return "shared";
+    }
+  };
+
+  const visibleFeed = useMemo(() => {
+    const normalized = feedItems.map((entry) => ({
+      ...entry,
+      adult: Boolean(entry.is_adult),
+      id: entry.tmdb_id,
+    }));
+
+    return filterItemsForProfile(normalized, activeProfile);
+  }, [feedItems, activeProfile]);
 
   const stats = useMemo(() => {
     const ratings = visibleFeed.filter((entry) => entry.activity_type === "rated");
@@ -101,138 +348,45 @@ export default function SocialHub() {
             <p className="mb-3 text-xs uppercase tracking-[0.28em] text-[var(--brand)]">Community</p>
             <h1 className="text-3xl font-black tracking-tight md:text-5xl">Social Hub</h1>
             <p className="mt-3 max-w-2xl text-sm leading-relaxed text-gray-400 md:text-base">
-              Shared comments, ratings, watch starts, likes, and saves from the database.
+              Friends, chat, presence, and community activity—all in one place.
             </p>
           </div>
-          <button
-            type="button"
-            onClick={loadFeed}
-            className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-white/[0.08] md:w-auto"
-          >
-            <RefreshCw className="h-4 w-4" />
-            Refresh
-          </button>
-        </div>
-
-        <div className="mb-6 grid gap-3 sm:grid-cols-3">
-          <MetricCard icon={Users} label="Members active" value={stats.members} />
-          <MetricCard icon={Star} label="Ratings shared" value={stats.ratings} />
-          <MetricCard icon={MessageCircle} label="Comments posted" value={stats.comments} />
-        </div>
-
-        {loading ? (
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {Array(6).fill(0).map((_, index) => (
-              <div key={index} className={`animate-pulse rounded-2xl ${isHulu ? "h-64 bg-white/[0.05]" : "h-56 bg-white/[0.04]"}`} />
+          <div className="grid grid-cols-3 gap-2 rounded-2xl border border-white/10 bg-white/[0.04] p-1">
+            {[
+              { id: "friends", label: "Friends" },
+              { id: "chat", label: "Chat" },
+              { id: "community", label: "Community" },
+            ].map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => setTab(t.id)}
+                className={`min-h-10 rounded-xl px-3 text-xs font-semibold uppercase tracking-[0.18em] transition-colors md:text-sm ${
+                  tab === t.id ? "bg-white text-black" : "text-white/75 hover:bg-white/[0.06] hover:text-white"
+                }`}
+              >
+                {t.label}
+              </button>
             ))}
           </div>
-        ) : visibleFeed.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-white/10 px-6 py-20 text-center">
-            <Users className="mx-auto mb-4 h-14 w-14 text-gray-700" />
-            <h2 className="text-2xl font-bold text-white">No social activity yet</h2>
-            <p className="mx-auto mt-2 max-w-xl text-sm leading-relaxed text-gray-500">
-              Rate a title, leave a comment, like something, or start watching to fill this hub.
-            </p>
+        </div>
+
+        {notice && <p className="mb-4 text-sm text-[#86efac]">{notice}</p>}
+
+        {tab === "friends" ? (
+          <div className="rounded-2xl border border-white/10 bg-black/20 p-6 text-sm text-gray-400">
+            Loading friends…
+          </div>
+        ) : tab === "chat" ? (
+          <div className="rounded-2xl border border-white/10 bg-black/20 p-6 text-sm text-gray-400">
+            Loading chat…
           </div>
         ) : (
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {visibleFeed.map((entry, index) => (
-              <article
-                key={`${entry.feed_type || entry.activity_type}-${entry.id || entry.tmdb_id}-${entry.updated_at}-${index}`}
-                className={`overflow-hidden rounded-2xl border border-white/10 ${isHulu ? "bg-[rgba(255,255,255,0.03)]" : "bg-[#111111]"}`}
-              >
-                <button
-                  type="button"
-                  onClick={() => navigate(`/${entry.media_type}/${entry.tmdb_id}`)}
-                  className={`group w-full gap-4 p-4 text-left ${isHulu ? "block" : "flex"}`}
-                >
-                  <div className={`${isHulu ? "mb-4 h-40 w-full" : "h-32 w-24 shrink-0"} overflow-hidden rounded-lg bg-[#1a1a1a]`}>
-                    {entry.poster_path ? (
-                      <img
-                        src={tmdbW300(entry.poster_path)}
-                        alt={entry.title}
-                        className="h-full w-full object-cover transition-transform group-hover:scale-105"
-                        loading="lazy"
-                      />
-                    ) : (
-                      <div className="flex h-full w-full items-center justify-center px-2 text-center text-xs text-gray-600">
-                        {entry.title}
-                      </div>
-                    )}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="mb-2 flex items-center gap-2 text-xs text-gray-500">
-                      <span className="rounded bg-white/10 px-2 py-1 uppercase text-gray-300">
-                        {entry.media_type === "tv" ? "TV" : "Movie"}
-                      </span>
-                      <span>{formatDate(entry.updated_at)}</span>
-                    </div>
-                    <h2 className="line-clamp-2 text-lg font-bold leading-tight text-white">{entry.title}</h2>
-                    <div className="mt-2 flex items-center gap-2">
-                      {entry.actor_avatar_url ? (
-                        <img
-                          src={entry.actor_avatar_url}
-                          alt={getActorName(entry)}
-                          className="h-7 w-7 shrink-0 rounded-md object-cover"
-                        />
-                      ) : (
-                        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-[var(--brand)] text-[11px] font-black text-[var(--brand-contrast)]">
-                          {String(getActorName(entry)).charAt(0).toUpperCase()}
-                        </div>
-                      )}
-                      <p className="min-w-0 text-sm text-gray-400">
-                        <span className="font-semibold text-white">{getActorName(entry)}</span>{" "}
-                        {getActionCopy(entry)}
-                      </p>
-                    </div>
-                    {entry.rating_value && (
-                      <div className="mt-3 flex items-center gap-1 text-yellow-400">
-                        <Star className="h-4 w-4 fill-yellow-400" />
-                        <span className="text-sm font-black">{entry.rating_value}/5</span>
-                      </div>
-                    )}
-                    {(entry.comment_text || entry.metadata?.comment_text) && (
-                      <p className="mt-3 line-clamp-3 rounded-lg bg-black/20 px-3 py-2 text-sm leading-relaxed text-gray-300">
-                        {entry.comment_text || entry.metadata.comment_text}
-                      </p>
-                    )}
-                  </div>
-                </button>
-
-                <div className="flex gap-2 border-t border-white/10 p-3">
-                  <button
-                    type="button"
-                    onClick={() => navigate(buildWatchPath({ mediaType: entry.media_type, tmdbId: entry.tmdb_id }))}
-                    className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-lg bg-white px-3 py-2 text-sm font-bold text-black transition-colors hover:bg-gray-200"
-                  >
-                    <Play className="h-4 w-4 fill-black" />
-                    Watch
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => navigate(`/${entry.media_type}/${entry.tmdb_id}`)}
-                    className="inline-flex min-h-11 flex-1 items-center justify-center rounded-lg border border-white/10 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-white/[0.06]"
-                  >
-                    Details
-                  </button>
-                </div>
-              </article>
-            ))}
+          <div className="rounded-2xl border border-white/10 bg-black/20 p-6 text-sm text-gray-400">
+            Loading community…
           </div>
         )}
       </div>
-    </div>
-  );
-}
-
-function MetricCard({ icon: Icon, label, value }) {
-  return (
-    <div className="rounded-2xl border border-white/10 bg-[#111111] px-4 py-4">
-      <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-lg bg-white/[0.04] text-[var(--brand)]">
-        <Icon className="h-5 w-5" />
-      </div>
-      <p className="text-2xl font-black text-white">{value}</p>
-      <p className="mt-1 text-xs uppercase tracking-[0.2em] text-gray-500">{label}</p>
     </div>
   );
 }
