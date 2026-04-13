@@ -89,151 +89,157 @@ export default function ProfileEditorModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 px-4">
-      <motion.div
-        className="w-full max-w-xl rounded-2xl border border-white/10 bg-[var(--panel-bg)] p-6"
-        initial={{ opacity: 0, scale: 0.94 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.2 }}
-      >
-        <div className="mb-6 flex items-center justify-between">
-          <h2 className="text-xl font-bold text-white">{profile?.id ? "Edit Profile" : "Add Profile"}</h2>
-          <button onClick={onClose} className="text-gray-400 transition-colors hover:text-white">
-            <X className="h-5 w-5" />
-          </button>
-        </div>
+    <div className="fixed inset-0 z-[70] bg-black/80 px-4 pb-[calc(var(--app-safe-bottom)+0.75rem)] pt-[calc(var(--app-safe-top)+0.75rem)]">
+      <div className="mx-auto flex h-full w-full max-w-xl items-start justify-center">
+        <motion.div
+          className="flex max-h-full w-full flex-col overflow-hidden rounded-2xl border border-white/10 bg-[var(--panel-bg)] shadow-[0_20px_60px_rgba(0,0,0,0.45)]"
+          initial={{ opacity: 0, scale: 0.94 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.2 }}
+        >
+          <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
+            <h2 className="text-xl font-bold text-white">{profile?.id ? "Edit Profile" : "Add Profile"}</h2>
+            <button onClick={onClose} className="text-gray-400 transition-colors hover:text-white">
+              <X className="h-5 w-5" />
+            </button>
+          </div>
 
-        <div className="mb-6 flex justify-center">
-          <ProfileAvatar profile={selectedProfilePreview} avatarAssets={availableAssets} size={100} className="rounded-xl" />
-        </div>
+          <div className="flex-1 overflow-y-auto px-5 py-5">
+            <div className="mb-6 flex justify-center">
+              <ProfileAvatar profile={selectedProfilePreview} avatarAssets={availableAssets} size={100} className="rounded-xl" />
+            </div>
 
-        <div className="mb-5">
-          <label className="mb-1 block text-sm text-gray-400">Name</label>
-          <input
-            value={name}
-            onChange={(event) => setName(event.target.value)}
-            className="w-full rounded-lg border border-white/10 bg-black/25 px-4 py-3 text-base text-white outline-none transition-colors focus:border-[var(--brand)]"
-            placeholder="Profile name"
-            maxLength={20}
-            autoFocus
-          />
-        </div>
-
-        <div className="mb-5">
-          <label className="mb-2 block text-sm text-gray-400">Accent color</label>
-          <div className="flex flex-wrap gap-2">
-            {AVATAR_COLORS.map((nextColor) => (
-              <button
-                key={nextColor}
-                type="button"
-                onClick={() => setColor(nextColor)}
-                className="h-9 w-9 rounded transition-transform hover:scale-110"
-                style={{
-                  backgroundColor: nextColor,
-                  outline: color === nextColor ? "3px solid white" : "none",
-                  outlineOffset: 2,
-                }}
+            <div className="mb-5">
+              <label className="mb-1 block text-sm text-gray-400">Name</label>
+              <input
+                value={name}
+                onChange={(event) => setName(event.target.value)}
+                className="w-full rounded-lg border border-white/10 bg-black/25 px-4 py-3 text-base text-white outline-none transition-colors focus:border-[var(--brand)]"
+                placeholder="Profile name"
+                maxLength={20}
+                autoFocus
               />
-            ))}
-          </div>
-        </div>
+            </div>
 
-        <div className="mb-6">
-          <AvatarAssetPicker
-            avatarAssets={availableAssets}
-            avatarColor={color}
-            selectedAssetId={selectedAssetId}
-            selectedLegacyIndex={selectedLegacyIndex}
-            onSelectAsset={(asset) => {
-              setSelectedAssetId(asset.id);
-              setSelectedAssetUrl(asset.public_url);
-              setSelectedAssetLabel(asset.label);
-              setSelectedLegacyIndex(asset.legacy_avatar_index ?? selectedLegacyIndex);
-            }}
-            onSelectLegacy={(legacyIndex) => {
-              setSelectedAssetId(null);
-              setSelectedAssetUrl(null);
-              setSelectedAssetLabel("");
-              setSelectedLegacyIndex(legacyIndex);
-            }}
-            onUpload={handleUpload}
-            onDeleteAsset={(asset) => {
-              setAvailableAssets((current) => current.filter((item) => item.id !== asset.id));
-              if (selectedAssetId === asset.id) {
-                setSelectedAssetId(null);
-                setSelectedAssetUrl(null);
-                setSelectedAssetLabel("");
-              }
-            }}
-            allowDeleteUploads
-          />
-        </div>
+            <div className="mb-5">
+              <label className="mb-2 block text-sm text-gray-400">Accent color</label>
+              <div className="flex flex-wrap gap-2">
+                {AVATAR_COLORS.map((nextColor) => (
+                  <button
+                    key={nextColor}
+                    type="button"
+                    onClick={() => setColor(nextColor)}
+                    className="h-9 w-9 rounded transition-transform hover:scale-110"
+                    style={{
+                      backgroundColor: nextColor,
+                      outline: color === nextColor ? "3px solid white" : "none",
+                      outlineOffset: 2,
+                    }}
+                  />
+                ))}
+              </div>
+            </div>
 
-        <div className="mb-5">
-          <label className="mb-2 block text-sm text-gray-400">Profile Type</label>
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              type="button"
-              onClick={() => setIsKids(false)}
-              className={`rounded-lg border px-4 py-3 text-sm transition-colors ${
-                !isKids ? "border-white bg-white text-black" : "border-white/10 text-gray-300 hover:border-white"
-              }`}
-            >
-              Standard
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setIsKids(true);
-                if (maturityRating === "all") {
-                  setMaturityRating("older_kids");
-                }
-              }}
-              className={`rounded-lg border px-4 py-3 text-sm transition-colors ${
-                isKids ? "border-white bg-white text-black" : "border-white/10 text-gray-300 hover:border-white"
-              }`}
-            >
-              Kids
-            </button>
-          </div>
-        </div>
+            <div className="mb-6">
+              <AvatarAssetPicker
+                avatarAssets={availableAssets}
+                avatarColor={color}
+                selectedAssetId={selectedAssetId}
+                selectedLegacyIndex={selectedLegacyIndex}
+                onSelectAsset={(asset) => {
+                  setSelectedAssetId(asset.id);
+                  setSelectedAssetUrl(asset.public_url);
+                  setSelectedAssetLabel(asset.label);
+                  setSelectedLegacyIndex(asset.legacy_avatar_index ?? selectedLegacyIndex);
+                }}
+                onSelectLegacy={(legacyIndex) => {
+                  setSelectedAssetId(null);
+                  setSelectedAssetUrl(null);
+                  setSelectedAssetLabel("");
+                  setSelectedLegacyIndex(legacyIndex);
+                }}
+                onUpload={handleUpload}
+                onDeleteAsset={(asset) => {
+                  setAvailableAssets((current) => current.filter((item) => item.id !== asset.id));
+                  if (selectedAssetId === asset.id) {
+                    setSelectedAssetId(null);
+                    setSelectedAssetUrl(null);
+                    setSelectedAssetLabel("");
+                  }
+                }}
+                allowDeleteUploads
+              />
+            </div>
 
-        <div className="mb-6">
-          <label className="mb-2 block text-sm text-gray-400">Allowed Maturity</label>
-          <select
-            value={isKids && maturityRating === "all" ? "older_kids" : maturityRating}
-            onChange={(event) => setMaturityRating(event.target.value)}
-            className="w-full rounded-lg border border-white/10 bg-black/25 px-4 py-3 text-base text-white outline-none transition-colors focus:border-[var(--brand)]"
-          >
-            {MATURITY_OPTIONS.map((option) => (
-              <option
-                key={option.value}
-                value={option.value}
-                disabled={isKids && option.value === "all"}
+            <div className="mb-5">
+              <label className="mb-2 block text-sm text-gray-400">Profile Type</label>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsKids(false)}
+                  className={`rounded-lg border px-4 py-3 text-sm transition-colors ${
+                    !isKids ? "border-white bg-white text-black" : "border-white/10 text-gray-300 hover:border-white"
+                  }`}
+                >
+                  Standard
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsKids(true);
+                    if (maturityRating === "all") {
+                      setMaturityRating("older_kids");
+                    }
+                  }}
+                  className={`rounded-lg border px-4 py-3 text-sm transition-colors ${
+                    isKids ? "border-white bg-white text-black" : "border-white/10 text-gray-300 hover:border-white"
+                  }`}
+                >
+                  Kids
+                </button>
+              </div>
+            </div>
+
+            <div className="mb-1">
+              <label className="mb-2 block text-sm text-gray-400">Allowed Maturity</label>
+              <select
+                value={isKids && maturityRating === "all" ? "older_kids" : maturityRating}
+                onChange={(event) => setMaturityRating(event.target.value)}
+                className="w-full rounded-lg border border-white/10 bg-black/25 px-4 py-3 text-base text-white outline-none transition-colors focus:border-[var(--brand)]"
               >
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </div>
+                {MATURITY_OPTIONS.map((option) => (
+                  <option
+                    key={option.value}
+                    value={option.value}
+                    disabled={isKids && option.value === "all"}
+                  >
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
 
-        <div className="flex gap-3">
-          <button
-            onClick={handleSave}
-            disabled={!name.trim() || saving}
-            className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-lg bg-[var(--brand)] px-4 py-3 font-bold text-[var(--brand-contrast)] transition-colors hover:bg-[var(--brand-strong)] disabled:opacity-40"
-          >
-            <Check className="h-4 w-4" />
-            {saving ? "Saving..." : "Save"}
-          </button>
-          <button
-            onClick={onClose}
-            className="flex-1 rounded-lg border border-white/10 px-4 py-3 text-gray-300 transition-colors hover:border-white hover:text-white"
-          >
-            Cancel
-          </button>
-        </div>
-      </motion.div>
+          <div className="border-t border-white/10 bg-black/25 px-5 py-4">
+            <div className="flex gap-3">
+              <button
+                onClick={handleSave}
+                disabled={!name.trim() || saving}
+                className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-lg bg-[var(--brand)] px-4 py-3 font-bold text-[var(--brand-contrast)] transition-colors hover:bg-[var(--brand-strong)] disabled:opacity-40"
+              >
+                <Check className="h-4 w-4" />
+                {saving ? "Saving..." : "Save"}
+              </button>
+              <button
+                onClick={onClose}
+                className="flex-1 rounded-lg border border-white/10 px-4 py-3 text-gray-300 transition-colors hover:border-white hover:text-white"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </motion.div>
+      </div>
     </div>
   );
 }

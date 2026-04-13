@@ -24,7 +24,15 @@ import { base44 } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
 import BrandWordmark from "@/components/layout/BrandWordmark";
 import { getDefaultSiteSettings } from "@/lib/admin-config";
-import { searchMulti, tmdbW185 } from "@/lib/tmdb";
+import {
+  getByGenre,
+  getMovieGenres,
+  getPopularMovies,
+  getPopularTV,
+  getTVGenres,
+  searchMulti,
+  tmdbW185,
+} from "@/lib/tmdb";
 import { useAppTheme } from "@/lib/theme";
 
 const sections = [
@@ -456,7 +464,7 @@ export default function AdminPage() {
 
   if (!isAdmin) {
     return (
-      <div className="min-h-screen bg-[var(--app-bg)] px-6 py-20 text-white">
+      <div className="min-h-[var(--app-viewport-height)] bg-[var(--app-bg)] px-6 py-20 text-white">
         <div className="mx-auto max-w-3xl rounded-[2rem] border border-white/10 bg-[var(--card-bg)] p-8 md:p-12">
           <div className="mb-6 inline-flex h-14 w-14 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04]">
             <ShieldAlert className="h-7 w-7 text-[var(--brand)]" />
@@ -483,7 +491,7 @@ export default function AdminPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[var(--app-bg)] text-white">
+    <div className="min-h-[var(--app-viewport-height)] bg-[var(--app-bg)] text-white">
       <div className="border-b border-white/10 bg-[var(--card-bg)]">
         <div className="mx-auto flex max-w-7xl flex-col gap-6 px-6 py-8 md:flex-row md:items-end md:justify-between md:px-10">
           <div>
@@ -725,33 +733,302 @@ function ContentSection({
   onToggle,
   onDelete,
 }) {
+  const [catalogTab, setCatalogTab] = useState("movie");
+  const [catalogGenre, setCatalogGenre] = useState("all");
+  const [catalogGenres, setCatalogGenres] = useState([]);
+  const [catalogItems, setCatalogItems] = useState([]);
+  const [catalogPage, setCatalogPage] = useState(1);
+  const [catalogHasMore, setCatalogHasMore] = useState(false);
+  const [catalogLoading, setCatalogLoading] = useState(true);
+  const [catalogLoadingMore, setCatalogLoadingMore] = useState(false);
+  const [catalogError, setCatalogError] = useState("");
+
+  const scopedSearchResults = useMemo(
+    () =>
+      (searchResults || []).filter((item) => {
+        const mediaType = item.media_type || (item.title ? "movie" : "tv");
+        return mediaType === catalogTab;
+      }),
+    [searchResults, catalogTab]
+  );
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadGenres = async () => {
+      try {
+        const response = catalogTab === "tv" ? await getTVGenres() : await getMovieGenres();
+        if (!isMounted) {
+          return;
+        }
+        setCatalogGenres(response?.genres || []);
+      } catch (error) {
+        if (!isMounted) {
+          return;
+        }
+        setCatalogGenres([]);
+        setCatalogError(error?.message || "We couldn’t load genres right now.");
+      }
+    };
+
+    loadGenres();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [catalogTab]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadInitialCatalog = async () => {
+      setCatalogLoading(true);
+      setCatalogError("");
+
+      try {
+        let response;
+        if (catalogGenre !== "all") {
+          response = await getByGenre(catalogGenre, catalogTab, 1);
+        } else if (catalogTab === "tv") {
+          response = await getPopularTV(1);
+        } else {
+          response = await getPopularMovies(1);
+        }
+
+        if (!isMounted) {
+          return;
+        }
+
+        const results = response?.results || [];
+        setCatalogItems(results);
+        setCatalogPage(1);
+        setCatalogHasMore((response?.page || 1) < (response?.total_pages || 1));
+      } catch (error) {
+        if (!isMounted) {
+          return;
+        }
+        setCatalogItems([]);
+        setCatalogPage(1);
+        setCatalogHasMore(false);
+        setCatalogError(error?.message || "We couldn’t load the catalog.");
+      } finally {
+        if (isMounted) {
+          setCatalogLoading(false);
+        }
+      }
+    };
+
+    loadInitialCatalog();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [catalogTab, catalogGenre]);
+
+  const handleLoadMoreCatalog = async () => {
+    if (catalogLoading || catalogLoadingMore || !catalogHasMore) {
+      return;
+    }
+
+    const nextPage = catalogPage + 1;
+    setCatalogLoadingMore(true);
+    setCatalogError("");
+
+    try {
+      let response;
+      if (catalogGenre !== "all") {
+        response = await getByGenre(catalogGenre, catalogTab, nextPage);
+      } else if (catalogTab === "tv") {
+        response = await getPopularTV(nextPage);
+      } else {
+        response = await getPopularMovies(nextPage);
+      }
+
+      const incoming = response?.results || [];
+
+      setCatalogItems((current) => {
+        const existingIds = new Set(current.map((item) => item.id));
+        const merged = [...current];
+
+        incoming.forEach((item) => {
+          if (!existingIds.has(item.id)) {
+            merged.push(item);
+          }
+        });
+
+        return merged;
+      });
+
+      setCatalogPage(nextPage);
+      setCatalogHasMore((response?.page || nextPage) < (response?.total_pages || nextPage));
+    } catch (error) {
+      setCatalogError(error?.message || "We couldn’t load more titles.");
+    } finally {
+      setCatalogLoadingMore(false);
+    }
+  };
+
+  const handleSelectCatalogItem = (item) => {
+    onSelectResult({
+      ...item,
+      media_type: catalogTab,
+    });
+  };
+
+  const mediaLabel = catalogTab === "movie" ? "Movie" : "TV Show";
+
   return (
     <section className="grid gap-6 xl:grid-cols-[0.92fr_1.08fr]">
       <Panel
         eyebrow="Curation Studio"
         title="Program the homepage"
-        description="Search TMDB titles, choose where they appear, and control which audience sees them."
+        description="Browse popular titles by tab and genre, load more when needed, then place picks on the homepage."
       >
-        <form onSubmit={onSearch} className="flex gap-3">
+        <div className="rounded-2xl border border-white/10 bg-black/20 p-4 sm:p-5">
+          <div className="scrollbar-hide -mx-1 flex snap-x gap-2 overflow-x-auto px-1 pb-1">
+            {[
+              { value: "movie", label: "Movies" },
+              { value: "tv", label: "TV Shows" },
+            ].map((tab) => {
+              const isActive = catalogTab === tab.value;
+              return (
+                <button
+                  key={tab.value}
+                  type="button"
+                  onClick={() => {
+                    setCatalogTab(tab.value);
+                    setCatalogGenre("all");
+                  }}
+                  className={`min-h-11 shrink-0 snap-start rounded-xl px-4 py-2 text-sm font-semibold transition-colors ${
+                    isActive
+                      ? "bg-[#E50914] text-white"
+                      : "border border-white/10 bg-white/[0.04] text-white/70 hover:bg-white/[0.08] hover:text-white"
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="mt-4 grid gap-3 sm:grid-cols-[minmax(0,1fr)_220px] sm:items-end">
+            <p className="text-sm text-white/65">
+              Browse {catalogTab === "movie" ? "movies" : "TV shows"} and tap a title to auto-fill the featured entry form.
+            </p>
+            <Field label="Genre">
+              <select value={catalogGenre} onChange={(event) => setCatalogGenre(event.target.value)} className="admin-input">
+                <option value="all">All genres</option>
+                {catalogGenres.map((genre) => (
+                  <option key={genre.id} value={genre.id}>
+                    {genre.name}
+                  </option>
+                ))}
+              </select>
+            </Field>
+          </div>
+
+          {catalogError && (
+            <p className="mt-3 rounded-xl border border-[#E50914]/20 bg-[#E50914]/10 px-3 py-2 text-sm text-white/80">
+              {catalogError}
+            </p>
+          )}
+
+          {catalogLoading ? (
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              {Array.from({ length: 4 }).map((_, index) => (
+                <div
+                  key={`catalog-skeleton-${index}`}
+                  className="admin-catalog-skeleton flex min-h-[108px] items-center gap-3 rounded-2xl border border-white/8 bg-white/[0.02] p-3"
+                >
+                  <div className="h-24 w-16 flex-shrink-0 rounded-xl bg-white/10" />
+                  <div className="min-w-0 flex-1 space-y-2.5">
+                    <div className="h-3 w-3/4 rounded-full bg-white/10" />
+                    <div className="h-2.5 w-2/5 rounded-full bg-white/10" />
+                    <div className="h-2.5 w-full rounded-full bg-white/10" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : catalogItems.length === 0 ? (
+            <div className="mt-4 rounded-2xl border border-white/8 bg-white/[0.02] px-4 py-6 text-center text-sm text-white/55">
+              No titles found for this genre yet. Try another filter.
+            </div>
+          ) : (
+            <div className="mt-4 space-y-3">
+              <div key={`${catalogTab}-${catalogGenre}`} className="admin-catalog-grid grid gap-3 sm:grid-cols-2">
+                {catalogItems.map((item) => {
+                  const isSelected =
+                    String(contentDraft.tmdb_id || "") === String(item.id) && contentDraft.media_type === catalogTab;
+                  const title = item.title || item.name || "Untitled";
+                  const releaseYear = (item.release_date || item.first_air_date || "").slice(0, 4);
+
+                  return (
+                    <button
+                      key={`${catalogTab}-${item.id}`}
+                      type="button"
+                      onClick={() => handleSelectCatalogItem(item)}
+                      className={`admin-catalog-card flex min-h-[108px] min-w-0 items-center gap-3 rounded-2xl border p-3 text-left transition-colors ${
+                        isSelected
+                          ? "border-[#E50914]/60 bg-[#E50914]/12"
+                          : "border-white/8 bg-white/[0.02] hover:border-[#E50914]/40 hover:bg-white/[0.04]"
+                      }`}
+                    >
+                      <div className="h-24 w-16 flex-shrink-0 overflow-hidden rounded-xl bg-[#121212]">
+                        {item.poster_path ? (
+                          <img src={tmdbW185(item.poster_path)} alt={title} className="h-full w-full object-cover" />
+                        ) : (
+                          <div className="flex h-full items-center justify-center px-2 text-center text-[11px] text-white/35">No art</div>
+                        )}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="truncate font-medium text-white">{title}</p>
+                        <p className="mt-1 text-xs uppercase tracking-[0.2em] text-white/45">
+                          {mediaLabel}
+                          {releaseYear ? ` · ${releaseYear}` : ""}
+                        </p>
+                        <p className="mt-2 line-clamp-2 text-xs text-white/55">{item.overview || "No synopsis available yet."}</p>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {catalogHasMore && (
+                <button
+                  type="button"
+                  onClick={handleLoadMoreCatalog}
+                  disabled={catalogLoadingMore}
+                  className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-4 text-sm font-semibold text-white transition-colors hover:bg-white/[0.08] disabled:opacity-70 sm:w-auto"
+                >
+                  {catalogLoadingMore ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+                  Load More {catalogTab === "movie" ? "Movies" : "Shows"}
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+
+        <form onSubmit={onSearch} className="mt-5 flex flex-col gap-3 sm:flex-row">
           <input
             type="text"
             value={searchQuery}
             onChange={(event) => onSearchQueryChange(event.target.value)}
-            placeholder="Search TMDB for a movie or show"
+            placeholder={`Search exact ${catalogTab === "movie" ? "movie" : "show"} title`}
             className="admin-input min-h-12 flex-1"
           />
           <button
             type="submit"
-            className="inline-flex min-h-12 items-center gap-2 rounded-xl bg-[#E50914] px-4 text-sm font-semibold text-white hover:bg-[#c40812]"
+            disabled={searching}
+            className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#E50914] px-4 text-sm font-semibold text-white hover:bg-[#c40812] sm:w-auto"
           >
             {searching ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
             Search
           </button>
         </form>
 
-        {searchResults.length > 0 && (
+        {scopedSearchResults.length > 0 && (
           <div className="mt-5 grid gap-3 md:grid-cols-2">
-            {searchResults.map((item) => (
+            {scopedSearchResults.map((item) => (
               <button
                 key={`${item.media_type}-${item.id}`}
                 type="button"
@@ -772,6 +1049,12 @@ function ContentSection({
               </button>
             ))}
           </div>
+        )}
+
+        {searchResults.length > 0 && scopedSearchResults.length === 0 && (
+          <p className="mt-3 text-sm text-white/55">
+            Search returned results in the other tab. Switch to {catalogTab === "movie" ? "TV Shows" : "Movies"} to see them.
+          </p>
         )}
 
         <form onSubmit={onSave} className="mt-6 space-y-4">

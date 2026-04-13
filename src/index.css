@@ -49,6 +49,15 @@
       radial-gradient(circle at 50% 62%, rgba(255, 255, 255, 0.05), transparent 30%),
       linear-gradient(180deg, #1a070b 0%, #0e0507 25%, #050505 62%, #000000 100%);
     --landing-divider: linear-gradient(90deg, transparent 0%, rgba(229, 9, 20, 0.3) 18%, rgba(255, 255, 255, 0.08) 50%, rgba(229, 9, 20, 0.3) 82%, transparent 100%);
+    --app-safe-top: env(safe-area-inset-top, 0px);
+    --app-safe-right: env(safe-area-inset-right, 0px);
+    --app-safe-bottom: env(safe-area-inset-bottom, 0px);
+    --app-safe-left: env(safe-area-inset-left, 0px);
+    --app-viewport-height: 100dvh;
+    --app-nav-height: 72px;
+    --app-tabbar-height: 92px;
+    --app-top-offset: calc(var(--app-safe-top) + var(--app-nav-height));
+    --app-bottom-offset: calc(var(--app-safe-bottom) + var(--app-tabbar-height));
   }
 
   :root[data-app-theme="hulu"] {
@@ -75,11 +84,21 @@
     @apply border-border outline-ring/50;
   }
 
+  html,
+  body,
+  #root {
+    min-height: var(--app-viewport-height);
+    width: 100%;
+    background-color: var(--app-bg);
+  }
+
   body {
     @apply bg-background text-foreground font-inter;
     background-color: var(--app-bg);
     color: var(--text-primary);
     overflow-x: hidden;
+    overscroll-behavior-y: none;
+    scroll-behavior: smooth;
     transition: background-color 180ms ease, color 180ms ease;
   }
 
@@ -92,10 +111,26 @@
   }
 
   @media (max-width: 767px) {
+    body {
+      padding-left: var(--app-safe-left);
+      padding-right: var(--app-safe-right);
+    }
+
     input,
     select,
     textarea {
       font-size: 16px;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 1ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 1ms !important;
+      scroll-behavior: auto !important;
     }
   }
 
@@ -119,6 +154,54 @@
 }
 
 @layer utilities {
+  @keyframes app-page-enter {
+    from {
+      opacity: 0;
+      transform: translate3d(0, 14px, 0) scale(0.985);
+      filter: blur(8px);
+    }
+    to {
+      opacity: 1;
+      transform: translate3d(0, 0, 0) scale(1);
+      filter: blur(0);
+    }
+  }
+
+  .app-page {
+    min-height: var(--app-viewport-height);
+    padding-top: calc(var(--app-top-offset) + 0.5rem);
+    padding-bottom: calc(var(--app-bottom-offset) + 0.5rem);
+  }
+
+  .app-page-content {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+
+  .app-page-animate {
+    will-change: opacity, transform;
+    animation: app-page-enter 340ms cubic-bezier(0.2, 0.86, 0.2, 1) both;
+  }
+
+  @media (min-width: 768px) {
+    .app-page {
+      min-height: 100vh;
+      padding-top: 5.75rem;
+      padding-bottom: 3rem;
+    }
+
+    .app-page-content {
+      padding-left: 3rem;
+      padding-right: 3rem;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .app-page-animate {
+      animation: none !important;
+    }
+  }
+
   .scrollbar-hide {
     -ms-overflow-style: none;
     scrollbar-width: none;
@@ -218,6 +301,75 @@
 
   .admin-action {
     @apply inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-sm font-medium text-white/75 transition-colors hover:bg-white/[0.08] hover:text-white;
+  }
+
+  @keyframes admin-catalog-in {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .admin-catalog-grid {
+    animation: admin-catalog-in 260ms cubic-bezier(0.22, 0.8, 0.22, 1) both;
+  }
+
+  .admin-catalog-card {
+    transform: translate3d(0, 0, 0);
+    transition: transform 220ms ease, border-color 200ms ease, background-color 200ms ease;
+  }
+
+  .admin-catalog-card:active {
+    transform: scale(0.99);
+  }
+
+  @media (hover: hover) {
+    .admin-catalog-card:hover {
+      transform: translateY(-2px);
+    }
+  }
+
+  @keyframes admin-skeleton-shimmer {
+    from {
+      transform: translateX(-120%);
+    }
+    to {
+      transform: translateX(120%);
+    }
+  }
+
+  .admin-catalog-skeleton {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .admin-catalog-skeleton::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      110deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.08) 40%,
+      rgba(255, 255, 255, 0.12) 52%,
+      transparent 72%
+    );
+    animation: admin-skeleton-shimmer 1.2s linear infinite;
+    pointer-events: none;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .admin-catalog-grid,
+    .admin-catalog-card,
+    .admin-catalog-skeleton::after {
+      animation: none !important;
+      transition: none !important;
+      transform: none !important;
+    }
   }
 
   .brand-wordmark {

@@ -5,6 +5,21 @@ import { isAdminEmail } from "@/lib/env";
 
 const AuthContext = createContext();
 
+const normalizeRedirectUrl = (value, fallback) => {
+  if (typeof window === "undefined") {
+    return fallback;
+  }
+
+  const safeFallback = fallback || window.location.href;
+
+  try {
+    const target = new URL(value || safeFallback, window.location.origin);
+    return target.origin === window.location.origin ? target.href : safeFallback;
+  } catch {
+    return safeFallback;
+  }
+};
+
 export const AuthProvider = ({ children }) => {
   const clerk = useClerk();
   const { getToken, isLoaded: isAuthLoaded, isSignedIn } = useClerkAuth();
@@ -38,11 +53,11 @@ export const AuthProvider = ({ children }) => {
       isLoaded,
       openSignIn: (redirectUrl = window.location.href) =>
         clerk.openSignIn({
-          fallbackRedirectUrl: redirectUrl,
-          forceRedirectUrl: redirectUrl,
+          fallbackRedirectUrl: normalizeRedirectUrl(redirectUrl, window.location.href),
+          forceRedirectUrl: normalizeRedirectUrl(redirectUrl, window.location.href),
         }),
       signOut: (redirectUrl = window.location.origin) =>
-        clerk.signOut({ redirectUrl }),
+        clerk.signOut({ redirectUrl: normalizeRedirectUrl(redirectUrl, window.location.origin) }),
       user,
     });
   }, [clerk, getToken, isLoaded, user]);
@@ -54,8 +69,8 @@ export const AuthProvider = ({ children }) => {
 
   const navigateToLogin = (redirectUrl = window.location.href) =>
     clerk.openSignIn({
-      fallbackRedirectUrl: redirectUrl,
-      forceRedirectUrl: redirectUrl,
+      fallbackRedirectUrl: normalizeRedirectUrl(redirectUrl, window.location.href),
+      forceRedirectUrl: normalizeRedirectUrl(redirectUrl, window.location.href),
     });
 
   return (

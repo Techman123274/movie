@@ -48,7 +48,7 @@ Do not expose `CLERK_SECRET_KEY` or `SUPABASE_SERVICE_ROLE_KEY` in this frontend
 
 Run the SQL in [supabase/schema.sql](C:/Users/user/Desktop/cinematique/supabase/schema.sql) inside the Supabase SQL editor.
 
-For Clerk-authenticated Supabase requests, create a Clerk JWT template named `supabase` and point it at your Supabase JWT secret. If that is not configured yet, the app will still work locally by falling back to browser storage for user lists/history/profiles.
+For Clerk-authenticated Supabase requests, the recommended setup is Supabase's native Clerk third-party auth integration plus Clerk session tokens. This app also supports the legacy Clerk JWT template named `supabase` as a fallback. If neither is configured, authenticated Supabase writes such as friend requests will be rejected by RLS.
 
 ## Notes
 

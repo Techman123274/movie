@@ -514,7 +514,7 @@ export default function Home() {
 
   if (!hasApiKey) {
     return (
-      <div className="min-h-screen bg-[var(--app-bg)] flex flex-col items-center justify-center px-4 text-center">
+      <div className="app-page app-page-content app-page-animate flex flex-col items-center justify-center bg-[var(--app-bg)] text-center">
         <span className="mb-6 text-4xl font-black tracking-tight text-[var(--brand)]">SUBFLIX</span>
         <h2 className="text-white text-2xl font-bold mb-3">Welcome to Subflix</h2>
         <p className="text-gray-400 mb-8 max-w-md">Open Settings to connect TMDB and start browsing movies and TV shows.</p>
@@ -539,7 +539,7 @@ export default function Home() {
       {!hasApiKey && <NoApiKeyBanner />}
       <HeroBanner items={heroItemsWithProgress} />
 
-      <div className={`relative z-10 pb-8 ${isHulu ? "-mt-1" : ""}`}>
+      <div className={`relative z-10 pb-[calc(var(--app-bottom-offset)+0.75rem)] md:pb-8 ${isHulu ? "-mt-1" : ""}`}>
         {user && continueWatching.length > 0 && (
           <ContentRow title="Continue Watching" items={continueWatching} />
         )}

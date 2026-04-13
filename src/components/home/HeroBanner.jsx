@@ -1,24 +1,30 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Check, Info, Play, Plus } from "lucide-react";
-import { tmdbOriginal, tmdbW300 } from "@/lib/tmdb";
+import { getMovieDetails, getTVDetails, getYouTubeTrailer, tmdbOriginal, tmdbW300 } from "@/lib/tmdb";
 import { base44 } from "@/api/base44Client";
 import { getMatchPercentage } from "@/lib/recommendations";
 import { buildWatchPath, getResumeLabel } from "@/lib/playback";
 import PlaybackProgressBar from "@/components/ui/PlaybackProgressBar";
 import { useAppTheme } from "@/lib/theme";
+import { useBooleanPreference } from "@/hooks/use-boolean-preference";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 export default function HeroBanner({ items = [] }) {
   const [current, setCurrent] = useState(0);
   const [inList, setInList] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState("");
   const navigate = useNavigate();
   const { themeDefinition } = useAppTheme();
   const isHulu = themeDefinition.heroVariant === "hulu";
+  const autoplayPreviews = useBooleanPreference("subflix_autoplay_previews", true);
+  const isMobile = useIsMobile();
 
   const item = items[current];
+  const mediaType = item?.media_type || (item?.title ? "movie" : "tv");
 
   useEffect(() => {
-    if (!items.length) {
+    if (!items.length || !autoplayPreviews) {
       return undefined;
     }
 
@@ -27,15 +33,46 @@ export default function HeroBanner({ items = [] }) {
     }, isHulu ? 9000 : 8000);
 
     return () => window.clearInterval(timer);
-  }, [isHulu, items.length]);
+  }, [isHulu, items.length, autoplayPreviews]);
 
   useEffect(() => {
     setInList(false);
   }, [current]);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadPreview = async () => {
+      if (!item || !autoplayPreviews || isMobile) {
+        setPreviewUrl("");
+        return;
+      }
+
+      const tmdbId = Number(item.tmdb_id ?? item.id);
+      if (!tmdbId) {
+        setPreviewUrl("");
+        return;
+      }
+
+      const detailLoader = mediaType === "tv" ? getTVDetails : getMovieDetails;
+      const data = await detailLoader(tmdbId).catch(() => null);
+      if (cancelled) {
+        return;
+      }
+
+      setPreviewUrl(getYouTubeTrailer(data?.videos, { autoplay: true, mute: true }) || "");
+    };
+
+    void loadPreview();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [autoplayPreviews, isMobile, item, mediaType]);
+
   if (!item) {
     return (
-      <div className={`flex w-full items-center justify-center ${isHulu ? "px-4 pb-8 pt-24 md:px-12 md:pt-28" : "h-[86svh] min-h-[560px] bg-[var(--app-bg)] md:h-screen"}`}>
+      <div className={`flex w-full items-center justify-center ${isHulu ? "px-4 pb-[calc(var(--app-bottom-offset)+0.75rem)] pt-[calc(var(--app-top-offset)+0.75rem)] md:px-12 md:pb-8 md:pt-28" : "h-[calc(var(--app-viewport-height)-var(--app-safe-top)-0.25rem)] min-h-[480px] max-h-[860px] bg-[var(--app-bg)] md:h-screen"}`}>
         <div className={`flex items-center justify-center ${isHulu ? "min-h-[520px] w-full rounded-[24px] border border-white/8 bg-[#0e1511]" : "w-full"}`}>
           <div className="h-12 w-12 animate-spin rounded-full border-4 border-[var(--brand)] border-t-transparent" />
         </div>
@@ -44,7 +81,6 @@ export default function HeroBanner({ items = [] }) {
   }
 
   const title = item.title || item.name || "";
-  const mediaType = item.media_type || (item.title ? "movie" : "tv");
   const overview = item.overview || "";
   const year = (item.release_date || item.first_air_date || "").slice(0, 4);
   const rating = item.vote_average ? Math.round(item.vote_average * 10) : null;
@@ -96,7 +132,7 @@ export default function HeroBanner({ items = [] }) {
 
   if (isHulu) {
     return (
-      <section className="px-4 pb-8 pt-24 md:px-12 md:pt-28">
+      <section className="px-4 pb-[calc(var(--app-bottom-offset)+0.75rem)] pt-[calc(var(--app-top-offset)+0.75rem)] md:px-12 md:pb-8 md:pt-28">
         <div className="mx-auto max-w-7xl">
           <div className="relative overflow-hidden rounded-[26px] border border-white/8 bg-[#0f1713] shadow-[0_30px_80px_rgba(0,0,0,0.35)]">
             <div className="absolute inset-0 overflow-hidden">
@@ -105,10 +141,24 @@ export default function HeroBanner({ items = [] }) {
                   src={tmdbOriginal(item.backdrop_path)}
                   alt={title}
                   className="h-full w-full object-cover object-center"
+                  loading="eager"
+                  fetchPriority="high"
                   style={{ transition: "opacity 0.8s ease" }}
                 />
               ) : (
                 <div className="h-full w-full bg-[radial-gradient(circle_at_top_left,#113524_0%,#09110d_60%,#050806_100%)]" />
+              )}
+              {previewUrl && (
+                <div className="absolute inset-0 pointer-events-none opacity-75">
+                  <iframe
+                    key={previewUrl}
+                    src={previewUrl}
+                    title={`${title} preview`}
+                    className="h-full w-full scale-[1.35] border-0"
+                    allow="autoplay; encrypted-media; picture-in-picture"
+                    tabIndex={-1}
+                  />
+                </div>
               )}
               <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(6,10,8,0.96)_0%,rgba(8,14,11,0.78)_42%,rgba(8,14,11,0.3)_100%)]" />
               <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(5,8,6,0.08)_0%,rgba(5,8,6,0.72)_100%)]" />
@@ -223,24 +273,38 @@ export default function HeroBanner({ items = [] }) {
   }
 
   return (
-    <div className="relative h-[86svh] min-h-[560px] w-full md:h-screen md:max-h-[900px] md:min-h-[600px]">
+    <div className="relative h-[calc(var(--app-viewport-height)-var(--app-safe-top)-0.25rem)] min-h-[480px] max-h-[860px] w-full md:h-screen md:max-h-[900px] md:min-h-[600px]">
       <div className="absolute inset-0 overflow-hidden">
         {item.backdrop_path ? (
           <img
             src={tmdbOriginal(item.backdrop_path)}
             alt={title}
             className="h-full w-full object-cover object-center"
+            loading="eager"
+            fetchPriority="high"
             style={{ transition: "opacity 0.8s ease" }}
           />
         ) : (
           <div className="h-full w-full bg-gradient-to-br from-gray-900 to-black" />
+        )}
+        {previewUrl && (
+          <div className="absolute inset-0 pointer-events-none opacity-70">
+            <iframe
+              key={previewUrl}
+              src={previewUrl}
+              title={`${title} preview`}
+              className="h-full w-full scale-[1.35] border-0"
+              allow="autoplay; encrypted-media; picture-in-picture"
+              tabIndex={-1}
+            />
+          </div>
         )}
         <div className="absolute inset-0 gradient-overlay" />
         <div className="absolute inset-0 gradient-bottom" />
         <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] via-transparent to-transparent" />
       </div>
 
-      <div className="relative z-10 flex h-full max-w-2xl flex-col justify-end px-4 pb-8 md:px-16 md:pb-24">
+      <div className="relative z-10 flex h-full max-w-2xl flex-col justify-end px-4 pb-[calc(var(--app-bottom-offset)+0.75rem)] md:px-16 md:pb-24">
         <div className="mb-3 flex items-center gap-3">
           {mediaType === "tv" && (
             <span className="rounded bg-[#E50914] px-2 py-0.5 text-xs font-bold text-white">SERIES</span>

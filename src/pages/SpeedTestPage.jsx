@@ -135,9 +135,9 @@ export default function SpeedTestPage({ standalone = false }) {
   };
 
   return (
-    <div className={`min-h-screen bg-[#0a0a0a] text-white ${standalone ? "" : "pt-24"}`}>
+    <div className={`min-h-[var(--app-viewport-height)] bg-[#0a0a0a] text-white ${standalone ? "" : "app-page app-page-animate"}`}>
       {standalone && (
-        <div className="px-4 md:px-12 py-6 border-b border-white/10">
+        <div className="border-b border-white/10 px-4 pb-6 pt-[calc(var(--app-safe-top)+1rem)] md:px-12">
           <div className="max-w-5xl mx-auto flex items-center justify-between gap-4">
             <Link to="/" className="text-[#E50914] font-black text-3xl tracking-tight select-none">
               SUBFLIX

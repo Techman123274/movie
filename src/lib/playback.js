@@ -118,11 +118,30 @@ export const estimateDurationSeconds = ({ mediaType, content, seasonData, episod
     return toFiniteNumber(selectedEpisode.runtime) * 60;
   }
 
+  const seasonEpisodeRuntimes = (seasonData?.episodes || [])
+    .map((episode) => toFiniteNumber(episode?.runtime))
+    .filter((runtime) => runtime > 0);
+
+  if (seasonEpisodeRuntimes.length > 0) {
+    const averageRuntime = seasonEpisodeRuntimes.reduce((sum, value) => sum + value, 0) / seasonEpisodeRuntimes.length;
+    return Math.round(averageRuntime) * 60;
+  }
+
+  if (content?.last_episode_to_air?.runtime) {
+    return toFiniteNumber(content.last_episode_to_air.runtime) * 60;
+  }
+
+  if (content?.next_episode_to_air?.runtime) {
+    return toFiniteNumber(content.next_episode_to_air.runtime) * 60;
+  }
+
   if (Array.isArray(content?.episode_run_time) && content.episode_run_time[0]) {
     return toFiniteNumber(content.episode_run_time[0]) * 60;
   }
 
-  return 0;
+  // TMDB can omit runtime metadata for some shows/seasons.
+  // Avoid under-estimating here (it could trigger auto-next early).
+  return 45 * 60;
 };
 
 export const buildContinueWatchingItems = (historyEntries = []) => {

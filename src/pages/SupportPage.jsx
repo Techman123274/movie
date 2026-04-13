@@ -57,9 +57,9 @@ export default function SupportPage({ page, standalone = false }) {
   const Icon = meta.icon;
 
   return (
-    <div className={`min-h-screen bg-[var(--app-bg)] text-white ${standalone ? "" : "pt-24"}`}>
+    <div className={`min-h-[var(--app-viewport-height)] bg-[var(--app-bg)] text-white ${standalone ? "" : "app-page app-page-animate"}`}>
       {standalone && (
-        <div className="px-4 md:px-12 py-6 border-b border-white/10">
+        <div className="border-b border-white/10 px-4 pb-6 pt-[calc(var(--app-safe-top)+1rem)] md:px-12">
           <div className="max-w-6xl mx-auto flex items-center justify-between gap-4">
             <BrandWordmark className="text-3xl" />
             <Link to="/" className="text-sm text-gray-300 hover:text-white transition-colors">

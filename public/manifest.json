@@ -1,0 +1,60 @@
+{
+  "id": "/",
+  "name": "Subflix",
+  "short_name": "Subflix",
+  "description": "A Netflix-style streaming frontend for movies and TV.",
+  "start_url": "/?source=pwa",
+  "scope": "/",
+  "orientation": "portrait",
+  "display": "standalone",
+  "display_override": ["standalone", "browser"],
+  "background_color": "#050505",
+  "theme_color": "#050505",
+  "prefer_related_applications": false,
+  "icons": [
+    {
+      "src": "/subflix-home-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/subflix-home-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/subflix-home-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Search",
+      "short_name": "Search",
+      "url": "/search",
+      "icons": [
+        {
+          "src": "/subflix-home-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "My List",
+      "short_name": "My List",
+      "url": "/my-list",
+      "icons": [
+        {
+          "src": "/subflix-home-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    }
+  ]
+}

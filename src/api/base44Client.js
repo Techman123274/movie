@@ -31,6 +31,11 @@ const SORT_FIELD_MAP = {
 
 const USER_PREFERENCES_TABLE = "user_preferences";
 const PROFILE_AVATAR_ASSETS_TABLE = "profile_avatar_assets";
+const FRIEND_REQUESTS_TABLE = "friend_requests";
+const USER_PRESENCE_TABLE = "user_presence";
+const CHAT_THREADS_TABLE = "chat_threads";
+const CHAT_THREAD_MEMBERS_TABLE = "chat_thread_members";
+const CHAT_MESSAGES_TABLE = "chat_messages";
 
 const ENTITY_UNIQUE_FIELDS = {
   Profile: ["name", "avatar_color", "avatar_index"],
@@ -54,6 +59,13 @@ const createAuthError = () => {
 
 const createAdminError = () => {
   return Object.assign(new Error("Admin access required"), { status: 403 });
+};
+
+const createSupabaseTokenError = () => {
+  return Object.assign(
+    new Error("Supabase auth is not connected. In Clerk, enable the Supabase integration or configure the legacy `supabase` JWT template."),
+    { status: 401 }
+  );
 };
 
 const isMissingRemoteTableError = (error) => {
@@ -95,6 +107,33 @@ const getCurrentAdminUser = async () => {
 
 const clone = (value) => JSON.parse(JSON.stringify(value));
 const normalizeEmail = (value) => String(value || "").trim().toLowerCase();
+
+const getSupabaseAccessToken = async () => {
+  const getToken = getAuthAdapter().getToken;
+  if (!getToken) {
+    return null;
+  }
+
+  const sessionToken = await getToken().catch(() => null);
+  if (sessionToken) {
+    return sessionToken;
+  }
+
+  if (!supabaseJwtTemplate) {
+    return null;
+  }
+
+  return getToken({ template: supabaseJwtTemplate }).catch(() => null);
+};
+
+const buildPairKey = (emailA, emailB) => {
+  const left = normalizeEmail(emailA);
+  const right = normalizeEmail(emailB);
+  if (!left || !right) {
+    return "";
+  }
+  return left < right ? `${left}::${right}` : `${right}::${left}`;
+};
 
 const getStorageKey = (entityName, userId) => `cinestream:${entityName}:${userId}`;
 const getAdminStorageKey = (entityName) => `cinestream:admin:${entityName}`;
@@ -345,23 +384,8 @@ const createSupabaseClient = () => {
       detectSessionInUrl: false,
       persistSession: false,
     },
-    global: {
-      fetch: async (url, options = {}) => {
-        const headers = new Headers(options.headers);
-        const getToken = getAuthAdapter().getToken;
-        const token = getToken
-          ? await getToken({ template: supabaseJwtTemplate }).catch(() => null)
-          : null;
-
-        if (token) {
-          headers.set("Authorization", `Bearer ${token}`);
-        }
-
-        return fetch(url, {
-          ...options,
-          headers,
-        });
-      },
+    accessToken: async () => {
+      return getSupabaseAccessToken();
     },
   });
 };
@@ -376,6 +400,25 @@ const writeLocalTheme = (userId, appTheme) => {
   writeLocalAccountValue("preferences", userId, {
     ...existing,
     app_theme: appTheme === "hulu" ? "hulu" : "netflix",
+    updated_at: new Date().toISOString(),
+  });
+};
+
+const readLocalPresenceVisibility = (userId) => {
+  const stored = readLocalAccountValue("preferences", userId, {});
+  const value = String(stored?.presence_visibility || "").trim().toLowerCase();
+  if (value === "friends" || value === "off" || value === "public") {
+    return value;
+  }
+  return "public";
+};
+
+const writeLocalPresenceVisibility = (userId, presenceVisibility) => {
+  const existing = readLocalAccountValue("preferences", userId, {});
+  const nextValue = presenceVisibility === "friends" || presenceVisibility === "off" ? presenceVisibility : "public";
+  writeLocalAccountValue("preferences", userId, {
+    ...existing,
+    presence_visibility: nextValue,
     updated_at: new Date().toISOString(),
   });
 };
@@ -1024,10 +1067,52 @@ const querySharedEntityRows = async ({ entityName, limit = 40, filters = {}, sor
 };
 
 const getFriendEmailsForCurrentUser = async () => {
-  const friendships = await createEntityClient("Friendship").list("-updated_date", 100).catch(() => []);
-  return friendships
+  const user = await getCurrentUser().catch(() => null);
+  const normalizedEmail = normalizeEmail(user?.email);
+
+  const legacyFriendships = await createEntityClient("Friendship")
+    .list("-updated_date", 100)
+    .catch(() => []);
+
+  const legacyEmails = legacyFriendships
     .map((entry) => normalizeEmail(entry.friend_email))
     .filter(Boolean);
+
+  if (!normalizedEmail || !canUseRemoteTable(FRIEND_REQUESTS_TABLE)) {
+    return [...new Set(legacyEmails)];
+  }
+
+  try {
+    const client = createSupabaseClient();
+    const { data, error } = await client
+      .from(FRIEND_REQUESTS_TABLE)
+      .select("*")
+      .eq("status", "accepted")
+      .or(`requester_email.eq.${normalizedEmail},addressee_email.eq.${normalizedEmail}`)
+      .order("updated_at", { ascending: false })
+      .limit(200);
+
+    if (error) {
+      throw error;
+    }
+
+    const requestEmails = (data || [])
+      .map((row) => {
+        const requester = normalizeEmail(row.requester_email);
+        const addressee = normalizeEmail(row.addressee_email);
+        if (!requester || !addressee) {
+          return null;
+        }
+        return requester === normalizedEmail ? addressee : requester;
+      })
+      .filter(Boolean);
+
+    return [...new Set([...legacyEmails, ...requestEmails])];
+  } catch (error) {
+    markTableUnavailableIfMissing(FRIEND_REQUESTS_TABLE, error);
+    console.warn("[FriendRequests] Falling back to legacy friendships", error);
+    return [...new Set(legacyEmails)];
+  }
 };
 
 const querySocialActivityByEmails = async ({ actorEmails = [], limit = 40, filters = {} } = {}) => {
@@ -1213,6 +1298,448 @@ export const base44 = {
       });
     },
   },
+  friends: {
+    async listRequests(limit = 200) {
+      const user = await getCurrentUser();
+      const normalizedEmail = normalizeEmail(user.email);
+      const supabaseToken = await getSupabaseAccessToken();
+
+      if (!normalizedEmail || !canUseRemoteTable(FRIEND_REQUESTS_TABLE) || !supabaseToken) {
+        return { incoming: [], outgoing: [], accepted: [] };
+      }
+
+      try {
+        const client = createSupabaseClient();
+        const { data, error } = await client
+          .from(FRIEND_REQUESTS_TABLE)
+          .select("*")
+          .or(`requester_email.eq.${normalizedEmail},addressee_email.eq.${normalizedEmail}`)
+          .order("updated_at", { ascending: false })
+          .limit(limit);
+
+        if (error) {
+          throw error;
+        }
+
+        const rows = data || [];
+        const incoming = rows.filter((row) => normalizeEmail(row.addressee_email) === normalizedEmail && row.status === "pending");
+        const outgoing = rows.filter((row) => normalizeEmail(row.requester_email) === normalizedEmail && row.status === "pending");
+        const accepted = rows.filter((row) => row.status === "accepted");
+
+        return { incoming, outgoing, accepted };
+      } catch (error) {
+        markTableUnavailableIfMissing(FRIEND_REQUESTS_TABLE, error);
+        console.warn("[FriendRequests] listRequests failed", error);
+        return { incoming: [], outgoing: [], accepted: [] };
+      }
+    },
+    async sendRequest({ email, name = "" } = {}) {
+      const user = await getCurrentUser();
+      const normalizedEmail = normalizeEmail(user.email);
+      const addresseeEmail = normalizeEmail(email);
+      const supabaseToken = await getSupabaseAccessToken();
+
+      if (!addresseeEmail) {
+        throw new Error("A valid email address is required.");
+      }
+
+      if (addresseeEmail === normalizedEmail) {
+        throw new Error("You cannot add yourself as a friend.");
+      }
+
+      if (!canUseRemoteTable(FRIEND_REQUESTS_TABLE)) {
+        throw new Error("Friend requests are unavailable (Supabase not configured).");
+      }
+
+      if (!supabaseToken) {
+        throw createSupabaseTokenError();
+      }
+
+      const payload = {
+        requester_user_id: user.id,
+        requester_email: normalizedEmail,
+        requester_name: String(name || "").trim() || user.full_name || normalizedEmail,
+        requester_avatar_url: user.image_url || null,
+        addressee_email: addresseeEmail,
+        status: "pending",
+        updated_at: new Date().toISOString(),
+      };
+
+      const client = createSupabaseClient();
+      const { data, error } = await client
+        .from(FRIEND_REQUESTS_TABLE)
+        .insert(payload)
+        .select("*")
+        .single();
+
+      if (error) {
+        throw error;
+      }
+
+      return data;
+    },
+    async updateRequestStatus({ id, status }) {
+      const user = await getCurrentUser();
+      const normalizedEmail = normalizeEmail(user.email);
+      const nextStatus = String(status || "").trim().toLowerCase();
+      const supabaseToken = await getSupabaseAccessToken();
+
+      if (!id || !nextStatus) {
+        throw new Error("Invalid friend request update.");
+      }
+
+      if (!canUseRemoteTable(FRIEND_REQUESTS_TABLE)) {
+        throw new Error("Friend requests are unavailable (Supabase not configured).");
+      }
+
+      if (!supabaseToken) {
+        throw createSupabaseTokenError();
+      }
+
+      const allowed = new Set(["accepted", "declined", "cancelled", "blocked", "removed", "pending"]);
+      if (!allowed.has(nextStatus)) {
+        throw new Error("Unsupported friend request status.");
+      }
+
+      const client = createSupabaseClient();
+      const { data, error } = await client
+        .from(FRIEND_REQUESTS_TABLE)
+        .update({
+          status: nextStatus,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", id)
+        .or(`requester_email.eq.${normalizedEmail},addressee_email.eq.${normalizedEmail}`)
+        .select("*")
+        .single();
+
+      if (error) {
+        throw error;
+      }
+
+      return data;
+    },
+  },
+  presence: {
+    async upsert(payload = {}) {
+      const user = await getCurrentUser();
+
+      if (!canUseRemoteTable(USER_PRESENCE_TABLE)) {
+        throw new Error("Presence is unavailable (Supabase not configured).");
+      }
+
+      const client = createSupabaseClient();
+      const record = {
+        user_id: user.id,
+        user_email: normalizeEmail(user.email),
+        ...payload,
+        updated_at: new Date().toISOString(),
+      };
+
+      const { data, error } = await client
+        .from(USER_PRESENCE_TABLE)
+        .upsert(record, { onConflict: "user_id" })
+        .select("*")
+        .single();
+
+      if (error) {
+        throw error;
+      }
+
+      return data;
+    },
+    async listByEmails(emails = [], limit = 200) {
+      const safeEmails = [...new Set((emails || []).map(normalizeEmail).filter(Boolean))];
+      if (safeEmails.length === 0) {
+        return [];
+      }
+
+      if (!canUseRemoteTable(USER_PRESENCE_TABLE)) {
+        return [];
+      }
+
+      try {
+        const client = createSupabaseClient();
+        const { data, error } = await client
+          .from(USER_PRESENCE_TABLE)
+          .select("*")
+          .in("user_email", safeEmails)
+          .order("updated_at", { ascending: false })
+          .limit(limit);
+
+        if (error) {
+          throw error;
+        }
+
+        return data || [];
+      } catch (error) {
+        markTableUnavailableIfMissing(USER_PRESENCE_TABLE, error);
+        console.warn("[Presence] listByEmails failed", error);
+        return [];
+      }
+    },
+  },
+  chat: {
+    async listMyThreads(limit = 80) {
+      const user = await getCurrentUser();
+      const normalizedEmail = normalizeEmail(user.email);
+
+      if (!normalizedEmail || !canUseRemoteTable(CHAT_THREADS_TABLE) || !canUseRemoteTable(CHAT_THREAD_MEMBERS_TABLE)) {
+        return [];
+      }
+
+      try {
+        const client = createSupabaseClient();
+        const { data, error } = await client
+          .from(CHAT_THREADS_TABLE)
+          .select("*, chat_thread_members!inner(member_email, role)")
+          .eq("chat_thread_members.member_email", normalizedEmail)
+          .order("last_message_at", { ascending: false })
+          .limit(limit);
+
+        if (error) {
+          throw error;
+        }
+
+        return (data || []).map((row) => ({
+          ...row,
+          my_role: row.chat_thread_members?.[0]?.role || "member",
+        }));
+      } catch (error) {
+        markTableUnavailableIfMissing(CHAT_THREADS_TABLE, error);
+        console.warn("[Chat] listMyThreads failed", error);
+        return [];
+      }
+    },
+    async listThreadMembers(threadId) {
+      if (!threadId || !canUseRemoteTable(CHAT_THREAD_MEMBERS_TABLE)) {
+        return [];
+      }
+
+      try {
+        const client = createSupabaseClient();
+        const { data, error } = await client
+          .from(CHAT_THREAD_MEMBERS_TABLE)
+          .select("*")
+          .eq("thread_id", threadId)
+          .order("created_at", { ascending: true })
+          .limit(100);
+
+        if (error) {
+          throw error;
+        }
+
+        return data || [];
+      } catch (error) {
+        markTableUnavailableIfMissing(CHAT_THREAD_MEMBERS_TABLE, error);
+        console.warn("[Chat] listThreadMembers failed", error);
+        return [];
+      }
+    },
+    async listThreadMessages(threadId, limit = 80) {
+      if (!threadId || !canUseRemoteTable(CHAT_MESSAGES_TABLE)) {
+        return [];
+      }
+
+      try {
+        const client = createSupabaseClient();
+        const { data, error } = await client
+          .from(CHAT_MESSAGES_TABLE)
+          .select("*")
+          .eq("thread_id", threadId)
+          .order("created_at", { ascending: true })
+          .limit(limit);
+
+        if (error) {
+          throw error;
+        }
+
+        return data || [];
+      } catch (error) {
+        markTableUnavailableIfMissing(CHAT_MESSAGES_TABLE, error);
+        console.warn("[Chat] listThreadMessages failed", error);
+        return [];
+      }
+    },
+    async sendMessage({ threadId, messageText, senderName = "", senderAvatarUrl = null }) {
+      const user = await getCurrentUser();
+      const normalizedEmail = normalizeEmail(user.email);
+
+      if (!threadId || !String(messageText || "").trim()) {
+        throw new Error("Message text is required.");
+      }
+
+      if (!canUseRemoteTable(CHAT_MESSAGES_TABLE)) {
+        throw new Error("Chat is unavailable (Supabase not configured).");
+      }
+
+      const client = createSupabaseClient();
+      const payload = {
+        thread_id: threadId,
+        sender_email: normalizedEmail,
+        sender_name: String(senderName || "").trim() || user.full_name || normalizedEmail,
+        sender_avatar_url: senderAvatarUrl || user.image_url || null,
+        message_text: String(messageText || "").trim(),
+        updated_at: new Date().toISOString(),
+      };
+
+      const { data, error } = await client
+        .from(CHAT_MESSAGES_TABLE)
+        .insert(payload)
+        .select("*")
+        .single();
+
+      if (error) {
+        throw error;
+      }
+
+      await client
+        .from(CHAT_THREADS_TABLE)
+        .update({
+          last_message_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", threadId)
+        .catch(() => null);
+
+      return data;
+    },
+    async getOrCreateDmThread(friendEmail) {
+      const user = await getCurrentUser();
+      const normalizedEmail = normalizeEmail(user.email);
+      const normalizedFriend = normalizeEmail(friendEmail);
+      const dmKey = buildPairKey(normalizedEmail, normalizedFriend);
+
+      if (!dmKey) {
+        throw new Error("A valid friend email is required.");
+      }
+
+      if (!canUseRemoteTable(CHAT_THREADS_TABLE)) {
+        throw new Error("Chat is unavailable (Supabase not configured).");
+      }
+
+      const client = createSupabaseClient();
+      const { data: existing, error: existingError } = await client
+        .from(CHAT_THREADS_TABLE)
+        .select("*")
+        .eq("dm_key", dmKey)
+        .maybeSingle();
+
+      if (existingError) {
+        throw existingError;
+      }
+
+      if (existing?.id) {
+        return existing;
+      }
+
+      const { data: thread, error: threadError } = await client
+        .from(CHAT_THREADS_TABLE)
+        .insert({
+          thread_type: "dm",
+          dm_key: dmKey,
+          created_by_email: normalizedEmail,
+          updated_at: new Date().toISOString(),
+        })
+        .select("*")
+        .single();
+
+      if (threadError) {
+        throw threadError;
+      }
+
+      await client
+        .from(CHAT_THREAD_MEMBERS_TABLE)
+        .insert([
+          {
+            thread_id: thread.id,
+            member_email: normalizedEmail,
+            role: "owner",
+            updated_at: new Date().toISOString(),
+          },
+          {
+            thread_id: thread.id,
+            member_email: normalizedFriend,
+            role: "member",
+            updated_at: new Date().toISOString(),
+          },
+        ])
+        .catch((error) => {
+          throw error;
+        });
+
+      return thread;
+    },
+    async createGroupThread({ title = "", memberEmails = [] } = {}) {
+      const user = await getCurrentUser();
+      const normalizedEmail = normalizeEmail(user.email);
+      const safeTitle = String(title || "").trim() || "New group";
+      const members = [...new Set((memberEmails || []).map(normalizeEmail).filter(Boolean))]
+        .filter((email) => email !== normalizedEmail);
+
+      if (!canUseRemoteTable(CHAT_THREADS_TABLE)) {
+        throw new Error("Chat is unavailable (Supabase not configured).");
+      }
+
+      const client = createSupabaseClient();
+      const { data: thread, error: threadError } = await client
+        .from(CHAT_THREADS_TABLE)
+        .insert({
+          thread_type: "group",
+          title: safeTitle,
+          created_by_email: normalizedEmail,
+          updated_at: new Date().toISOString(),
+        })
+        .select("*")
+        .single();
+
+      if (threadError) {
+        throw threadError;
+      }
+
+      const memberRows = [
+        {
+          thread_id: thread.id,
+          member_email: normalizedEmail,
+          role: "owner",
+          updated_at: new Date().toISOString(),
+        },
+        ...members.map((email) => ({
+          thread_id: thread.id,
+          member_email: email,
+          role: "member",
+          updated_at: new Date().toISOString(),
+        })),
+      ];
+
+      await client
+        .from(CHAT_THREAD_MEMBERS_TABLE)
+        .insert(memberRows)
+        .catch((error) => {
+          throw error;
+        });
+
+      return thread;
+    },
+    async leaveThread(threadId) {
+      const user = await getCurrentUser();
+      const normalizedEmail = normalizeEmail(user.email);
+
+      if (!threadId || !canUseRemoteTable(CHAT_THREAD_MEMBERS_TABLE)) {
+        return true;
+      }
+
+      const client = createSupabaseClient();
+      await client
+        .from(CHAT_THREAD_MEMBERS_TABLE)
+        .delete()
+        .eq("thread_id", threadId)
+        .eq("member_email", normalizedEmail)
+        .catch(() => null);
+
+      return true;
+    },
+  },
   preferences: {
     async getAppTheme() {
       const user = await getCurrentUser();
@@ -1271,6 +1798,65 @@ export const base44 = {
       }
 
       return nextTheme;
+    },
+    async getPresenceVisibility() {
+      const user = await getCurrentUser();
+      const localValue = readLocalPresenceVisibility(user.id);
+
+      if (!canUseRemoteTable(USER_PREFERENCES_TABLE)) {
+        return localValue;
+      }
+
+      try {
+        const client = createSupabaseClient();
+        const { data, error } = await client
+          .from(USER_PREFERENCES_TABLE)
+          .select("*")
+          .eq("user_id", user.id)
+          .maybeSingle();
+
+        if (error) {
+          throw error;
+        }
+
+        const remoteValue = String(data?.presence_visibility || "").trim().toLowerCase();
+        const nextValue = remoteValue === "friends" || remoteValue === "off" ? remoteValue : "public";
+        writeLocalPresenceVisibility(user.id, nextValue);
+        return nextValue;
+      } catch (error) {
+        markTableUnavailableIfMissing(USER_PREFERENCES_TABLE, error);
+        console.warn("[Preferences] Falling back to local storage", error);
+        return localValue;
+      }
+    },
+    async setPresenceVisibility(presenceVisibility) {
+      const user = await getCurrentUser();
+      const nextValue = presenceVisibility === "friends" || presenceVisibility === "off" ? presenceVisibility : "public";
+      writeLocalPresenceVisibility(user.id, nextValue);
+
+      if (!canUseRemoteTable(USER_PREFERENCES_TABLE)) {
+        return nextValue;
+      }
+
+      try {
+        const client = createSupabaseClient();
+        const { error } = await client
+          .from(USER_PREFERENCES_TABLE)
+          .upsert({
+            user_id: user.id,
+            presence_visibility: nextValue,
+            updated_at: new Date().toISOString(),
+          });
+
+        if (error) {
+          throw error;
+        }
+      } catch (error) {
+        markTableUnavailableIfMissing(USER_PREFERENCES_TABLE, error);
+        console.warn("[Preferences] Falling back to local storage", error);
+      }
+
+      return nextValue;
     },
   },
   avatars: {

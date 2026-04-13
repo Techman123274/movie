@@ -185,8 +185,8 @@ function App() {
 
 function UpdateModeScreen({ title, message }) {
   return (
-    <div className="min-h-screen bg-[var(--app-bg)] text-white">
-      <div className="flex min-h-screen items-center justify-center px-6">
+    <div className="min-h-[var(--app-viewport-height)] bg-[var(--app-bg)] text-white">
+      <div className="flex min-h-[var(--app-viewport-height)] items-center justify-center px-6">
         <div className="w-full max-w-3xl rounded-[2rem] border border-white/10 bg-[var(--card-bg)] p-8 text-center shadow-[0_25px_80px_rgba(0,0,0,0.45)] md:p-12">
           <p className="text-sm font-semibold uppercase tracking-[0.32em] text-[var(--brand)]">Subflix Update Mode</p>
           <h1 className="mt-5 text-4xl font-black tracking-tight md:text-5xl">

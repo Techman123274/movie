@@ -149,65 +149,67 @@ export default function ProfileSelector({ user, onProfileSelect }) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-[var(--app-bg)] px-6">
-      <div className="absolute left-8 top-6 md:left-12 md:top-8">
-        <BrandWordmark className="text-3xl" showMode />
-      </div>
-
-      <motion.h1
-        className="mb-12 text-center font-light text-white"
-        style={{ fontSize: "clamp(2rem, 5vw, 3.5rem)" }}
-        initial={{ opacity: 0, y: -10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4 }}
-      >
-        Who&apos;s watching?
-      </motion.h1>
-
-      {loading ? (
-        <div className="h-10 w-10 animate-spin rounded-full border-4 border-[var(--brand)] border-t-transparent" />
-      ) : (
-        <div className="flex flex-wrap items-start justify-center gap-4 px-2 md:gap-6">
-          {profiles.map((profile, index) => (
-            <SelectableProfileCard
-              key={profile.id}
-              profile={profile}
-              avatarAssets={avatarAssets}
-              index={index}
-              onClick={handleSelect}
-              isSelecting={selecting}
-              isSelected={selectedIndex === index}
-            />
-          ))}
-
-          {profiles.length < 5 && !selecting && (
-            <motion.div
-              className="flex cursor-pointer flex-col items-center gap-3"
-              onClick={() => setEditingProfile({})}
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: profiles.length * 0.06, duration: 0.35 }}
-            >
-              <div className="flex h-[140px] w-[140px] items-center justify-center rounded-md border-2 border-dashed border-white/20 bg-white/[0.03] transition-colors hover:border-white/45 hover:bg-white/[0.05]">
-                <Plus className="h-12 w-12 text-gray-500" />
-              </div>
-              <span className="text-sm text-gray-500">Add Profile</span>
-            </motion.div>
-          )}
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-[var(--app-bg)] text-white">
+      <div className="mx-auto flex min-h-[var(--app-viewport-height)] w-full max-w-6xl flex-col items-center px-5 pb-[calc(var(--app-safe-bottom)+1.25rem)] pt-[calc(var(--app-safe-top)+1rem)] md:px-8">
+        <div className="mb-8 w-full">
+          <BrandWordmark className="text-3xl" showMode />
         </div>
-      )}
 
-      {!selecting && (
-        <motion.button
-          onClick={() => setManaging(true)}
-          className="mt-14 rounded border border-white/25 px-7 py-2 text-sm uppercase tracking-[0.18em] text-gray-300 transition-colors hover:border-white hover:text-white"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.45, duration: 0.35 }}
+        <motion.h1
+          className="mb-10 text-center font-light text-white md:mb-12"
+          style={{ fontSize: "clamp(2rem, 5vw, 3.5rem)" }}
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.38, ease: "easeOut" }}
         >
-          Manage Profiles
-        </motion.button>
-      )}
+          Who&apos;s watching?
+        </motion.h1>
+
+        {loading ? (
+          <div className="h-10 w-10 animate-spin rounded-full border-4 border-[var(--brand)] border-t-transparent" />
+        ) : (
+          <div className="flex w-full flex-wrap items-start justify-center gap-4 md:gap-6">
+            {profiles.map((profile, index) => (
+              <SelectableProfileCard
+                key={profile.id}
+                profile={profile}
+                avatarAssets={avatarAssets}
+                index={index}
+                onClick={handleSelect}
+                isSelecting={selecting}
+                isSelected={selectedIndex === index}
+              />
+            ))}
+
+            {profiles.length < 5 && !selecting && (
+              <motion.div
+                className="flex cursor-pointer flex-col items-center gap-3"
+                onClick={() => setEditingProfile({})}
+                initial={{ opacity: 0, y: 30 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: profiles.length * 0.06, duration: 0.35 }}
+              >
+                <div className="flex h-[140px] w-[140px] items-center justify-center rounded-md border-2 border-dashed border-white/20 bg-white/[0.03] transition-colors hover:border-white/45 hover:bg-white/[0.05]">
+                  <Plus className="h-12 w-12 text-gray-500" />
+                </div>
+                <span className="text-sm text-gray-500">Add Profile</span>
+              </motion.div>
+            )}
+          </div>
+        )}
+
+        {!selecting && (
+          <motion.button
+            onClick={() => setManaging(true)}
+            className="mt-10 rounded border border-white/25 px-7 py-2 text-sm uppercase tracking-[0.18em] text-gray-300 transition-colors hover:border-white hover:text-white md:mt-14"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.4, duration: 0.32 }}
+          >
+            Manage Profiles
+          </motion.button>
+        )}
+      </div>
 
       {editingProfile && (
         <ProfileEditorModal

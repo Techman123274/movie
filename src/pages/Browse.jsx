@@ -1,23 +1,14 @@
-import { useState, useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { Loader2 } from "lucide-react";
 import { useOutletContext, useSearchParams } from "react-router-dom";
-import ContentRow from "@/components/ui/ContentRow";
-import { getPopularMovies, getTopRatedMovies, getPopularTV, getTopRatedTV, getByGenre, getAiringTodayTV } from "@/lib/tmdb";
+import ContentCard from "@/components/ui/ContentCard";
+import { getByGenre, getMovieGenres, getPopularMovies, getPopularTV, getTVGenres } from "@/lib/tmdb";
 import { filterItemsForProfile } from "@/lib/preferences";
 import { useAppTheme } from "@/lib/theme";
 
-const MOVIE_GENRE_ROWS = [
-  { id: 28, name: "Action" }, { id: 35, name: "Comedy" }, { id: 18, name: "Drama" },
-  { id: 27, name: "Horror" }, { id: 878, name: "Sci-Fi" }, { id: 10749, name: "Romance" },
-];
-
-const TV_GENRE_ROWS = [
-  { id: 18, name: "Drama" }, { id: 35, name: "Comedy" }, { id: 10759, name: "Action & Adventure" },
-  { id: 9648, name: "Mystery" }, { id: 10765, name: "Sci-Fi & Fantasy" }, { id: 10762, name: "Kids" },
-];
-
-const dedupeItems = (items) => {
+const dedupeItems = (items = []) => {
   const seen = new Set();
-  return (items || []).filter((item) => {
+  return items.filter((item) => {
     const key = `${item.media_type || "movie"}-${item.id}`;
     if (seen.has(key)) {
       return false;
@@ -27,7 +18,8 @@ const dedupeItems = (items) => {
   });
 };
 
-const buildShelf = (...groups) => dedupeItems(groups.flat().filter(Boolean));
+const decorateMediaType = (items = [], type = "movie") =>
+  items.map((item) => ({ ...item, media_type: type }));
 
 export default function Browse() {
   const { activeProfile } = useOutletContext() || {};
@@ -35,253 +27,264 @@ export default function Browse() {
   const isHulu = themeDefinition.shellVariant === "hulu";
   const [searchParams] = useSearchParams();
   const type = searchParams.get("type") || "movie";
-  const [rows, setRows] = useState([]);
+
+  const [genres, setGenres] = useState([]);
+  const [selectedGenre, setSelectedGenre] = useState("all");
+  const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(false);
+  const [page, setPage] = useState(1);
+  const [error, setError] = useState("");
+  const [refreshToken, setRefreshToken] = useState(0);
+
+  const getFeedResponse = async (nextPage = 1) => {
+    if (selectedGenre === "all") {
+      return type === "tv" ? getPopularTV(nextPage) : getPopularMovies(nextPage);
+    }
+
+    return getByGenre(Number(selectedGenre), type, nextPage);
+  };
 
   useEffect(() => {
-    loadContent();
-  }, [type, activeProfile]);
+    let cancelled = false;
 
-  const loadContent = async () => {
-    setLoading(true);
-    setRows([]);
+    const loadGenres = async () => {
+      try {
+        const response = type === "tv" ? await getTVGenres() : await getMovieGenres();
+        if (cancelled) {
+          return;
+        }
 
-    if (activeProfile?.is_kids) {
-      if (type === "movie") {
-        const [popular, popularPage2, topRated, animation, family, adventure, comedy, fantasy] = await Promise.all([
-          getPopularMovies().catch(() => ({ results: [] })),
-          getPopularMovies(2).catch(() => ({ results: [] })),
-          getTopRatedMovies().catch(() => ({ results: [] })),
-          getByGenre(16, "movie").catch(() => ({ results: [] })),
-          getByGenre(10751, "movie").catch(() => ({ results: [] })),
-          getByGenre(12, "movie").catch(() => ({ results: [] })),
-          getByGenre(35, "movie").catch(() => ({ results: [] })),
-          getByGenre(14, "movie").catch(() => ({ results: [] })),
-        ]);
-
-        setRows([
-          {
-            title: "Popular with Kids",
-            items: filterItemsForProfile(
-              buildShelf(
-                (popular.results || []).map((item) => ({ ...item, media_type: "movie" })),
-                (popularPage2.results || []).map((item) => ({ ...item, media_type: "movie" }))
-              ),
-              activeProfile
-            ),
-          },
-          {
-            title: "Animated Favorites",
-            items: filterItemsForProfile(
-              buildShelf(
-                (animation.results || []).map((item) => ({ ...item, media_type: "movie" })),
-                (topRated.results || []).map((item) => ({ ...item, media_type: "movie" }))
-              ),
-              activeProfile
-            ),
-          },
-          {
-            title: "Family Movie Night",
-            items: filterItemsForProfile(
-              buildShelf(
-                (family.results || []).map((item) => ({ ...item, media_type: "movie" })),
-                (popular.results || []).map((item) => ({ ...item, media_type: "movie" }))
-              ),
-              activeProfile
-            ),
-          },
-          {
-            title: "Adventure Time",
-            items: filterItemsForProfile(
-              buildShelf(
-                (adventure.results || []).map((item) => ({ ...item, media_type: "movie" })),
-                (fantasy.results || []).map((item) => ({ ...item, media_type: "movie" }))
-              ),
-              activeProfile
-            ),
-          },
-          {
-            title: "Laugh Out Loud",
-            items: filterItemsForProfile(
-              buildShelf(
-                (comedy.results || []).map((item) => ({ ...item, media_type: "movie" })),
-                (animation.results || []).map((item) => ({ ...item, media_type: "movie" }))
-              ),
-              activeProfile
-            ),
-          },
-          {
-            title: "Top Kids Movies",
-            items: filterItemsForProfile(
-              buildShelf(
-                (topRated.results || []).map((item) => ({ ...item, media_type: "movie" })),
-                (family.results || []).map((item) => ({ ...item, media_type: "movie" }))
-              ),
-              activeProfile
-            ),
-          },
-        ]);
-      } else {
-        const [popular, popularPage2, topRated, airingToday, kidsTV, animation, comedy, documentary] = await Promise.all([
-          getPopularTV().catch(() => ({ results: [] })),
-          getPopularTV(2).catch(() => ({ results: [] })),
-          getTopRatedTV().catch(() => ({ results: [] })),
-          getAiringTodayTV().catch(() => ({ results: [] })),
-          getByGenre(10762, "tv").catch(() => ({ results: [] })),
-          getByGenre(16, "tv").catch(() => ({ results: [] })),
-          getByGenre(35, "tv").catch(() => ({ results: [] })),
-          getByGenre(99, "tv").catch(() => ({ results: [] })),
-        ]);
-
-        setRows([
-          {
-            title: "Popular with Kids",
-            items: filterItemsForProfile(
-              buildShelf(
-                (popular.results || []).map((item) => ({ ...item, media_type: "tv" })),
-                (popularPage2.results || []).map((item) => ({ ...item, media_type: "tv" }))
-              ),
-              activeProfile
-            ),
-          },
-          {
-            title: "Kids TV",
-            items: filterItemsForProfile(
-              buildShelf(
-                (kidsTV.results || []).map((item) => ({ ...item, media_type: "tv" })),
-                (popular.results || []).map((item) => ({ ...item, media_type: "tv" }))
-              ),
-              activeProfile
-            ),
-          },
-          {
-            title: "Animated Series",
-            items: filterItemsForProfile(
-              buildShelf(
-                (animation.results || []).map((item) => ({ ...item, media_type: "tv" })),
-                (topRated.results || []).map((item) => ({ ...item, media_type: "tv" }))
-              ),
-              activeProfile
-            ),
-          },
-          {
-            title: "Funny Shows",
-            items: filterItemsForProfile(
-              buildShelf(
-                (comedy.results || []).map((item) => ({ ...item, media_type: "tv" })),
-                (kidsTV.results || []).map((item) => ({ ...item, media_type: "tv" }))
-              ),
-              activeProfile
-            ),
-          },
-          {
-            title: "Learning and Nature",
-            items: filterItemsForProfile(
-              buildShelf(
-                (documentary.results || []).map((item) => ({ ...item, media_type: "tv" })),
-                (kidsTV.results || []).map((item) => ({ ...item, media_type: "tv" }))
-              ),
-              activeProfile
-            ),
-          },
-          {
-            title: "Top Kids Shows",
-            items: filterItemsForProfile(
-              buildShelf(
-                (topRated.results || []).map((item) => ({ ...item, media_type: "tv" })),
-                (kidsTV.results || []).map((item) => ({ ...item, media_type: "tv" }))
-              ),
-              activeProfile
-            ),
-          },
-          {
-            title: "New for Kids",
-            items: filterItemsForProfile(
-              buildShelf(
-                (airingToday.results || []).map((item) => ({ ...item, media_type: "tv" })),
-                (popular.results || []).map((item) => ({ ...item, media_type: "tv" }))
-              ),
-              activeProfile
-            ),
-          },
-        ]);
+        const nextGenres = [...(response?.genres || [])].sort((a, b) => a.name.localeCompare(b.name));
+        setGenres(nextGenres);
+      } catch {
+        if (!cancelled) {
+          setGenres([]);
+        }
       }
-      setLoading(false);
+    };
+
+    setSelectedGenre("all");
+    loadGenres();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [type]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadFirstPage = async () => {
+      setError("");
+      setItems([]);
+      setPage(1);
+      setHasMore(false);
+      setLoading(true);
+
+      try {
+        const response = await getFeedResponse(1);
+        if (cancelled) {
+          return;
+        }
+
+        const normalized = decorateMediaType(response?.results || [], type);
+        const filtered = filterItemsForProfile(normalized, activeProfile);
+
+        setItems(dedupeItems(filtered));
+        setPage(1);
+        setHasMore((response?.page || 1) < (response?.total_pages || 1));
+      } catch (err) {
+        if (cancelled) {
+          return;
+        }
+        setError(err?.message || "We couldn’t load this genre right now.");
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    };
+
+    loadFirstPage();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [type, selectedGenre, activeProfile, refreshToken]);
+
+  const handleLoadMore = async () => {
+    if (loading || loadingMore || !hasMore) {
       return;
     }
 
-    if (type === "movie") {
-      const [popular, topRated, ...genreResults] = await Promise.all([
-        getPopularMovies().catch(() => ({ results: [] })),
-        getTopRatedMovies().catch(() => ({ results: [] })),
-        ...MOVIE_GENRE_ROWS.map((g) => getByGenre(g.id, "movie").catch(() => ({ results: [] }))),
-      ]);
-      setRows([
-        { title: "Popular Movies", items: filterItemsForProfile(popular.results || [], activeProfile) },
-        { title: "Top Rated Movies", items: filterItemsForProfile(topRated.results || [], activeProfile) },
-        ...MOVIE_GENRE_ROWS.map((g, i) => ({
-          title: g.name + " Movies",
-          items: filterItemsForProfile((genreResults[i]?.results || []).map((m) => ({ ...m, media_type: "movie" })), activeProfile),
-        })),
-      ]);
-    } else {
-      const [popular, topRated, ...genreResults] = await Promise.all([
-        getPopularTV().catch(() => ({ results: [] })),
-        getTopRatedTV().catch(() => ({ results: [] })),
-        ...TV_GENRE_ROWS.map((g) => getByGenre(g.id, "tv").catch(() => ({ results: [] }))),
-      ]);
-      setRows([
-        { title: "Popular TV Shows", items: filterItemsForProfile((popular.results || []).map((t) => ({ ...t, media_type: "tv" })), activeProfile) },
-        { title: "Top Rated TV Shows", items: filterItemsForProfile((topRated.results || []).map((t) => ({ ...t, media_type: "tv" })), activeProfile) },
-        ...TV_GENRE_ROWS.map((g, i) => ({
-          title: g.name + " Shows",
-          items: filterItemsForProfile((genreResults[i]?.results || []).map((t) => ({ ...t, media_type: "tv" })), activeProfile),
-        })),
-      ]);
+    const nextPage = page + 1;
+    setLoadingMore(true);
+    setError("");
+
+    try {
+      const response = await getFeedResponse(nextPage);
+      const normalized = decorateMediaType(response?.results || [], type);
+      const filtered = filterItemsForProfile(normalized, activeProfile);
+
+      setItems((current) => dedupeItems([...current, ...filtered]));
+      setPage(nextPage);
+      setHasMore((response?.page || nextPage) < (response?.total_pages || nextPage));
+    } catch (err) {
+      setError(err?.message || "We couldn’t load more titles.");
+    } finally {
+      setLoadingMore(false);
     }
-    setLoading(false);
   };
 
+  const selectedGenreLabel = useMemo(() => {
+    if (selectedGenre === "all") {
+      return type === "movie" ? "Popular Movies" : "Popular TV Shows";
+    }
+
+    const genre = genres.find((item) => String(item.id) === String(selectedGenre));
+    if (!genre) {
+      return type === "movie" ? "Movies" : "TV Shows";
+    }
+
+    return type === "movie" ? `${genre.name} Movies` : `${genre.name} Shows`;
+  }, [genres, selectedGenre, type]);
+
+  const gridColumnsClass = isHulu
+    ? "grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4"
+    : "grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6";
+
   return (
-    <div className="min-h-screen bg-[var(--app-bg)] pt-20">
-      <div className={`px-4 py-6 md:px-12 ${isHulu ? "md:py-6" : "md:py-8"}`}>
+    <div className="app-page app-page-animate bg-[var(--app-bg)]">
+      <div className={`app-page-content py-4 md:py-8 ${isHulu ? "md:py-6" : "md:py-8"}`}>
         {isHulu && (
           <p className="mb-2 text-xs font-semibold uppercase tracking-[0.28em] text-[var(--brand)]">
             Browse
           </p>
         )}
+
         <h1 className={`font-bold text-white ${isHulu ? "text-3xl md:text-5xl" : "text-2xl md:text-4xl"}`}>
           {type === "movie" ? "Movies" : "TV Shows"}
         </h1>
+
         {isHulu && (
           <p className="mt-3 max-w-2xl text-sm leading-relaxed text-white/62">
-            Jump between curated rails, trending picks, and genre stacks in the Hulu view.
+            Pick a genre at the top, browse a bigger feed, and load more titles whenever you want.
           </p>
+        )}
+
+        <div className="mt-5">
+          <p className="mb-2 text-xs font-semibold uppercase tracking-[0.24em] text-white/45">
+            Genre Filter
+          </p>
+
+          <div className="scrollbar-hide -mx-1 flex snap-x gap-2 overflow-x-auto px-1 pb-1">
+            <button
+              type="button"
+              onClick={() => setSelectedGenre("all")}
+              className={`min-h-10 shrink-0 snap-start rounded-full border px-4 text-sm font-semibold transition-colors ${
+                selectedGenre === "all"
+                  ? "border-[var(--brand)] bg-[var(--brand)] text-[var(--brand-contrast)]"
+                  : "border-white/15 bg-white/[0.03] text-white/75 hover:border-white/25 hover:bg-white/[0.08]"
+              }`}
+            >
+              All
+            </button>
+
+            {genres.map((genre) => {
+              const isSelected = String(selectedGenre) === String(genre.id);
+              return (
+                <button
+                  key={genre.id}
+                  type="button"
+                  onClick={() => setSelectedGenre(String(genre.id))}
+                  className={`min-h-10 shrink-0 snap-start rounded-full border px-4 text-sm font-semibold transition-colors ${
+                    isSelected
+                      ? "border-[var(--brand)] bg-[var(--brand)] text-[var(--brand-contrast)]"
+                      : "border-white/15 bg-white/[0.03] text-white/75 hover:border-white/25 hover:bg-white/[0.08]"
+                  }`}
+                >
+                  {genre.name}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {error && (
+          <div className="mt-4 rounded-xl border border-[#E50914]/20 bg-[#E50914]/10 px-4 py-3 text-sm text-white/85">
+            {error}
+            <button
+              type="button"
+              onClick={() => setRefreshToken((current) => current + 1)}
+              className="ml-3 rounded-lg border border-white/20 px-3 py-1 text-xs font-semibold text-white/85 hover:bg-white/[0.08]"
+            >
+              Retry
+            </button>
+          </div>
         )}
       </div>
 
       {loading ? (
-        <div className="space-y-8 px-4 md:px-12">
-          {Array(4).fill(0).map((_, i) => (
-            <div key={i}>
-              <div className={`mb-3 animate-pulse rounded ${isHulu ? "h-4 w-52 bg-white/10" : "h-5 w-40 bg-[#1a1a1a]"}`} />
-              <div className="flex gap-2 overflow-hidden">
-                {Array(7).fill(0).map((_, j) => (
-                  <div
-                    key={j}
-                    className={`flex-shrink-0 animate-pulse rounded-2xl ${isHulu ? "w-[240px] bg-white/10" : "w-[132px] bg-[#1a1a1a] sm:w-[150px] md:w-[clamp(140px,15vw,200px)]"}`}
-                    style={{ aspectRatio: isHulu ? "16/9" : "2/3" }}
-                  />
-                ))}
-              </div>
-            </div>
-          ))}
+        <div className="app-page-content pb-8">
+          <div className="mb-4 flex items-end justify-between">
+            <h2 className={`animate-pulse rounded ${isHulu ? "h-5 w-60 bg-white/12" : "h-5 w-44 bg-[#1a1a1a]"}`} />
+          </div>
+          <div className={`grid ${gridColumnsClass}`}>
+            {Array.from({ length: isHulu ? 8 : 12 }).map((_, j) => (
+              <div
+                key={j}
+                className={`animate-pulse rounded-2xl ${isHulu ? "bg-white/10" : "bg-[#1a1a1a]"}`}
+                style={{ aspectRatio: isHulu ? "16/9" : "2/3" }}
+              />
+            ))}
+          </div>
         </div>
       ) : (
         <div className="pb-8">
-          {rows.map((row) => (
-            <ContentRow key={row.title} title={row.title} items={row.items} />
-          ))}
+          <div className="app-page-content">
+            <div className="mb-4 flex items-end justify-between gap-3">
+              <h2 className={`font-semibold text-white ${isHulu ? "text-2xl" : "text-lg md:text-xl"}`}>
+                {selectedGenreLabel}
+              </h2>
+              <p className="text-xs uppercase tracking-[0.2em] text-white/40">
+                {items.length} loaded
+              </p>
+            </div>
+
+            <div className={`grid ${gridColumnsClass}`}>
+              {items.map((item) => (
+                <ContentCard
+                  key={`${item.id}-${item.media_type}`}
+                  item={item}
+                  layout="grid"
+                />
+              ))}
+            </div>
+          </div>
+
+          {!items.length && !error && (
+            <div className="app-page-content px-4 text-sm text-white/60 md:px-12">
+              No titles found in this genre. Try another filter.
+            </div>
+          )}
+
+          {hasMore && (
+            <div className="app-page-content mt-2 px-4 md:px-12">
+              <button
+                type="button"
+                onClick={handleLoadMore}
+                disabled={loadingMore}
+                className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/[0.04] px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-white/[0.08] disabled:opacity-70 sm:w-auto"
+              >
+                {loadingMore ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                {loadingMore
+                  ? "Loading more..."
+                  : `Load More ${type === "movie" ? "Movies" : "Shows"}`}
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>

@@ -4,6 +4,29 @@ import * as RechartsPrimitive from "recharts"
 
 import { cn } from "@/lib/utils"
 
+const safeCssEscape = (value) => {
+  const raw = String(value ?? "");
+  if (typeof CSS !== "undefined" && typeof CSS.escape === "function") {
+    return CSS.escape(raw);
+  }
+  return raw.replace(/[^a-zA-Z0-9_-]/g, "_");
+};
+
+const isSafeCssVarName = (value) => /^[a-zA-Z0-9_-]+$/.test(String(value ?? ""));
+
+const sanitizeCssValue = (value) => {
+  const raw = String(value ?? "").trim();
+  if (!raw) {
+    return "";
+  }
+
+  if (/[;<>{}]/.test(raw) || raw.includes("</style")) {
+    return "";
+  }
+
+  return raw.replace(/[\r\n]/g, " ");
+};
+
 // Format: { THEME_NAME: CSS_SELECTOR }
 const THEMES = {
   light: "",
@@ -61,16 +84,20 @@ const ChartStyle = ({
       dangerouslySetInnerHTML={{
         __html: Object.entries(THEMES)
           .map(([theme, prefix]) => `
-${prefix} [data-chart=${id}] {
-${colorConfig
-.map(([key, itemConfig]) => {
-const color =
-  itemConfig.theme?.[theme] ||
-  itemConfig.color
-return color ? `  --color-${key}: ${color};` : null
-})
-.join("\n")}
-}
+ ${prefix} [data-chart="${safeCssEscape(id)}"] {
+ ${colorConfig
+ .map(([key, itemConfig]) => {
+ if (!isSafeCssVarName(key)) {
+   return null
+ }
+ const color =
+   itemConfig.theme?.[theme] ||
+   itemConfig.color
+ const safeColor = sanitizeCssValue(color)
+ return safeColor ? `  --color-${key}: ${safeColor};` : null
+ })
+ .join("\n")}
+ }
 `)
           .join("\n"),
       }} />)

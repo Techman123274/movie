@@ -45,7 +45,7 @@ export default function History() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[var(--app-bg)] px-4 pt-24 md:px-12">
+      <div className="app-page app-page-content app-page-animate bg-[var(--app-bg)]">
         <div className={`mb-8 animate-pulse rounded ${isHulu ? "h-10 w-72 bg-white/10" : "h-8 w-48 bg-[#1a1a1a]"}`} />
         <div className={`grid gap-3 ${isHulu ? "grid-cols-1 md:grid-cols-2 xl:grid-cols-3" : "grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5"}`}>
           {Array(10).fill(0).map((_, i) => (
@@ -57,7 +57,7 @@ export default function History() {
   }
 
   return (
-    <div className="min-h-screen bg-[var(--app-bg)] px-4 pb-28 pt-24 md:px-12 md:pb-12">
+    <div className="app-page app-page-content app-page-animate bg-[var(--app-bg)]">
       <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
           <Clock className="w-7 h-7 text-[var(--brand)]" />
