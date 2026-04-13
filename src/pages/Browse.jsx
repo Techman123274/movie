@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { useOutletContext, useSearchParams } from "react-router-dom";
-import ContentRow from "@/components/ui/ContentRow";
+import ContentCard from "@/components/ui/ContentCard";
 import { getByGenre, getMovieGenres, getPopularMovies, getPopularTV, getTVGenres } from "@/lib/tmdb";
 import { filterItemsForProfile } from "@/lib/preferences";
 import { useAppTheme } from "@/lib/theme";
@@ -151,6 +151,10 @@ export default function Browse() {
     return type === "movie" ? `${genre.name} Movies` : `${genre.name} Shows`;
   }, [genres, selectedGenre, type]);
 
+  const gridColumnsClass = isHulu
+    ? "grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4"
+    : "grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6";
+
   return (
     <div className="app-page app-page-animate bg-[var(--app-bg)]">
       <div className={`app-page-content py-4 md:py-8 ${isHulu ? "md:py-6" : "md:py-8"}`}>
@@ -223,23 +227,42 @@ export default function Browse() {
       </div>
 
       {loading ? (
-        <div className="app-page-content space-y-8 pb-8">
-          <div>
-            <div className={`mb-3 animate-pulse rounded ${isHulu ? "h-4 w-52 bg-white/10" : "h-5 w-40 bg-[#1a1a1a]"}`} />
-            <div className="flex gap-2 overflow-hidden">
-              {Array.from({ length: 7 }).map((_, j) => (
-                <div
-                  key={j}
-                  className={`flex-shrink-0 animate-pulse rounded-2xl ${isHulu ? "w-[240px] bg-white/10" : "w-[132px] bg-[#1a1a1a] sm:w-[150px] md:w-[clamp(140px,15vw,200px)]"}`}
-                  style={{ aspectRatio: isHulu ? "16/9" : "2/3" }}
-                />
-              ))}
-            </div>
+        <div className="app-page-content pb-8">
+          <div className="mb-4 flex items-end justify-between">
+            <h2 className={`animate-pulse rounded ${isHulu ? "h-5 w-60 bg-white/12" : "h-5 w-44 bg-[#1a1a1a]"}`} />
+          </div>
+          <div className={`grid ${gridColumnsClass}`}>
+            {Array.from({ length: isHulu ? 8 : 12 }).map((_, j) => (
+              <div
+                key={j}
+                className={`animate-pulse rounded-2xl ${isHulu ? "bg-white/10" : "bg-[#1a1a1a]"}`}
+                style={{ aspectRatio: isHulu ? "16/9" : "2/3" }}
+              />
+            ))}
           </div>
         </div>
       ) : (
         <div className="pb-8">
-          <ContentRow key={`${type}-${selectedGenre}`} title={selectedGenreLabel} items={items} />
+          <div className="app-page-content">
+            <div className="mb-4 flex items-end justify-between gap-3">
+              <h2 className={`font-semibold text-white ${isHulu ? "text-2xl" : "text-lg md:text-xl"}`}>
+                {selectedGenreLabel}
+              </h2>
+              <p className="text-xs uppercase tracking-[0.2em] text-white/40">
+                {items.length} loaded
+              </p>
+            </div>
+
+            <div className={`grid ${gridColumnsClass}`}>
+              {items.map((item) => (
+                <ContentCard
+                  key={`${item.id}-${item.media_type}`}
+                  item={item}
+                  layout="grid"
+                />
+              ))}
+            </div>
+          </div>
 
           {!items.length && !error && (
             <div className="app-page-content px-4 text-sm text-white/60 md:px-12">
