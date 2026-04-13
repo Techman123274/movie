@@ -1,14 +1,15 @@
 import { useState, useEffect, useRef } from "react";
-import { useSearchParams, useNavigate, useOutletContext } from "react-router-dom";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import { Search as SearchIcon, X } from "lucide-react";
 import { searchMulti } from "@/lib/tmdb";
 import ContentCard from "@/components/ui/ContentCard";
 import { SearchCardSkeleton } from "@/components/ui/LoadingSkeleton";
+import { useAppOutletContext } from "@/lib/outlet-context";
 import { filterItemsForProfile } from "@/lib/preferences";
 import { useAppTheme } from "@/lib/theme";
 
 export default function Search() {
-  const { activeProfile } = useOutletContext() || {};
+  const { activeProfile } = useAppOutletContext();
   const { themeDefinition } = useAppTheme();
   const isHulu = themeDefinition.shellVariant === "hulu";
   const [searchParams, setSearchParams] = useSearchParams();

@@ -1,10 +1,24 @@
+import { useEffect } from "react";
 import { Outlet } from "react-router-dom";
 import Navbar from "./Navbar";
 import Footer from "./Footer";
 import { useAuth } from "@/lib/AuthContext";
+import { startPresenceHeartbeat, stopPresenceHeartbeat } from "@/lib/presence";
 
 export default function AppLayout({ activeProfile, onSwitchProfile }) {
   const { user, isAdmin } = useAuth();
+
+  useEffect(() => {
+    if (!user || isAdmin || !activeProfile) {
+      void stopPresenceHeartbeat();
+      return undefined;
+    }
+
+    void startPresenceHeartbeat({ activeProfile });
+    return () => {
+      void stopPresenceHeartbeat();
+    };
+  }, [activeProfile?.id, isAdmin, user?.id]);
 
   return (
     <div className="min-h-screen bg-[var(--app-bg)] pb-[calc(6rem+env(safe-area-inset-bottom))] text-[var(--text-primary)] md:pb-0">

@@ -19,7 +19,9 @@ import {
   getProgressPercent,
 } from "@/lib/playback";
 import { logSocialActivity } from "@/lib/social";
+import { clearWatching, setWatching } from "@/lib/presence";
 import { useAppTheme } from "@/lib/theme";
+import { useBooleanPreference } from "@/hooks/use-boolean-preference";
 
 const SAVE_INTERVAL_MS = 15000;
 const PLAYER_LOAD_TIMEOUT_MS = 10000;
@@ -33,6 +35,7 @@ export default function Player() {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const activeProfile = readActiveProfile();
+  const autoplayNextEpisode = useBooleanPreference("subflix_autoplay_next_episode", true);
 
   const season = parseInt(searchParams.get("season") || "1", 10);
   const episode = parseInt(searchParams.get("episode") || "1", 10);
@@ -299,6 +302,8 @@ export default function Player() {
           activityType: "watch_started",
           message: `${user.full_name || user.email || "A friend"} started watching`,
         });
+
+        void setWatching({ item: content, mediaType: type });
       }
 
       sessionRef.current = {
@@ -340,6 +345,7 @@ export default function Player() {
     return () => {
       syncElapsedMs();
       persistPlaybackProgress();
+      void clearWatching();
       window.clearInterval(saveInterval);
       window.clearInterval(progressTickInterval);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
@@ -373,6 +379,30 @@ export default function Player() {
       return { season, episode: episode + 1 };
     }
 
+    const knownSeasonEpisodeCount = Number(
+      content.seasons?.find((item) => item.season_number === season)?.episode_count
+    ) || 0;
+    if (knownSeasonEpisodeCount > 0 && episode < knownSeasonEpisodeCount) {
+      return { season, episode: episode + 1 };
+    }
+
+    const lastSeason = Number(content.last_episode_to_air?.season_number) || 0;
+    const lastEpisode = Number(content.last_episode_to_air?.episode_number) || 0;
+    if (lastSeason === season && lastEpisode > 0 && episode < lastEpisode) {
+      return { season, episode: episode + 1 };
+    }
+
+    const nextSeason = Number(content.next_episode_to_air?.season_number) || 0;
+    const nextEpisode = Number(content.next_episode_to_air?.episode_number) || 0;
+    if (nextSeason > 0 && nextEpisode > 0) {
+      if (season < nextSeason) {
+        return { season: nextSeason, episode: nextEpisode };
+      }
+      if (season === nextSeason && episode < nextEpisode) {
+        return { season: nextSeason, episode: nextEpisode };
+      }
+    }
+
     if (content.number_of_seasons && season < content.number_of_seasons) {
       return { season: season + 1, episode: 1 };
     }
@@ -387,18 +417,27 @@ export default function Player() {
   }, [type, id, season, episode]);
 
   useEffect(() => {
-    if (type !== "tv" || !nextEpisodeTarget || autoNextDismissed || !durationSeconds) {
+    if (autoplayNextEpisode) {
+      return;
+    }
+
+    setShowAutoNext(false);
+    setAutoNextCountdown(AUTO_NEXT_COUNTDOWN_SECONDS);
+  }, [autoplayNextEpisode]);
+
+  useEffect(() => {
+    if (!autoplayNextEpisode || type !== "tv" || !nextEpisodeTarget || autoNextDismissed || !durationSeconds) {
       return;
     }
 
     const remainingSeconds = durationSeconds - currentProgressSeconds;
-    if (remainingSeconds <= AUTO_NEXT_TRIGGER_SECONDS && remainingSeconds > 0) {
+    if (remainingSeconds <= AUTO_NEXT_TRIGGER_SECONDS && remainingSeconds > -5) {
       setShowAutoNext(true);
     }
-  }, [type, nextEpisodeTarget, autoNextDismissed, durationSeconds, currentProgressSeconds]);
+  }, [autoplayNextEpisode, type, nextEpisodeTarget, autoNextDismissed, durationSeconds, currentProgressSeconds]);
 
   useEffect(() => {
-    if (!showAutoNext || autoNextDismissed || !nextEpisodeTarget) {
+    if (!autoplayNextEpisode || !showAutoNext || autoNextDismissed || !nextEpisodeTarget) {
       return undefined;
     }
 
@@ -416,7 +455,7 @@ export default function Player() {
     }, 1000);
 
     return () => window.clearTimeout(timer);
-  }, [showAutoNext, autoNextDismissed, autoNextCountdown, nextEpisodeTarget, setSearchParams]);
+  }, [autoplayNextEpisode, showAutoNext, autoNextDismissed, autoNextCountdown, nextEpisodeTarget, setSearchParams]);
 
   const goToEpisode = (nextSeason, nextEpisode) => {
     setSearchParams({ season: String(nextSeason), episode: String(nextEpisode) });

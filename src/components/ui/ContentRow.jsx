@@ -1,14 +1,61 @@
-import { useRef, useState } from "react";
+import { useCallback, useLayoutEffect, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import ContentCard from "./ContentCard";
 import { useAppTheme } from "@/lib/theme";
 
+const SCROLL_EPSILON = 10;
+
 export default function ContentRow({ title, items = [], loading = false, layout = "row" }) {
   const rowRef = useRef(null);
   const [showLeft, setShowLeft] = useState(false);
-  const [showRight, setShowRight] = useState(true);
+  const [showRight, setShowRight] = useState(false);
   const { themeDefinition } = useAppTheme();
   const isHulu = themeDefinition.rowVariant === "hulu";
+
+  const updateScrollState = useCallback(() => {
+    const row = rowRef.current;
+    if (!row) {
+      return;
+    }
+
+    const canScroll = row.scrollWidth > row.clientWidth + SCROLL_EPSILON;
+    const nextShowLeft = canScroll && row.scrollLeft > SCROLL_EPSILON;
+    const nextShowRight = canScroll && row.scrollLeft < row.scrollWidth - row.clientWidth - SCROLL_EPSILON;
+
+    setShowLeft(nextShowLeft);
+    setShowRight(nextShowRight);
+  }, []);
+
+  useLayoutEffect(() => {
+    const row = rowRef.current;
+    if (!row) {
+      return undefined;
+    }
+
+    const frame = window.requestAnimationFrame(updateScrollState);
+
+    if (typeof ResizeObserver === "undefined") {
+      window.addEventListener("resize", updateScrollState);
+      return () => {
+        window.cancelAnimationFrame(frame);
+        window.removeEventListener("resize", updateScrollState);
+      };
+    }
+
+    const observer = new ResizeObserver(() => updateScrollState());
+    observer.observe(row);
+
+    if (row.parentElement) {
+      observer.observe(row.parentElement);
+    }
+
+    Array.from(row.children).forEach((child) => observer.observe(child));
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+      observer.disconnect();
+    };
+  }, [items.length, layout, isHulu, updateScrollState]);
 
   const scroll = (direction) => {
     const row = rowRef.current;
@@ -20,10 +67,16 @@ export default function ContentRow({ title, items = [], loading = false, layout 
     row.scrollBy({ left: direction === "left" ? -scrollAmount : scrollAmount, behavior: "smooth" });
 
     window.setTimeout(() => {
-      setShowLeft(row.scrollLeft > 0);
-      setShowRight(row.scrollLeft < row.scrollWidth - row.clientWidth - 10);
-    }, 400);
+      updateScrollState();
+    }, 420);
   };
+
+  const handleScroll = useCallback((event) => {
+    const target = event.currentTarget;
+    const canScroll = target.scrollWidth > target.clientWidth + SCROLL_EPSILON;
+    setShowLeft(canScroll && target.scrollLeft > SCROLL_EPSILON);
+    setShowRight(canScroll && target.scrollLeft < target.scrollWidth - target.clientWidth - SCROLL_EPSILON);
+  }, []);
 
   if (loading) {
     return (
@@ -84,11 +137,7 @@ export default function ContentRow({ title, items = [], loading = false, layout 
           ref={rowRef}
           className={`scrollbar-hide flex snap-x gap-3 overflow-x-auto ${isHulu ? "rounded-2xl" : "px-4 md:px-12"}`}
           style={isHulu ? undefined : { paddingBottom: "100px", marginBottom: "-100px" }}
-          onScroll={(event) => {
-            const target = event.currentTarget;
-            setShowLeft(target.scrollLeft > 0);
-            setShowRight(target.scrollLeft < target.scrollWidth - target.clientWidth - 10);
-          }}
+          onScroll={handleScroll}
         >
           {items.map((item) => (
             <ContentCard

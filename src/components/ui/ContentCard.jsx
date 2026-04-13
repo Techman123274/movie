@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Check, ChevronDown, Play, Plus, ThumbsUp } from "lucide-react";
+import { Check, ChevronDown, Info, Play, Plus, ThumbsUp } from "lucide-react";
 import { tmdbW300, tmdbW500, GENRE_MAP } from "@/lib/tmdb";
 import { base44 } from "@/api/base44Client";
 import { getMatchPercentage } from "@/lib/recommendations";
@@ -14,13 +14,21 @@ import {
 } from "@/lib/library";
 import { readActiveProfile } from "@/lib/preferences";
 import PlaybackProgressBar from "@/components/ui/PlaybackProgressBar";
+import MobileActionSheet from "@/components/ui/MobileActionSheet";
 import { useAppTheme } from "@/lib/theme";
 
-export default function ContentCard({ item, onWatchlistChange, isInWatchlist = false, layout = "row" }) {
+export default function ContentCard({ item, onWatchlistChange = undefined, isInWatchlist = false, layout = "row" }) {
   const [hovered, setHovered] = useState(false);
   const [inList, setInList] = useState(isInWatchlist);
   const [liked, setLiked] = useState(false);
-  const [watchlistLoaded, setWatchlistLoaded] = useState(false);
+  const [mobileActionsOpen, setMobileActionsOpen] = useState(false);
+  const [supportsHover, setSupportsHover] = useState(() => {
+    if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
+      return true;
+    }
+
+    return window.matchMedia("(hover: hover)").matches;
+  });
   const navigate = useNavigate();
   const activeProfile = readActiveProfile();
   const { themeDefinition } = useAppTheme();
@@ -36,6 +44,7 @@ export default function ContentCard({ item, onWatchlistChange, isInWatchlist = f
   const progressPercent = Math.max(0, Math.min(100, Math.round(Number(item.progress_percent) || 0)));
   const socialReason = item.social_reason || "";
   const userRating = Number(item.user_rating) || 0;
+  const showTouchActions = !supportsHover;
   const playPath = item.resume_path || buildWatchPath({
     mediaType,
     tmdbId: item.tmdb_id ?? item.id,
@@ -50,40 +59,52 @@ export default function ContentCard({ item, onWatchlistChange, isInWatchlist = f
     return layout === "grid" ? "hulu-grid" : "hulu-row";
   }, [isHulu, layout]);
 
-  const handlePlay = (event) => {
-    event.stopPropagation();
-    navigate(playPath);
-  };
+  useEffect(() => {
+    if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
+      return undefined;
+    }
 
-  const handleDetails = () => {
-    navigate(`/${mediaType}/${item.id}`);
-  };
+    const hoverMediaQuery = window.matchMedia("(hover: hover)");
+    const updateHoverSupport = () => setSupportsHover(hoverMediaQuery.matches);
+
+    updateHoverSupport();
+
+    if (typeof hoverMediaQuery.addEventListener === "function") {
+      hoverMediaQuery.addEventListener("change", updateHoverSupport);
+      return () => hoverMediaQuery.removeEventListener("change", updateHoverSupport);
+    }
+
+    hoverMediaQuery.addListener(updateHoverSupport);
+    return () => hoverMediaQuery.removeListener(updateHoverSupport);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
 
-    const loadLikeState = async () => {
+    const hydrateLibraryState = async () => {
       const user = await base44.auth.me().catch(() => null);
-      if (!user || cancelled) {
+      if (cancelled) {
         return;
       }
+
+      if (!user) {
+        setLiked(false);
+        setInList(Boolean(isInWatchlist));
+        return;
+      }
+
       setLiked(isItemLiked(user, activeProfile, item, mediaType));
+      const entry = await getWatchlistEntry(item, mediaType).catch(() => null);
+      if (cancelled) {
+        return;
+      }
+      setInList(Boolean(entry));
     };
 
-    loadLikeState();
+    void hydrateLibraryState();
 
-    const handleLibraryChanged = async () => {
-      const user = await base44.auth.me().catch(() => null);
-      if (!user || cancelled) {
-        return;
-      }
-      setLiked(isItemLiked(user, activeProfile, item, mediaType));
-      if (watchlistLoaded) {
-        const entry = await getWatchlistEntry(item, mediaType).catch(() => null);
-        if (!cancelled) {
-          setInList(Boolean(entry));
-        }
-      }
+    const handleLibraryChanged = () => {
+      void hydrateLibraryState();
     };
 
     window.addEventListener(LIBRARY_CHANGED_EVENT, handleLibraryChanged);
@@ -91,34 +112,31 @@ export default function ContentCard({ item, onWatchlistChange, isInWatchlist = f
       cancelled = true;
       window.removeEventListener(LIBRARY_CHANGED_EVENT, handleLibraryChanged);
     };
-  }, [activeProfile, item, mediaType, watchlistLoaded]);
+  }, [activeProfile, isInWatchlist, item, mediaType]);
 
-  useEffect(() => {
-    if (!hovered || watchlistLoaded) {
-      return undefined;
+  const handlePlay = (event) => {
+    event?.stopPropagation?.();
+    setMobileActionsOpen(false);
+    navigate(playPath);
+  };
+
+  const handleDetails = (event) => {
+    event?.stopPropagation?.();
+    setMobileActionsOpen(false);
+    navigate(`/${mediaType}/${item.id}`);
+  };
+
+  const handleCardSelect = () => {
+    if (!supportsHover) {
+      setMobileActionsOpen(true);
+      return;
     }
 
-    let cancelled = false;
-    const loadWatchlistState = async () => {
-      const user = await base44.auth.me().catch(() => null);
-      if (!user) {
-        return;
-      }
-      const entry = await getWatchlistEntry(item, mediaType).catch(() => null);
-      if (!cancelled) {
-        setInList(Boolean(entry));
-        setWatchlistLoaded(true);
-      }
-    };
-
-    loadWatchlistState();
-    return () => {
-      cancelled = true;
-    };
-  }, [hovered, item, mediaType, watchlistLoaded]);
+    handleDetails();
+  };
 
   const handleWatchlist = async (event) => {
-    event.stopPropagation();
+    event?.stopPropagation?.();
     try {
       const user = await base44.auth.me();
       if (!user) {
@@ -128,7 +146,6 @@ export default function ContentCard({ item, onWatchlistChange, isInWatchlist = f
 
       const result = await toggleWatchlistItem({ item: { ...item, title }, mediaType });
       setInList(result.inWatchlist);
-      setWatchlistLoaded(true);
       onWatchlistChange?.();
     } catch {
       base44.auth.redirectToLogin();
@@ -136,7 +153,7 @@ export default function ContentCard({ item, onWatchlistChange, isInWatchlist = f
   };
 
   const handleLike = async (event) => {
-    event.stopPropagation();
+    event?.stopPropagation?.();
     try {
       const user = await base44.auth.me();
       if (!user) {
@@ -165,9 +182,9 @@ export default function ContentCard({ item, onWatchlistChange, isInWatchlist = f
     return (
       <article
         className={`group relative flex-shrink-0 snap-start cursor-pointer ${cardWidthClass}`}
-        onClick={handleDetails}
-        onMouseEnter={() => setHovered(true)}
-        onMouseLeave={() => setHovered(false)}
+        onClick={handleCardSelect}
+        onMouseEnter={() => supportsHover && setHovered(true)}
+        onMouseLeave={() => supportsHover && setHovered(false)}
       >
         <div className="overflow-hidden rounded-[22px] border border-white/8 bg-[rgba(255,255,255,0.03)] transition-all duration-200 hover:border-white/18 hover:bg-[rgba(255,255,255,0.05)]">
           <div className="relative aspect-video overflow-hidden bg-[#111814]">
@@ -177,6 +194,7 @@ export default function ContentCard({ item, onWatchlistChange, isInWatchlist = f
                 alt={title}
                 className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
                 loading="lazy"
+                sizes="(max-width: 767px) 84vw, (max-width: 1279px) 260px, 280px"
               />
             ) : (
               <div className="flex h-full w-full items-center justify-center px-3 text-center text-xs text-gray-500">
@@ -248,11 +266,31 @@ export default function ContentCard({ item, onWatchlistChange, isInWatchlist = f
                     : "border-white/12 bg-white/[0.03] text-white hover:bg-white/[0.08]"
                 }`}
               >
-                <ThumbsUp className={`h-4 w-4 ${liked ? "fill-[var(--brand)]" : ""}`} />
+                <ThumbsUp className={`h-4 w-4 ${liked ? "fill-current" : ""}`} />
               </button>
             </div>
           </div>
         </div>
+
+        <MobileActionSheet
+          open={mobileActionsOpen}
+          onOpenChange={setMobileActionsOpen}
+          item={item}
+          title={title}
+          mediaType={mediaType}
+          year={year}
+          matchPercentage={matchPercentage}
+          rating={rating}
+          progressPercent={progressPercent}
+          genres={genres}
+          socialReason={socialReason}
+          inList={inList}
+          liked={liked}
+          onPlay={handlePlay}
+          onDetails={handleDetails}
+          onWatchlist={handleWatchlist}
+          onLike={handleLike}
+        />
       </article>
     );
   }
@@ -265,9 +303,9 @@ export default function ContentCard({ item, onWatchlistChange, isInWatchlist = f
     <div
       className={`group relative flex-shrink-0 snap-start cursor-pointer ${cardWidthClass}`}
       style={{ zIndex: hovered ? 50 : 1, position: "relative" }}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      onClick={handleDetails}
+      onMouseEnter={() => supportsHover && setHovered(true)}
+      onMouseLeave={() => supportsHover && setHovered(false)}
+      onClick={handleCardSelect}
     >
       <div className="relative aspect-[2/3] overflow-hidden rounded bg-[#1a1a1a]">
         {item.poster_path ? (
@@ -276,6 +314,7 @@ export default function ContentCard({ item, onWatchlistChange, isInWatchlist = f
             alt={title}
             className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
             loading="lazy"
+            sizes={layout === "grid" ? "(max-width: 767px) 42vw, (max-width: 1279px) 30vw, 16vw" : "(max-width: 767px) 36vw, 200px"}
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center bg-[#1a1a1a]">
@@ -283,7 +322,7 @@ export default function ContentCard({ item, onWatchlistChange, isInWatchlist = f
           </div>
         )}
 
-        <div className={`absolute inset-0 bg-black/20 transition-opacity duration-200 ${hovered ? "opacity-100" : "opacity-0"}`} />
+        <div className={`absolute inset-0 bg-black/20 transition-opacity duration-200 ${hovered || showTouchActions ? "opacity-100" : "opacity-0"}`} />
 
         {topRank ? (
           <div className="absolute left-2 top-2 rounded bg-[#E50914] px-2 py-1 text-xs font-black text-white shadow-lg">
@@ -300,7 +339,48 @@ export default function ContentCard({ item, onWatchlistChange, isInWatchlist = f
         </div>
       </div>
 
-      {hovered && (
+      {showTouchActions && (
+        <div className="mt-2 grid grid-cols-4 gap-2 rounded-2xl border border-white/10 bg-white/[0.04] p-2">
+          <button
+            onClick={handlePlay}
+            className="inline-flex min-h-11 items-center justify-center rounded-xl bg-white text-black transition-colors hover:bg-gray-200"
+            aria-label={`Play ${title}`}
+          >
+            <Play className="h-4 w-4 fill-black" />
+          </button>
+          <button
+            onClick={handleDetails}
+            className="inline-flex min-h-11 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-white transition-colors hover:bg-white/[0.08]"
+            aria-label={`View details for ${title}`}
+          >
+            <Info className="h-4 w-4" />
+          </button>
+          <button
+            onClick={handleWatchlist}
+            className={`inline-flex min-h-11 items-center justify-center rounded-xl border transition-colors ${
+              inList
+                ? "border-[var(--brand)] bg-[rgba(var(--brand-rgb),0.14)] text-[var(--brand)]"
+                : "border-white/10 bg-white/[0.04] text-white hover:bg-white/[0.08]"
+            }`}
+            aria-label={inList ? `Remove ${title} from My List` : `Add ${title} to My List`}
+          >
+            {inList ? <Check className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+          </button>
+          <button
+            onClick={handleLike}
+            className={`inline-flex min-h-11 items-center justify-center rounded-xl border transition-colors ${
+              liked
+                ? "border-[var(--brand)] bg-[rgba(var(--brand-rgb),0.14)] text-[var(--brand)]"
+                : "border-white/10 bg-white/[0.04] text-white hover:bg-white/[0.08]"
+            }`}
+            aria-label={liked ? `Unlike ${title}` : `Like ${title}`}
+          >
+            <ThumbsUp className={`h-4 w-4 ${liked ? "fill-current" : ""}`} />
+          </button>
+        </div>
+      )}
+
+      {hovered && supportsHover && (
         <div
           className="absolute z-30 overflow-hidden rounded-md border border-white/10 bg-[#141414] shadow-2xl"
           style={{
@@ -318,12 +398,16 @@ export default function ContentCard({ item, onWatchlistChange, isInWatchlist = f
                 src={tmdbW500(item.backdrop_path)}
                 alt={title}
                 className="h-full w-full object-cover"
+                loading="lazy"
+                sizes="280px"
               />
             ) : item.poster_path ? (
               <img
                 src={tmdbW300(item.poster_path)}
                 alt={title}
                 className="h-full w-full object-cover"
+                loading="lazy"
+                sizes="280px"
               />
             ) : null}
             <div className="absolute inset-0 gradient-bottom" />
@@ -408,6 +492,26 @@ export default function ContentCard({ item, onWatchlistChange, isInWatchlist = f
           </div>
         </div>
       )}
+
+      <MobileActionSheet
+        open={mobileActionsOpen}
+        onOpenChange={setMobileActionsOpen}
+        item={item}
+        title={title}
+        mediaType={mediaType}
+        year={year}
+        matchPercentage={matchPercentage}
+        rating={rating}
+        progressPercent={progressPercent}
+        genres={genres}
+        socialReason={socialReason}
+        inList={inList}
+        liked={liked}
+        onPlay={handlePlay}
+        onDetails={handleDetails}
+        onWatchlist={handleWatchlist}
+        onLike={handleLike}
+      />
     </div>
   );
 }

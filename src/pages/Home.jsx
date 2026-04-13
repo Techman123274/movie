@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
-import { useOutletContext } from "react-router-dom";
 import HeroBanner from "@/components/home/HeroBanner";
+import SessionStats from "@/components/home/SessionStats";
 import ContentRow from "@/components/ui/ContentRow";
 import { HeroSkeleton, RowSkeleton } from "@/components/ui/LoadingSkeleton";
 import NoApiKeyBanner from "@/components/home/NoApiKeyBanner";
@@ -34,6 +34,7 @@ import {
   saveTasteProfile,
 } from "@/lib/recommendations";
 import { LIBRARY_CHANGED_EVENT, readLikedItems } from "@/lib/library";
+import { useAppOutletContext } from "@/lib/outlet-context";
 import { attachPlaybackProgress, buildContinueWatchingItems } from "@/lib/playback";
 import { listFriendActivityItems, SOCIAL_CHANGED_EVENT } from "@/lib/social";
 import { useAppTheme } from "@/lib/theme";
@@ -68,7 +69,7 @@ const dedupeItems = (items) => {
 const buildShelf = (...groups) => dedupeItems(groups.flat().filter(Boolean));
 
 export default function Home() {
-  const { user, activeProfile } = useOutletContext() || {};
+  const { user, activeProfile } = useAppOutletContext();
   const { themeDefinition } = useAppTheme();
   const isHulu = themeDefinition.shellVariant === "hulu";
   const [heroItems, setHeroItems] = useState([]);
@@ -538,6 +539,13 @@ export default function Home() {
     <div className="bg-[var(--app-bg)]">
       {!hasApiKey && <NoApiKeyBanner />}
       <HeroBanner items={heroItemsWithProgress} />
+      {user && (
+        <SessionStats
+          historyEntries={historyEntries}
+          myList={myList}
+          friendActivityItems={friendActivityItems}
+        />
+      )}
 
       <div className={`relative z-10 pb-8 ${isHulu ? "-mt-1" : ""}`}>
         {user && continueWatching.length > 0 && (

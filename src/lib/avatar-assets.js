@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { base44 } from "@/api/base44Client";
 import {
   AVATAR_COLORS,

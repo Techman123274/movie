@@ -6,6 +6,12 @@ export const LIBRARY_CHANGED_EVENT = "subflix:library-changed";
 
 const isBrowser = typeof window !== "undefined";
 const LIKES_STORAGE_PREFIX = "subflix_likes";
+const WATCHLIST_CACHE_LIMIT = 500;
+
+let watchlistCache = {
+  items: null,
+  promise: null,
+};
 
 const getMediaIdentity = (item, fallbackType) => {
   const mediaType = item?.media_type || fallbackType || (item?.title ? "movie" : "tv");
@@ -30,6 +36,41 @@ const dispatchLibraryChange = (detail) => {
       detail,
     })
   );
+};
+
+const setWatchlistCache = (items) => {
+  watchlistCache = {
+    items: Array.isArray(items) ? items : [],
+    promise: Promise.resolve(Array.isArray(items) ? items : []),
+  };
+};
+
+const clearWatchlistCache = () => {
+  watchlistCache = {
+    items: null,
+    promise: null,
+  };
+};
+
+export const listWatchlistItems = async () => {
+  if (watchlistCache.items) {
+    return watchlistCache.items;
+  }
+
+  if (!watchlistCache.promise) {
+    watchlistCache.promise = base44.entities.Watchlist
+      .list("-created_date", WATCHLIST_CACHE_LIMIT)
+      .then((items) => {
+        setWatchlistCache(items);
+        return watchlistCache.items || [];
+      })
+      .catch((error) => {
+        clearWatchlistCache();
+        throw error;
+      });
+  }
+
+  return watchlistCache.promise;
 };
 
 const normalizeLikedItem = (item, fallbackType) => {
@@ -131,12 +172,12 @@ export const getWatchlistEntry = async (item, fallbackType) => {
     return null;
   }
 
-  const entries = await base44.entities.Watchlist.filter({
-    tmdb_id: identity.tmdb_id,
-    media_type: identity.media_type,
-  });
-
-  return entries[0] || null;
+  const entries = await listWatchlistItems().catch(() => []);
+  return entries.find(
+    (entry) =>
+      Number(entry?.tmdb_id) === identity.tmdb_id &&
+      entry?.media_type === identity.media_type
+  ) || null;
 };
 
 export const toggleWatchlistItem = async ({ item, mediaType }) => {
@@ -149,6 +190,9 @@ export const toggleWatchlistItem = async ({ item, mediaType }) => {
 
   if (existing) {
     await base44.entities.Watchlist.delete(existing.id);
+    setWatchlistCache(
+      (watchlistCache.items || []).filter((entry) => Number(entry?.id) !== Number(existing.id))
+    );
     dispatchLibraryChange({
       scope: "watchlist",
       action: "removed",
@@ -168,6 +212,7 @@ export const toggleWatchlistItem = async ({ item, mediaType }) => {
     release_date: item?.release_date || item?.first_air_date || null,
     genre_ids: item?.genre_ids || item?.genres?.map((genre) => genre.id) || [],
   });
+  setWatchlistCache([created, ...(watchlistCache.items || [])]);
 
   const user = await base44.auth.me().catch(() => null);
   const profile = readActiveProfile();

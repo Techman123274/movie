@@ -1,24 +1,44 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Check, Info, Play, Plus } from "lucide-react";
-import { tmdbOriginal, tmdbW300 } from "@/lib/tmdb";
+import { getMovieDetails, getTVDetails, getYouTubeTrailer, tmdbOriginal, tmdbW300 } from "@/lib/tmdb";
 import { base44 } from "@/api/base44Client";
 import { getMatchPercentage } from "@/lib/recommendations";
 import { buildWatchPath, getResumeLabel } from "@/lib/playback";
 import PlaybackProgressBar from "@/components/ui/PlaybackProgressBar";
 import { useAppTheme } from "@/lib/theme";
+import { useBooleanPreference } from "@/hooks/use-boolean-preference";
+import { useIsMobile } from "@/hooks/use-mobile";
+import {
+  getWatchlistEntry,
+  LIBRARY_CHANGED_EVENT,
+  toggleWatchlistItem,
+} from "@/lib/library";
+
+const createParallaxState = (x = 0, y = 0) => ({ x, y });
+
+const getPointFromPointerEvent = (event) => ({
+  x: event.clientX,
+  y: event.clientY,
+});
 
 export default function HeroBanner({ items = [] }) {
   const [current, setCurrent] = useState(0);
   const [inList, setInList] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState("");
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+  const [parallax, setParallax] = useState(createParallaxState());
   const navigate = useNavigate();
   const { themeDefinition } = useAppTheme();
   const isHulu = themeDefinition.heroVariant === "hulu";
+  const autoplayPreviews = useBooleanPreference("subflix_autoplay_previews", true);
+  const isMobile = useIsMobile();
 
   const item = items[current];
+  const mediaType = item?.media_type || (item?.title ? "movie" : "tv");
 
   useEffect(() => {
-    if (!items.length) {
+    if (!items.length || !autoplayPreviews) {
       return undefined;
     }
 
@@ -27,11 +47,105 @@ export default function HeroBanner({ items = [] }) {
     }, isHulu ? 9000 : 8000);
 
     return () => window.clearInterval(timer);
-  }, [isHulu, items.length]);
+  }, [isHulu, items.length, autoplayPreviews]);
 
   useEffect(() => {
-    setInList(false);
+    if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
+      return undefined;
+    }
+
+    const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const updatePreference = () => setPrefersReducedMotion(mediaQuery.matches);
+
+    updatePreference();
+
+    if (typeof mediaQuery.addEventListener === "function") {
+      mediaQuery.addEventListener("change", updatePreference);
+      return () => mediaQuery.removeEventListener("change", updatePreference);
+    }
+
+    mediaQuery.addListener(updatePreference);
+    return () => mediaQuery.removeListener(updatePreference);
+  }, []);
+
+  useEffect(() => {
+    if (prefersReducedMotion) {
+      setParallax(createParallaxState());
+    }
+  }, [prefersReducedMotion]);
+
+  useEffect(() => {
+    setParallax(createParallaxState());
   }, [current]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadWatchlistState = async () => {
+      if (!item) {
+        setInList(false);
+        return;
+      }
+
+      const user = await base44.auth.me().catch(() => null);
+      if (cancelled) {
+        return;
+      }
+
+      if (!user) {
+        setInList(false);
+        return;
+      }
+
+      const entry = await getWatchlistEntry(item, mediaType).catch(() => null);
+      if (!cancelled) {
+        setInList(Boolean(entry));
+      }
+    };
+
+    void loadWatchlistState();
+
+    const handleLibraryChanged = () => {
+      void loadWatchlistState();
+    };
+
+    window.addEventListener(LIBRARY_CHANGED_EVENT, handleLibraryChanged);
+    return () => {
+      cancelled = true;
+      window.removeEventListener(LIBRARY_CHANGED_EVENT, handleLibraryChanged);
+    };
+  }, [item, mediaType]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadPreview = async () => {
+      if (!item || !autoplayPreviews || isMobile) {
+        setPreviewUrl("");
+        return;
+      }
+
+      const tmdbId = Number(item.tmdb_id ?? item.id);
+      if (!tmdbId) {
+        setPreviewUrl("");
+        return;
+      }
+
+      const detailLoader = mediaType === "tv" ? getTVDetails : getMovieDetails;
+      const data = await detailLoader(tmdbId).catch(() => null);
+      if (cancelled) {
+        return;
+      }
+
+      setPreviewUrl(getYouTubeTrailer(data?.videos, { autoplay: true, mute: true }) || "");
+    };
+
+    void loadPreview();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [autoplayPreviews, isMobile, item, mediaType]);
 
   if (!item) {
     return (
@@ -44,7 +158,6 @@ export default function HeroBanner({ items = [] }) {
   }
 
   const title = item.title || item.name || "";
-  const mediaType = item.media_type || (item.title ? "movie" : "tv");
   const overview = item.overview || "";
   const year = (item.release_date || item.first_air_date || "").slice(0, 4);
   const rating = item.vote_average ? Math.round(item.vote_average * 10) : null;
@@ -69,47 +182,79 @@ export default function HeroBanner({ items = [] }) {
         return;
       }
 
-      if (inList) {
-        const existing = await base44.entities.Watchlist.filter({ tmdb_id: item.id, created_by: user.email });
-        if (existing.length > 0) {
-          await base44.entities.Watchlist.delete(existing[0].id);
-        }
-        setInList(false);
-      } else {
-        await base44.entities.Watchlist.create({
-          tmdb_id: item.id,
-          media_type: mediaType,
-          title,
-          poster_path: item.poster_path,
-          backdrop_path: item.backdrop_path,
-          vote_average: item.vote_average,
-          overview,
-          release_date: item.release_date || item.first_air_date,
-          genre_ids: item.genre_ids,
-        });
-        setInList(true);
-      }
+      const result = await toggleWatchlistItem({ item: { ...item, title }, mediaType });
+      setInList(result.inWatchlist);
     } catch {
       base44.auth.redirectToLogin();
     }
   };
 
+  const updateParallax = (event) => {
+    if (prefersReducedMotion || isMobile) {
+      return;
+    }
+
+    const bounds = event.currentTarget.getBoundingClientRect();
+    const point = getPointFromPointerEvent(event);
+    const relativeX = (point.x - bounds.left) / bounds.width - 0.5;
+    const relativeY = (point.y - bounds.top) / bounds.height - 0.5;
+
+    setParallax(createParallaxState(relativeX * 24, relativeY * 18));
+  };
+
+  const resetParallax = () => setParallax(createParallaxState());
+
+  const backgroundTransform = prefersReducedMotion
+    ? undefined
+    : { transform: `translate3d(${parallax.x}px, ${parallax.y}px, 0) scale(1.04)` };
+  const overlayTransform = prefersReducedMotion
+    ? undefined
+    : { transform: `translate3d(${parallax.x * -0.55}px, ${parallax.y * -0.55}px, 0)` };
+
   if (isHulu) {
     return (
       <section className="px-4 pb-8 pt-24 md:px-12 md:pt-28">
         <div className="mx-auto max-w-7xl">
-          <div className="relative overflow-hidden rounded-[26px] border border-white/8 bg-[#0f1713] shadow-[0_30px_80px_rgba(0,0,0,0.35)]">
+          <div
+            className="relative overflow-hidden rounded-[26px] border border-white/8 bg-[#0f1713] shadow-[0_30px_80px_rgba(0,0,0,0.35)]"
+            style={{ perspective: "1400px" }}
+            onPointerMove={updateParallax}
+            onPointerLeave={resetParallax}
+          >
             <div className="absolute inset-0 overflow-hidden">
               {item.backdrop_path ? (
                 <img
                   src={tmdbOriginal(item.backdrop_path)}
                   alt={title}
-                  className="h-full w-full object-cover object-center"
-                  style={{ transition: "opacity 0.8s ease" }}
+                  className="h-full w-full object-cover object-center transition-transform duration-300 ease-out"
+                  style={backgroundTransform}
                 />
               ) : (
-                <div className="h-full w-full bg-[radial-gradient(circle_at_top_left,#113524_0%,#09110d_60%,#050806_100%)]" />
+                <div
+                  className="h-full w-full bg-[radial-gradient(circle_at_top_left,#113524_0%,#09110d_60%,#050806_100%)] transition-transform duration-300 ease-out"
+                  style={backgroundTransform}
+                />
               )}
+              {previewUrl && (
+                <div className="absolute inset-0 pointer-events-none opacity-75">
+                  <iframe
+                    key={previewUrl}
+                    src={previewUrl}
+                    title={`${title} preview`}
+                    className="h-full w-full scale-[1.35] border-0"
+                    allow="autoplay; encrypted-media; picture-in-picture"
+                    tabIndex={-1}
+                  />
+                </div>
+              )}
+              <div
+                className="pointer-events-none absolute -left-16 top-[-5%] h-[48%] w-[42%] rounded-full bg-[radial-gradient(circle,rgba(29,231,144,0.24)_0%,rgba(29,231,144,0.06)_42%,transparent_72%)] blur-3xl animate-ambient-float"
+                style={overlayTransform}
+              />
+              <div
+                className="pointer-events-none absolute bottom-[-12%] right-[-6%] h-[44%] w-[34%] rounded-full bg-[radial-gradient(circle,rgba(255,255,255,0.12)_0%,rgba(255,255,255,0.03)_40%,transparent_74%)] blur-3xl animate-ambient-float"
+                style={backgroundTransform}
+              />
               <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(6,10,8,0.96)_0%,rgba(8,14,11,0.78)_42%,rgba(8,14,11,0.3)_100%)]" />
               <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(5,8,6,0.08)_0%,rgba(5,8,6,0.72)_100%)]" />
             </div>
@@ -200,6 +345,8 @@ export default function HeroBanner({ items = [] }) {
                             src={tmdbW300(spotlightItem.backdrop_path || spotlightItem.poster_path)}
                             alt={spotlightItem.title || spotlightItem.name}
                             className="h-full w-full object-cover"
+                            loading="lazy"
+                            sizes="96px"
                           />
                         ) : null}
                       </div>
@@ -223,18 +370,46 @@ export default function HeroBanner({ items = [] }) {
   }
 
   return (
-    <div className="relative h-[86svh] min-h-[560px] w-full md:h-screen md:max-h-[900px] md:min-h-[600px]">
+    <div
+      className="relative h-[86svh] min-h-[560px] w-full md:h-screen md:max-h-[900px] md:min-h-[600px]"
+      style={{ perspective: "1400px" }}
+      onPointerMove={updateParallax}
+      onPointerLeave={resetParallax}
+    >
       <div className="absolute inset-0 overflow-hidden">
         {item.backdrop_path ? (
           <img
             src={tmdbOriginal(item.backdrop_path)}
             alt={title}
-            className="h-full w-full object-cover object-center"
-            style={{ transition: "opacity 0.8s ease" }}
+            className="h-full w-full object-cover object-center transition-transform duration-300 ease-out"
+            style={backgroundTransform}
           />
         ) : (
-          <div className="h-full w-full bg-gradient-to-br from-gray-900 to-black" />
+          <div
+            className="h-full w-full bg-gradient-to-br from-gray-900 to-black transition-transform duration-300 ease-out"
+            style={backgroundTransform}
+          />
         )}
+        {previewUrl && (
+          <div className="absolute inset-0 pointer-events-none opacity-70">
+            <iframe
+              key={previewUrl}
+              src={previewUrl}
+              title={`${title} preview`}
+              className="h-full w-full scale-[1.35] border-0"
+              allow="autoplay; encrypted-media; picture-in-picture"
+              tabIndex={-1}
+            />
+          </div>
+        )}
+        <div
+          className="pointer-events-none absolute left-[-12%] top-[-10%] h-[46%] w-[40%] rounded-full bg-[radial-gradient(circle,rgba(229,9,20,0.24)_0%,rgba(229,9,20,0.04)_40%,transparent_74%)] blur-3xl animate-ambient-float"
+          style={overlayTransform}
+        />
+        <div
+          className="pointer-events-none absolute bottom-[-14%] right-[-8%] h-[42%] w-[34%] rounded-full bg-[radial-gradient(circle,rgba(255,255,255,0.12)_0%,rgba(255,255,255,0.02)_44%,transparent_72%)] blur-3xl animate-ambient-float"
+          style={backgroundTransform}
+        />
         <div className="absolute inset-0 gradient-overlay" />
         <div className="absolute inset-0 gradient-bottom" />
         <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] via-transparent to-transparent" />

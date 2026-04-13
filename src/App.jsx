@@ -10,23 +10,9 @@ import { AppThemeProvider } from '@/lib/theme';
 import AppLayout from '@/components/layout/AppLayout';
 
 // Pages
-import { useEffect, useState } from 'react';
+import { Suspense, lazy, useEffect, useState } from 'react';
 import NetflixLoadingScreen from '@/components/auth/NetflixLoadingScreen';
 import ProfileSelector from '@/components/auth/ProfileSelector';
-import SignIn from '@/pages/SignIn';
-import Home from '@/pages/Home';
-import Browse from '@/pages/Browse';
-import MovieDetail from '@/pages/MovieDetail';
-import TVDetail from '@/pages/TVDetail';
-import Player from '@/pages/Player';
-import Search from '@/pages/Search';
-import MyList from '@/pages/MyList';
-import History from '@/pages/History';
-import SettingsPage from '@/pages/Settings';
-import SocialHub from '@/pages/SocialHub';
-import AdminPage from '@/pages/Admin';
-import SupportPage from '@/pages/SupportPage';
-import SpeedTestPage from '@/pages/SpeedTestPage';
 import {
   ACTIVE_PROFILE_CHANGED_EVENT,
   readActiveProfile,
@@ -34,6 +20,27 @@ import {
 } from '@/lib/preferences';
 import { fetchPublicSiteSettings, getDefaultSiteSettings } from '@/lib/admin-config';
 import { getSupportPageByPath, SUPPORT_PAGES } from '@/lib/support-pages';
+
+const SignIn = lazy(() => import('@/pages/SignIn'));
+const Home = lazy(() => import('@/pages/Home'));
+const Browse = lazy(() => import('@/pages/Browse'));
+const MovieDetail = lazy(() => import('@/pages/MovieDetail'));
+const TVDetail = lazy(() => import('@/pages/TVDetail'));
+const Player = lazy(() => import('@/pages/Player'));
+const Search = lazy(() => import('@/pages/Search'));
+const MyList = lazy(() => import('@/pages/MyList'));
+const History = lazy(() => import('@/pages/History'));
+const SettingsPage = lazy(() => import('@/pages/Settings'));
+const SocialHub = lazy(() => import('@/pages/SocialHub'));
+const AdminPage = lazy(() => import('@/pages/Admin'));
+const SupportPage = lazy(() => import('@/pages/SupportPage'));
+const SpeedTestPage = lazy(() => import('@/pages/SpeedTestPage'));
+
+const SuspendedRoute = ({ children }) => (
+  <Suspense fallback={<RouteLoadingFallback />}>
+    {children}
+  </Suspense>
+);
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, user, isAdmin } = useAuth();
@@ -121,12 +128,24 @@ const AuthenticatedApp = () => {
   if (authError) {
     if (authError.type === 'auth_required') {
       if (location.pathname === '/speed-test') {
-        return <SpeedTestPage standalone />;
+        return (
+          <SuspendedRoute>
+            <SpeedTestPage standalone />
+          </SuspendedRoute>
+        );
       }
       if (publicSupportPage) {
-        return <SupportPage page={publicSupportPage} standalone />;
+        return (
+          <SuspendedRoute>
+            <SupportPage page={publicSupportPage} standalone />
+          </SuspendedRoute>
+        );
       }
-      return <SignIn />;
+      return (
+        <SuspendedRoute>
+          <SignIn />
+        </SuspendedRoute>
+      );
     }
   }
 
@@ -141,26 +160,26 @@ const AuthenticatedApp = () => {
 
   return (
     <Routes>
-      <Route path="/admin" element={<AdminPage />} />
+      <Route path="/admin" element={<SuspendedRoute><AdminPage /></SuspendedRoute>} />
 
       {/* Player - fullscreen, no layout */}
-      <Route path="/watch/:type/:id" element={<Player />} />
+      <Route path="/watch/:type/:id" element={<SuspendedRoute><Player /></SuspendedRoute>} />
 
       {/* All other pages with layout */}
       <Route element={<AppLayout activeProfile={activeProfile} onSwitchProfile={handleSwitchProfile} />}>
-        <Route path="/" element={<Home />} />
-        <Route path="/browse" element={<Browse />} />
-        <Route path="/movie/:id" element={<MovieDetail />} />
-        <Route path="/tv/:id" element={<TVDetail />} />
-        <Route path="/search" element={<Search />} />
-        <Route path="/my-list" element={<MyList />} />
-        <Route path="/history" element={<History />} />
-        <Route path="/social" element={<SocialHub />} />
-        <Route path="/settings" element={<SettingsPage />} />
-        <Route path="/setup" element={<SettingsPage />} />
-        <Route path="/speed-test" element={<SpeedTestPage />} />
+        <Route path="/" element={<SuspendedRoute><Home /></SuspendedRoute>} />
+        <Route path="/browse" element={<SuspendedRoute><Browse /></SuspendedRoute>} />
+        <Route path="/movie/:id" element={<SuspendedRoute><MovieDetail /></SuspendedRoute>} />
+        <Route path="/tv/:id" element={<SuspendedRoute><TVDetail /></SuspendedRoute>} />
+        <Route path="/search" element={<SuspendedRoute><Search /></SuspendedRoute>} />
+        <Route path="/my-list" element={<SuspendedRoute><MyList /></SuspendedRoute>} />
+        <Route path="/history" element={<SuspendedRoute><History /></SuspendedRoute>} />
+        <Route path="/social" element={<SuspendedRoute><SocialHub /></SuspendedRoute>} />
+        <Route path="/settings" element={<SuspendedRoute><SettingsPage /></SuspendedRoute>} />
+        <Route path="/setup" element={<SuspendedRoute><SettingsPage /></SuspendedRoute>} />
+        <Route path="/speed-test" element={<SuspendedRoute><SpeedTestPage /></SuspendedRoute>} />
         {SUPPORT_PAGES.filter((page) => page.path !== '/speed-test').map((page) => (
-          <Route key={page.path} path={page.path} element={<SupportPage page={page} />} />
+          <Route key={page.path} path={page.path} element={<SuspendedRoute><SupportPage page={page} /></SuspendedRoute>} />
         ))}
         <Route path="*" element={<PageNotFound />} />
       </Route>
@@ -194,6 +213,22 @@ function UpdateModeScreen({ title, message }) {
           </h1>
           <p className="mx-auto mt-5 max-w-2xl text-base text-white/70 md:text-lg">
             {message || "We are rolling out a fresh update right now. Please check back in a few minutes."}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function RouteLoadingFallback() {
+  return (
+    <div className="min-h-screen bg-[var(--app-bg)] text-white">
+      <div className="flex min-h-screen items-center justify-center px-6">
+        <div className="w-full max-w-md rounded-[2rem] border border-white/10 bg-[var(--card-bg)] p-8 text-center shadow-[0_25px_80px_rgba(0,0,0,0.45)]">
+          <p className="text-xs font-semibold uppercase tracking-[0.32em] text-[var(--brand)]">Loading</p>
+          <h2 className="mt-4 text-2xl font-black tracking-tight">Preparing your next screen</h2>
+          <p className="mt-3 text-sm text-white/65">
+            We&apos;re streaming in just the code this page needs.
           </p>
         </div>
       </div>

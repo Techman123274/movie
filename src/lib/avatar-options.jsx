@@ -1,3 +1,4 @@
+// @ts-nocheck
 const avatarImageModules = import.meta.glob("../assets/avatars/*.{png,jpg,jpeg,webp,avif,gif}", {
   eager: true,
   import: "default",

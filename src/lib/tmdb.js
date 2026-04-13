@@ -22,6 +22,7 @@ const tmdbFetch = async (endpoint, params = {}) => {
     throw new Error("TMDB credentials are not configured.");
   }
 
+  /** @type {HeadersInit} */
   const headers = {};
 
   if (accessToken) {
@@ -96,13 +97,29 @@ export const getByGenre = (genreId, mediaType = "movie", page = 1) =>
 export const getPersonDetails = (id) =>
   tmdbFetch(`/person/${id}`, { append_to_response: "movie_credits,tv_credits,images" });
 
+const buildYouTubeEmbedUrl = (videoKey, options = {}) => {
+  if (!videoKey) {
+    return null;
+  }
+
+  const params = new URLSearchParams({
+    autoplay: options.autoplay === false ? "0" : "1",
+    mute: options.mute === false ? "0" : "1",
+    playsinline: "1",
+    rel: "0",
+    modestbranding: "1",
+  });
+
+  return `https://www.youtube.com/embed/${videoKey}?${params.toString()}`;
+};
+
 // Videos helper
-export const getYouTubeTrailer = (videos) => {
+export const getYouTubeTrailer = (videos, options = {}) => {
   if (!videos?.results) return null;
   const trailer = videos.results.find(
     (v) => v.site === "YouTube" && (v.type === "Trailer" || v.type === "Teaser")
   );
-  return trailer ? `https://www.youtube.com/embed/${trailer.key}?autoplay=1&mute=1` : null;
+  return trailer ? buildYouTubeEmbedUrl(trailer.key, options) : null;
 };
 
 export const GENRE_MAP = {

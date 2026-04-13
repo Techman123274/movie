@@ -7,7 +7,7 @@
     "jsx": "react-jsx",
     "module": "esnext",
     "moduleResolution": "bundler",
-    "lib": ["esnext", "dom"],
+    "lib": ["dom", "dom.iterable", "esnext"],
     "target": "esnext",
     "checkJs": true,
     "skipLibCheck": true,
@@ -16,6 +16,14 @@
     "resolveJsonModule": true,
     "types": []
   },
-  "include": ["src/components/**/*.js", "src/pages/**/*.jsx", "src/Layout.jsx"],
+  "include": [
+    "src/App.jsx",
+    "src/main.jsx",
+    "src/components/**/*.js",
+    "src/components/**/*.jsx",
+    "src/hooks/**/*.jsx",
+    "src/pages/**/*.jsx",
+    "src/**/*.d.ts"
+  ],
   "exclude": ["node_modules", "dist", "src/vite-plugins", "src/components/ui", "src/api", "src/lib"]
 } 

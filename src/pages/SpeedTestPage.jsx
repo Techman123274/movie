@@ -2,12 +2,20 @@ import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { Activity, Gauge, MonitorPlay, RotateCcw, Wifi } from "lucide-react";
 
+/**
+ * @typedef {{
+ *   effectiveType?: string;
+ *   downlink?: number;
+ * }} BrowserConnection
+ */
+
 const getConnectionDetails = () => {
   if (typeof navigator === "undefined") {
     return null;
   }
 
-  return navigator.connection || navigator.mozConnection || navigator.webkitConnection || null;
+  const browserNavigator = /** @type {Navigator & { connection?: BrowserConnection; mozConnection?: BrowserConnection; webkitConnection?: BrowserConnection }} */ (navigator);
+  return browserNavigator.connection || browserNavigator.mozConnection || browserNavigator.webkitConnection || null;
 };
 
 const getBestResourceUrl = () => {
@@ -15,8 +23,8 @@ const getBestResourceUrl = () => {
     return "/";
   }
 
-  const entries = performance
-    .getEntriesByType("resource")
+  const entries = /** @type {PerformanceResourceTiming[]} */ (performance
+    .getEntriesByType("resource"))
     .filter((entry) => {
       if (!entry?.name || typeof entry.name !== "string") {
         return false;

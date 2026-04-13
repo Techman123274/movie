@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useParams, useNavigate, useOutletContext } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { Play, Plus, Check, X, Star, Clock, ThumbsUp } from "lucide-react";
 import { getMovieDetails, tmdbOriginal, tmdbW500, tmdbW185, getYouTubeTrailer } from "@/lib/tmdb";
 import ContentRow from "@/components/ui/ContentRow";
@@ -24,10 +24,11 @@ import {
   saveRating,
 } from "@/lib/social";
 import { useAppTheme } from "@/lib/theme";
+import { useAppOutletContext } from "@/lib/outlet-context";
 
 export default function MovieDetail() {
   const { id } = useParams();
-  const { activeProfile } = useOutletContext() || {};
+  const { activeProfile } = useAppOutletContext();
   const { themeDefinition } = useAppTheme();
   const isHulu = themeDefinition.detailVariant === "hulu";
   const navigate = useNavigate();

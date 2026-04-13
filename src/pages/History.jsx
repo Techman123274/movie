@@ -1,15 +1,16 @@
 import { useState, useEffect, useMemo } from "react";
-import { useNavigate, useOutletContext } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { Clock, Play, Trash2 } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { tmdbW300 } from "@/lib/tmdb";
+import { useAppOutletContext } from "@/lib/outlet-context";
 import { filterItemsForProfile } from "@/lib/preferences";
 import { buildWatchPath } from "@/lib/playback";
 import PlaybackProgressBar from "@/components/ui/PlaybackProgressBar";
 import { useAppTheme } from "@/lib/theme";
 
 export default function History() {
-  const { activeProfile } = useOutletContext() || {};
+  const { activeProfile } = useAppOutletContext();
   const { themeDefinition } = useAppTheme();
   const isHulu = themeDefinition.shellVariant === "hulu";
   const [items, setItems] = useState([]);

@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils";
 
-export default function PlaybackProgressBar({ progress = 0, className }) {
+export default function PlaybackProgressBar({ progress = 0, className = "" }) {
   const safeProgress = Math.max(0, Math.min(100, Number(progress) || 0));
 
   if (safeProgress <= 0) {
